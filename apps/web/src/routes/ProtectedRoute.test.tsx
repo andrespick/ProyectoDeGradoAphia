@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { apiError, DEV_PRINCIPAL, json, mockApi } from "../test/mockApi";
+import { ProtectedRoute } from "./ProtectedRoute";
 import { routes } from "./routes";
 
 function renderAt(path: string) {
@@ -36,10 +37,23 @@ describe("ProtectedRoute", () => {
   });
 
   it("niega el acceso sin el rol requerido", async () => {
-    mockApi({ "GET /api/v1/auth/me": () => json({ ...DEV_PRINCIPAL, roles: ["consulta"] }) });
-
-    renderAt("/panel");
+    mockApi({ "GET /api/v1/auth/me": () => json({ ...DEV_PRINCIPAL, roles: ["asesor"] }) });
+    const router = createMemoryRouter(
+      [
+        {
+          element: <ProtectedRoute roles={["admin_sistemas"]} />,
+          children: [{ path: "/solo-admin", element: <h1>Solo administradores</h1> }],
+        },
+      ],
+      { initialEntries: ["/solo-admin"] },
+    );
+    render(
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("No tiene permisos");
+    expect(screen.queryByText("Solo administradores")).not.toBeInTheDocument();
   });
 });

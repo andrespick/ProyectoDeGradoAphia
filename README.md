@@ -48,10 +48,10 @@ Las versiones exactas quedan fijadas en `pnpm-lock.yaml`, `apps/api/uv.lock`,
 git clone https://github.com/andrespick/ProyectoDeGradoAphia.git
 cd ProyectoDeGradoAphia
 pnpm install          # dependencias JS (incluye wrangler y Playwright)
-pnpm env:init         # crea .env con contraseñas locales aleatorias
+pnpm env:init         # crea .env y apps/api/.dev.vars con secretos locales aleatorios
 pnpm infra:up         # MySQL 8.4 y servicio de documentos en Docker
 pnpm db:migrate       # aplica migraciones
-pnpm db:seed          # carga clientes ficticios
+pnpm db:seed          # carga catálogos y datos ficticios
 pnpm dev              # frontend + API (Python Workers local)
 ```
 
@@ -69,7 +69,7 @@ Las dependencias de Python se instalan solas con `uv run` la primera vez.
 
 | Comando | Qué hace |
 | --- | --- |
-| `pnpm dev` | Crea `.env` si falta, levanta Docker y ejecuta web + API en Python Workers local con recarga |
+| `pnpm dev` | Crea `.env` y `apps/api/.dev.vars` si faltan, levanta Docker y ejecuta web + API en Python Workers local con recarga |
 | `pnpm dev:asgi` | Igual, pero la API corre con Uvicorn (ruta de ejecución Linux tradicional) |
 | `pnpm infra:up` / `pnpm infra:down` | Inicia / detiene MySQL y documentos (los datos se conservan) |
 | `pnpm infra:logs` · `pnpm infra:ps` | Registros y estado de los contenedores |
@@ -86,8 +86,8 @@ Las dependencias de Python se instalan solas con `uv run` la primera vez.
 ## Pruebas
 
 ```bash
-pnpm test               # 108 pruebas unitarias (17 web + 60 API + 31 documentos)
-pnpm test:integration   # 21 API↔MySQL (clientes, modelo 3FN, migraciones) + 5 documentos en Docker
+pnpm test               # 127 pruebas unitarias (23 web + 73 API + 31 documentos)
+pnpm test:integration   # 26 API↔MySQL (clientes, catálogos, modelo 3FN, migraciones) + 5 documentos en Docker
 pnpm test:e2e           # 5 escenarios en Chromium contra el stack completo
 ```
 
@@ -105,6 +105,7 @@ alimenta Docker Compose, los scripts y la API local. **Nunca se versiona.**
 | `TEST_DB_*` | MySQL de pruebas de integración |
 | `FILES_SERVICE_TOKEN` | Token entre servicios para el servicio de documentos (generado) |
 | `FILES_MAX_BYTES`, `FILES_ALLOWED_TYPES` | Límites de archivos |
+| `AUTH_SECRET` | Clave de firma de los tokens de sesión (generada; `pnpm env:init` la copia también a `apps/api/.dev.vars` para el Worker local) |
 | `CORS_ORIGINS`, `AUTH_MODE`, `LOG_LEVEL`, `APP_ENV` | API con Uvicorn (`pnpm dev:asgi`) |
 
 Con Python Workers, las variables no secretas de cada entorno están en
@@ -143,7 +144,9 @@ Responsabilidades de cada carpeta y reglas de trabajo: [docs/desarrollo](docs/de
 
 ## Documentación
 
+- [Plan de implementación](docs/plan-de-implementacion.md) (fases, criterios de aceptación y estado)
 - [Requisitos y alcance](docs/requisitos/README.md)
+- [Identidad visual](docs/diseno/README.md)
 - [Arquitectura](docs/arquitectura/README.md) y [modelo de datos](docs/arquitectura/modelo-de-datos.md)
 - [Desarrollo](docs/desarrollo/README.md)
 - [Pruebas](docs/pruebas/README.md)

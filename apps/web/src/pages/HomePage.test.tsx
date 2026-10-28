@@ -36,7 +36,7 @@ describe("HomePage", () => {
 
     renderApp();
 
-    expect(within(screen.getByRole("banner")).getByText("APHIA")).toBeInTheDocument();
+    expect(within(screen.getByRole("complementary", { name: "Barra lateral" })).getByText("APHIA")).toBeInTheDocument();
     expect(await screen.findByText("API conectada")).toBeInTheDocument();
     expect(screen.getByText("ASGI (Uvicorn)")).toBeInTheDocument();
     const table = await screen.findByRole("table");

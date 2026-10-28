@@ -1,5 +1,6 @@
 import type { RouteObject } from "react-router";
 
+import { LECTURA } from "../features/auth/roles";
 import { MainLayout } from "../layouts/MainLayout";
 import { HomePage } from "../pages/HomePage";
 import { LoginPage } from "../pages/LoginPage";
@@ -14,7 +15,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       {
-        element: <ProtectedRoute roles={["admin", "asesor"]} />,
+        element: <ProtectedRoute roles={LECTURA} />,
         children: [{ path: "panel", element: <PanelPage /> }],
       },
       { path: "*", element: <NotFoundPage /> },

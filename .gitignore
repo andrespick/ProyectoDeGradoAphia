@@ -91,3 +91,7 @@ SKILL.md
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Material de diseño local (sistema de diseño y mockups exportados de Google Stitch)
+DESIGN.md
+stitch_sistema_aphia_ui_ux/

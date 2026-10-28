@@ -13,7 +13,10 @@ from dataclasses import dataclass, field
 
 ENVIRONMENTS = frozenset({"development", "test", "staging", "production"})
 LOCAL_ENVIRONMENTS = frozenset({"development", "test"})
-AUTH_MODES = frozenset({"disabled", "development"})
+# disabled: todo protegido responde 401. development: usuario ficticio (solo local).
+# database: usuarios de MySQL con contraseña y token firmado con AUTH_SECRET.
+AUTH_MODES = frozenset({"disabled", "development", "database"})
+MIN_AUTH_SECRET_LENGTH = 32
 
 Getter = Callable[[str], str | None]
 
@@ -27,6 +30,7 @@ class Settings:
     app_env: str = "development"
     cors_origins: tuple[str, ...] = ()
     auth_mode: str = "disabled"
+    auth_secret: str | None = field(default=None, repr=False)
     log_level: str = "INFO"
     db_host: str | None = None
     db_port: int = 3306
@@ -50,11 +54,18 @@ class Settings:
             raise ConfigurationError(f"AUTH_MODE inválido: {auth_mode!r}")
         if auth_mode == "development" and app_env not in LOCAL_ENVIRONMENTS:
             raise ConfigurationError("AUTH_MODE=development solo se permite en development o test")
+        auth_secret = get("AUTH_SECRET") or None
+        if auth_mode == "database" and len(auth_secret or "") < MIN_AUTH_SECRET_LENGTH:
+            raise ConfigurationError(
+                f"AUTH_MODE=database requiere AUTH_SECRET de al menos {MIN_AUTH_SECRET_LENGTH} "
+                "caracteres"
+            )
 
         return cls(
             app_env=app_env,
             cors_origins=parse_origins(get("CORS_ORIGINS")),
             auth_mode=auth_mode,
+            auth_secret=auth_secret,
             log_level=(_clean(get("LOG_LEVEL")) or "info").upper(),
             db_host=get("DB_HOST") or None,
             db_port=_parse_int(get("DB_PORT"), "DB_PORT", 3306),

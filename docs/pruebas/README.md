@@ -20,7 +20,7 @@ datos en memoria), aplica las migraciones automáticamente, ejecuta las pruebas 
 frontend y la API en **Python Workers local**, de modo que la prueba recorre el mismo runtime
 que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 
-## Cobertura actual (resultados de la última ejecución local, 2026-10-27)
+## Cobertura actual (resultados de la última ejecución local, 2026-10-28)
 
 | Requisito | Pruebas | Resultado |
 | --- | --- | --- |
@@ -32,10 +32,13 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | 6. Rechazo de archivos no permitidos | ejecutable, HTML, texto, GIF, tipo declarado falso, demasiado grande (con y sin Content-Length), vacío, ids con *path traversal* | ✅ |
 | 7. Manejo de errores | 404/405/422/409/401/403/500/503 con formato uniforme, sin trazas ni datos reflejados; configuración inválida | ✅ |
 | 8. Comunicación frontend-backend | `apiClient.test.ts`, `HomePage.test.tsx` (mock de fetch), E2E real con CORS | ✅ |
-| Integridad del modelo 3FN | `test_modelo_3fn.py`: 32 tablas, 36 FK con `RESTRICT`, escenarios válidos y 9 violaciones rechazadas con su código MySQL | ✅ |
+| Integridad del modelo 3FN | `test_modelo_3fn.py`: 32 tablas + `person_party_role`, 36 + 2 FK con `RESTRICT`, códigos de la migración `0008`, escenarios válidos (incluida una persona con dos papeles) y 11 violaciones rechazadas con su código MySQL | ✅ |
+| Catálogos para formularios | `test_catalogos.py` (contenido y 401), `test_catalogos_mysql.py` (códigos de `0008` sobre MySQL) | ✅ |
+| Roles y configuración de autenticación | `test_auth.py`: roles `admin_sistemas`/`administrativo`/`asesor`, 403 por rol insuficiente, `AUTH_MODE=database` exige `AUTH_SECRET` de 32 caracteres | ✅ |
+| Componentes compartidos de la web | `Field.test.tsx`, `Pagination.test.tsx`, `usePagedList.test.tsx` (filtros y paginación en la URL) | ✅ |
 | Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
 
-Totales: 17 (web) + 60 (API) + 31 (documentos) unitarias; 21 (API ↔ MySQL) + 5 (documentos)
+Totales: 23 (web) + 73 (API) + 31 (documentos) unitarias; 26 (API ↔ MySQL) + 5 (documentos)
 de integración; 5 E2E.
 
 ## CI

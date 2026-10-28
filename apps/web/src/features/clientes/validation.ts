@@ -1,10 +1,9 @@
-import type { ApiErrorDetail } from "../../types/api";
 import type { ClienteCreate } from "../../types/cliente";
+import { EMAIL_RE, type Errores } from "../shared/validation";
 
-export type ClienteErrors = Partial<Record<keyof ClienteCreate, string>>;
+export const CAMPOS_CLIENTE = ["nombre", "correo"] as const satisfies readonly (keyof ClienteCreate)[];
 
-// Validación rápida en el navegador. La validación definitiva la hace la API (Pydantic).
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export type ClienteErrors = Errores<keyof ClienteCreate>;
 
 export function validateCliente(input: ClienteCreate): ClienteErrors {
   const errors: ClienteErrors = {};
@@ -14,16 +13,6 @@ export function validateCliente(input: ClienteCreate): ClienteErrors {
   if (!input.correo) errors.correo = "El correo electrónico es obligatorio.";
   else if (input.correo.length > 254 || !EMAIL_RE.test(input.correo)) {
     errors.correo = "Ingrese un correo electrónico válido.";
-  }
-  return errors;
-}
-
-export function errorsFromApi(details: ApiErrorDetail[]): ClienteErrors {
-  const errors: ClienteErrors = {};
-  for (const detail of details) {
-    if (detail.campo === "nombre" || detail.campo === "correo") {
-      errors[detail.campo] = detail.mensaje.replace(/^Value error, /, "");
-    }
   }
   return errors;
 }

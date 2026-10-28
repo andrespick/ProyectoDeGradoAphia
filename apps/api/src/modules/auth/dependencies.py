@@ -12,7 +12,7 @@ from modules.auth.schemas import Principal, Role
 DEVELOPMENT_PRINCIPAL = Principal(
     sujeto="desarrollo-local",
     nombre="Usuario de desarrollo",
-    roles=[Role.ADMIN],
+    roles=[Role.ADMIN_SISTEMAS],
     modo="development",
 )
 

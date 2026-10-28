@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from tests.conftest import InMemoryClientesRepository
+from tests.fakes import InMemoryClientesRepository
 
 pytestmark = pytest.mark.anyio
 

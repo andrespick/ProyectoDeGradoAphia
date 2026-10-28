@@ -1,9 +1,11 @@
 """Autenticación y autorización por roles.
 
-ESTADO ACTUAL: NO HAY AUTENTICACIÓN DE PRODUCCIÓN.
+Modos (``AUTH_MODE``):
 
-Solo existe ``AUTH_MODE=development``: entrega un usuario ficticio con rol ``admin``
-y únicamente cuando ``APP_ENV`` es ``development`` o ``test``. En cualquier otro caso
-los endpoints protegidos responden 401. La autenticación real (proveedor de identidad,
-sesiones o JWT) es una tarea pendiente documentada en docs/seguridad/.
+- ``development``: usuario ficticio con rol ``admin_sistemas``; solo en development/test.
+- ``database``: usuarios de MySQL (``user_account``) con contraseña y token firmado
+  (se implementa en la fase 1 del plan; ver docs/plan-de-implementacion.md).
+- ``disabled``: todo endpoint protegido responde 401.
+
+Los routers declaran roles con ``require_roles`` y los grupos de ``schemas.py``.
 """

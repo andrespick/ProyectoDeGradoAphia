@@ -8,6 +8,9 @@ import { parseEnv } from "node:util";
 export const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const ENV_FILE = join(ROOT, ".env");
 export const ENV_EXAMPLE = join(ROOT, ".env.example");
+// Secretos del Worker local (pywrangler dev los lee de este archivo, no del proceso).
+export const DEV_VARS_FILE = join(ROOT, "apps", "api", ".dev.vars");
+export const DEV_VARS_EXAMPLE = join(ROOT, "apps", "api", ".dev.vars.example");
 
 /**
  * Variables del proceso + .env de la raíz (las del proceso tienen prioridad, p. ej. en CI).

@@ -1,8 +1,10 @@
 import { type FormEvent, useState } from "react";
 
+import { Field } from "../../components/Field";
 import { ApiError } from "../../services/apiClient";
 import type { ClienteCreate } from "../../types/cliente";
-import { type ClienteErrors, errorsFromApi, validateCliente } from "./validation";
+import { errorsFromApi } from "../shared/validation";
+import { CAMPOS_CLIENTE, type ClienteErrors, validateCliente } from "./validation";
 
 interface ClienteFormProps {
   onSubmit: (input: ClienteCreate) => Promise<unknown>;
@@ -39,7 +41,7 @@ export function ClienteForm({ onSubmit }: ClienteFormProps) {
       setSuccess("Cliente registrado correctamente.");
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrors(errorsFromApi(error.details));
+        setErrors(errorsFromApi(error.details, CAMPOS_CLIENTE));
         setFormError(error.message);
       } else {
         setFormError("No fue posible registrar el cliente.");
@@ -82,39 +84,5 @@ export function ClienteForm({ onSubmit }: ClienteFormProps) {
         {submitting ? "Guardando…" : "Registrar cliente"}
       </button>
     </form>
-  );
-}
-
-interface FieldProps {
-  id: string;
-  label: string;
-  value: string;
-  error?: string;
-  type?: "text" | "email";
-  maxLength: number;
-  onChange: (value: string) => void;
-}
-
-function Field({ id, label, value, error, type = "text", maxLength, onChange }: FieldProps) {
-  const errorId = `${id}-error`;
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        maxLength={maxLength}
-        autoComplete="off"
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {error && (
-        <p id={errorId} className="field-error">
-          {error}
-        </p>
-      )}
-    </div>
   );
 }

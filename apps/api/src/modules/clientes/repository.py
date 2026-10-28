@@ -4,10 +4,9 @@ import aiomysql
 import pymysql
 
 from db.connection import Database
+from db.sql import ER_DUP_ENTRY, mysql_error_code
 from modules.clientes.schemas import Cliente
 from modules.clientes.service import CorreoDuplicadoError
-
-_ER_DUP_ENTRY = 1062
 
 
 class ClientesRepository:
@@ -42,7 +41,7 @@ class ClientesRepository:
                 )
                 row = await cursor.fetchone()
         except pymysql.err.IntegrityError as exc:
-            if exc.args and exc.args[0] == _ER_DUP_ENTRY:
+            if mysql_error_code(exc) == ER_DUP_ENTRY:
                 raise CorreoDuplicadoError() from exc
             raise
         return Cliente(**row)

@@ -7,7 +7,7 @@ Las migraciones son archivos SQL en `database/migrations/` aplicados en orden po
 ## Agregar una migración
 
 1. Cree `database/migrations/NNNN_descripcion.sql` con el siguiente número libre
-   (la última es `0007`, así que la próxima es `0008_...`). Solo minúsculas, números y `_`.
+   (la última es `0010`, así que la próxima es `0011_...`). Solo minúsculas, números y `_`.
 2. Escriba una sentencia DDL por archivo cuando sea posible. Termine cada sentencia con `;`
    al final de la línea. Comentarios con `--`. No use `DELIMITER` ni procedimientos.
 3. Siga las reglas físicas del [modelo de datos](../arquitectura/modelo-de-datos.md):
@@ -35,6 +35,10 @@ pnpm test:integration
   restaure el respaldo antes de reintentar.
 - Cambios destructivos en dos fases: (1) agregar lo nuevo y adaptar el código; (2) en una
   versión posterior, eliminar lo viejo.
+- Valores de referencia que la aplicación usa por código (roles, papeles, estados, tipos de
+  documento, monedas…) van en una migración con `INSERT` (como `0008`), porque producción los
+  necesita. Los nombres libres (ciudades, bancos, proveedores) los crea la aplicación y solo
+  se siembran en `database/seeds/` para desarrollo.
 - Un candado (`GET_LOCK`) impide dos ejecuciones simultáneas.
 
 ## Producción

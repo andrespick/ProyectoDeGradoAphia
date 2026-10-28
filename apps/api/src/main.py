@@ -19,6 +19,7 @@ from core.logging import configure_logging
 from core.middleware import RequestContextMiddleware, SettingsCORSMiddleware
 from core.runtime import settings_from_scope
 from modules.auth.router import router as auth_router
+from modules.catalogos.router import router as catalogos_router
 from modules.clientes.router import router as clientes_router
 from modules.health.router import API_VERSION
 from modules.health.router import router as health_router
@@ -39,6 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(clientes_router)
+    app.include_router(catalogos_router)
     add_local_docs(app)
 
     provider = (lambda _scope: settings) if settings is not None else settings_from_scope

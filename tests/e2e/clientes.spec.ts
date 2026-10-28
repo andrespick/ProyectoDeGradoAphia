@@ -7,7 +7,7 @@ test.describe("APHIA de extremo a extremo", () => {
   test("la pantalla inicial muestra la API conectada", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("banner").getByText("APHIA")).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Barra lateral" }).getByText("APHIA")).toBeVisible();
     await expect(page.getByText("API conectada")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Cloudflare Workers")).toBeVisible();
   });

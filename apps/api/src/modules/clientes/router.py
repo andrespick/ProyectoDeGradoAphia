@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, status
 from db.connection import Database
 from db.dependencies import get_database
 from modules.auth.dependencies import require_roles
-from modules.auth.schemas import Role
+from modules.auth.schemas import LECTURA
 from modules.clientes.repository import ClientesRepository
 from modules.clientes.schemas import Cliente, ClienteCreate, ClientesPage
 from modules.clientes.service import ClientesRepositoryPort, ClientesService
@@ -15,7 +15,7 @@ from modules.clientes.service import ClientesRepositoryPort, ClientesService
 router = APIRouter(
     prefix="/api/v1/clientes",
     tags=["clientes"],
-    dependencies=[Depends(require_roles(Role.ADMIN, Role.ASESOR))],
+    dependencies=[Depends(require_roles(*LECTURA))],
 )
 
 
