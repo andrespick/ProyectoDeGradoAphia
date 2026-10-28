@@ -1,0 +1,50 @@
+[project]
+name = "aphia-api"
+version = "0.1.0"
+description = "API REST de APHIA (FastAPI sobre Cloudflare Python Workers o Uvicorn)"
+requires-python = ">=3.13"
+# Solo dependencias compatibles con Python Workers (Pyodide): pywrangler las empaqueta
+# en el Worker. Antes de agregar una, verificar su soporte (docs/arquitectura/README.md).
+dependencies = [
+    "aiomysql>=0.3.2",
+    "fastapi>=0.162.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+    "workers-py>=1.17.9",
+    "workers-runtime-sdk>=1.9.5",
+]
+# Ruta alternativa de ejecución en Linux (no se empaqueta en el Worker).
+server = [
+    "uvicorn>=0.54.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "server"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "../../database/scripts"]
+addopts = "-ra -m 'not integration'"
+markers = [
+    "integration: requiere el MySQL de pruebas (pnpm test:integration)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests", "../../database/scripts"]
+extend-exclude = ["src/vendor", "python_modules", ".venv-workers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "SIM", "RUF", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "db", "integrations", "modules", "main", "migrate", "seed", "dbscripts"]

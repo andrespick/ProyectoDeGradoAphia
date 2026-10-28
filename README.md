@@ -1,27 +1,152 @@
-# Proyecto de Grado – APHIA S.A.S.
+# APHIA
 
-Repositorio del código del proyecto de grado para **APHIA S.A.S.**, empresa inmobiliaria.
+Aplicación web interna para **APHIA S.A.S.**, inmobiliaria ubicada en Colombia. Administrará
+clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y trazabilidad.
 
-## Descripción
+> **Estado actual (v0.1.0):** fundamentos técnicos. Existe un flujo mínimo de *clientes de
+> prueba* que valida la arquitectura de extremo a extremo (navegador → API → MySQL) y un
+> servicio privado de documentos. Los módulos de negocio están pendientes.
 
-_Por completar: problema que resuelve el proyecto y alcance._
+## Arquitectura en una línea
+
+React + Vite en **Cloudflare Pages** → FastAPI en **Cloudflare Python Workers** →
+**Hyperdrive** + **Cloudflare Tunnel / Workers VPC** → **MySQL 8.4** y servicio de documentos en
+un **VPS Linux** con Docker. La misma API corre también con **Uvicorn** en cualquier Linux.
+
+Detalle y diagramas: [docs/arquitectura](docs/arquitectura/README.md).
 
 ## Tecnologías
 
-_Por completar._
+| Capa | Tecnología | Versión verificada |
+| --- | --- | --- |
+| Frontend | React · React Router · TypeScript · Vite | 19.3 · 8.5 · 7.0 · 8.3 |
+| Pruebas frontend | Vitest · Testing Library · Playwright | 5.0 · 16.3 · 1.64 |
+| API | Python · FastAPI · Pydantic · aiomysql | 3.13 local / 3.14 en Workers · 0.162 · 2.14 · 0.3.2 |
+| Runtime API | Cloudflare Python Workers (pywrangler · wrangler) | 1.17.9 · 4.153 |
+| Runtime alternativo | Uvicorn (ASGI) | 0.54 |
+| Base de datos | MySQL LTS | 8.4.13 |
+| Documentos | FastAPI + volumen Docker | — |
+| Herramientas | pnpm · uv · Node.js · Docker Compose | 12.15 · 0.13.6 · 24 · v5 |
+| Calidad | Ruff · Pytest · HTTPX | 0.17 · 9.2 · 0.28 |
 
-## Instalación y ejecución
+Las versiones exactas quedan fijadas en `pnpm-lock.yaml`, `apps/api/uv.lock`,
+`apps/api/pylock.toml` (paquete del Worker) y `apps/files/uv.lock`.
+
+## Requisitos previos
+
+- **Node.js 22.12+** (probado con 24) y **pnpm 12** (`corepack enable` o instalación de pnpm).
+- **uv** ([instalación](https://docs.astral.sh/uv/getting-started/installation/)). uv descarga
+  Python 3.13 si no está instalado.
+- **Docker Desktop** (Windows/macOS) o **Docker Engine + Compose** (Linux), en ejecución.
+- Git. No se necesita cuenta de Cloudflare ni VPS para desarrollar.
+
+## Instalación
 
 ```bash
 git clone https://github.com/andrespick/ProyectoDeGradoAphia.git
 cd ProyectoDeGradoAphia
+pnpm install          # dependencias JS (incluye wrangler y Playwright)
+pnpm env:init         # crea .env con contraseñas locales aleatorias
+pnpm infra:up         # MySQL 8.4 y servicio de documentos en Docker
+pnpm db:migrate       # aplica migraciones
+pnpm db:seed          # carga clientes ficticios
+pnpm dev              # frontend + API (Python Workers local)
 ```
 
-_Por completar: dependencias, configuración del entorno (`.env`) y comandos para ejecutar el proyecto._
+Las dependencias de Python se instalan solas con `uv run` la primera vez.
 
-## Estructura del proyecto
+| Servicio | URL local |
+| --- | --- |
+| Frontend | http://localhost:5173 |
+| API | http://localhost:8787 (documentación: http://localhost:8787/api/docs) |
+| MySQL | 127.0.0.1:3307 |
+| MySQL de pruebas | 127.0.0.1:3308 (solo durante `pnpm test:integration`) |
+| Servicio de documentos | 127.0.0.1:4000 |
 
-_Por completar._
+## Comandos
+
+| Comando | Qué hace |
+| --- | --- |
+| `pnpm dev` | Crea `.env` si falta, levanta Docker y ejecuta web + API en Python Workers local con recarga |
+| `pnpm dev:asgi` | Igual, pero la API corre con Uvicorn (ruta de ejecución Linux tradicional) |
+| `pnpm infra:up` / `pnpm infra:down` | Inicia / detiene MySQL y documentos (los datos se conservan) |
+| `pnpm infra:logs` · `pnpm infra:ps` | Registros y estado de los contenedores |
+| `pnpm infra:reset -- --yes` | **Borra** los volúmenes locales (MySQL y documentos) |
+| `pnpm db:migrate` · `pnpm db:status` | Aplica / consulta migraciones |
+| `pnpm db:seed` | Carga datos ficticios (solo development/test) |
+| `pnpm lint` · `pnpm typecheck` | Ruff (Python) y TypeScript |
+| `pnpm test` | Pruebas unitarias: web (Vitest), API y documentos (Pytest). No requiere Docker |
+| `pnpm test:integration` | API ↔ MySQL real y servicio de documentos en Docker |
+| `pnpm test:e2e` | Playwright de extremo a extremo (primera vez: `pnpm test:e2e:install`) |
+| `pnpm build` | Compila el frontend en `apps/web/dist` |
+| `pnpm check:worker` | Empaqueta el Worker sin desplegar (`pywrangler deploy --dry-run`) |
+
+## Pruebas
+
+```bash
+pnpm test               # 108 pruebas unitarias (17 web + 60 API + 31 documentos)
+pnpm test:integration   # 7 API↔MySQL + 5 documentos en Docker (incluye recrear el contenedor)
+pnpm test:e2e           # 5 escenarios en Chromium contra el stack completo
+```
+
+Estrategia y cobertura: [docs/pruebas](docs/pruebas/README.md).
+
+## Variables de entorno
+
+El archivo `.env` de la raíz (creado por `pnpm env:init` desde [.env.example](.env.example))
+alimenta Docker Compose, los scripts y la API local. **Nunca se versiona.**
+
+| Variable | Uso |
+| --- | --- |
+| `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD` | Contraseñas locales de MySQL (generadas) |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | Conexión local (Uvicorn, migraciones y Hyperdrive local) |
+| `TEST_DB_*` | MySQL de pruebas de integración |
+| `FILES_SERVICE_TOKEN` | Token entre servicios para el servicio de documentos (generado) |
+| `FILES_MAX_BYTES`, `FILES_ALLOWED_TYPES` | Límites de archivos |
+| `CORS_ORIGINS`, `AUTH_MODE`, `LOG_LEVEL`, `APP_ENV` | API con Uvicorn (`pnpm dev:asgi`) |
+
+Con Python Workers, las variables no secretas de cada entorno están en
+[apps/api/wrangler.jsonc](apps/api/wrangler.jsonc) y los secretos se cargan con
+`wrangler secret put`. El frontend solo usa `VITE_API_BASE_URL` (pública).
+
+## Estructura
+
+```text
+apps/web      Frontend React + Vite (Cloudflare Pages)
+apps/api      API FastAPI (Cloudflare Python Workers / Uvicorn)
+apps/files    Servicio privado de documentos (Docker en el VPS)
+database      Migraciones SQL versionadas, datos ficticios y scripts
+infra         Docker Compose local y de producción, túnel, respaldos
+tests         Pruebas de integración entre servicios y E2E (Playwright)
+docs          Requisitos, arquitectura, desarrollo, despliegue, seguridad y pruebas
+scripts       Utilidades Node multiplataforma (dev, infra, entorno)
+```
+
+Responsabilidades de cada carpeta y reglas de trabajo: [AGENTS.md](AGENTS.md).
+
+## Solución de problemas
+
+| Síntoma | Solución |
+| --- | --- |
+| `No se encontró "docker"` o `infra:up` falla | Inicie Docker Desktop y espere a que diga *Engine running*. En una terminal nueva, `docker version` debe mostrar el servidor. |
+| `uv` o `docker` no se reconocen tras instalarlos | Abra una terminal nueva (el PATH se actualiza al iniciar sesión). |
+| Puerto 3307, 4000, 5173 u 8787 en uso | Cambie `DB_PORT`/`FILES_PORT` en `.env`, o cierre el proceso que lo ocupa (`netstat -ano \| findstr :8787`). |
+| La primera solicitud a la API tarda ~10 s | Normal en `pywrangler dev`: carga Pyodide la primera vez. Las siguientes tardan milisegundos. |
+| `UnicodeDecodeError: 'charmap'` al ejecutar pywrangler en Windows | Use los scripts de pnpm (definen `PYTHONUTF8=1`) o defina esa variable en su terminal. |
+| `/api/ready` responde `not_ready` | MySQL no está arriba o faltan migraciones: `pnpm infra:up && pnpm db:migrate`. |
+| `Table 'aphia.clientes' doesn't exist` | Ejecute `pnpm db:migrate`. |
+| `pnpm install` avisa de *build scripts* ignorados | Ya están aprobados en `pnpm-workspace.yaml` (`allowBuilds`); si agrega otro, use `pnpm approve-builds`. |
+| `test:e2e` falla con «Executable doesn't exist» | Instale el navegador: `pnpm test:e2e:install`. |
+| Cambié la contraseña en `.env` y MySQL rechaza la conexión | MySQL solo usa las variables al crear el volumen. `pnpm infra:reset -- --yes` (borra datos locales) y repita la instalación. |
+
+## Documentación
+
+- [Requisitos y alcance](docs/requisitos/README.md)
+- [Arquitectura](docs/arquitectura/README.md)
+- [Desarrollo](docs/desarrollo/README.md)
+- [Pruebas](docs/pruebas/README.md)
+- [Seguridad](docs/seguridad/README.md)
+- [Despliegue](docs/despliegue/README.md)
 
 ## Autor
 

@@ -1,0 +1,135 @@
+# Producción en el VPS: MySQL + servicio de documentos + Cloudflare Tunnel.
+#
+#   cd infra/production
+#   docker compose --env-file .env.production up -d --build
+#
+# Ningún servicio publica puertos en el host. MySQL y el servicio de documentos viven en
+# la red interna "backend" (sin salida a Internet); solo cloudflared tiene salida, y
+# Cloudflare (Workers VPC / Hyperdrive) llega a ellos únicamente a través del túnel.
+# Guía completa: docs/despliegue/vps.md
+name: aphia
+
+services:
+  mysql:
+    image: mysql:${MYSQL_VERSION:-8.4}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_DATABASE: ${DB_NAME:-aphia}
+      APHIA_APP_USER: ${DB_APP_USER:-aphia_app}
+      APHIA_MIGRATOR_USER: ${DB_MIGRATOR_USER:-aphia_migrator}
+      TZ: UTC
+    secrets: [mysql_root_password, mysql_app_password, mysql_migrator_password]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d:ro
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: ${MYSQL_MEMORY_LIMIT:-1200m}
+    security_opt:
+      - no-new-privileges:true
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  files:
+    build:
+      context: ../../apps/files
+    image: aphia-files:production
+    restart: unless-stopped
+    environment:
+      FILES_SERVICE_TOKEN_FILE: /run/secrets/files_service_token
+      FILES_STORAGE_DIR: /data
+      FILES_MAX_BYTES: ${FILES_MAX_BYTES:-10485760}
+      FILES_ALLOWED_TYPES: ${FILES_ALLOWED_TYPES:-application/pdf,image/png,image/jpeg}
+    secrets: [files_service_token]
+    volumes:
+      - files-data:/data
+    networks: [backend]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    logging: *logging
+
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:?Fije CLOUDFLARED_VERSION en .env.production}
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Defina TUNNEL_TOKEN en .env.production}
+    networks: [backend, egress]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      files:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    logging: *logging
+
+  # Migraciones controladas (nunca automáticas). Uso, tras un respaldo verificado:
+  #   docker compose --env-file .env.production run --rm --build migrator --status
+  #   docker compose --env-file .env.production run --rm migrator --confirm-backup
+  migrator:
+    profiles: [ops]
+    build:
+      context: ../..
+      dockerfile: database/Dockerfile
+    image: aphia-migrator:production
+    environment:
+      APP_ENV: production
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-aphia}
+      MIGRATIONS_DB_USER: ${DB_MIGRATOR_USER:-aphia_migrator}
+      MIGRATIONS_DB_PASSWORD_FILE: /run/secrets/mysql_migrator_password
+      DB_SSL_MODE: required
+    secrets: [mysql_migrator_password]
+    networks: [backend]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+networks:
+  backend:
+    internal: true
+  egress: {}
+
+volumes:
+  mysql-data:
+  files-data:
+
+# Archivos generados en el VPS con scripts/generate-secrets.sh (nunca versionados).
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password
+  mysql_app_password:
+    file: ./secrets/mysql_app_password
+  mysql_migrator_password:
+    file: ./secrets/mysql_migrator_password
+  files_service_token:
+    file: ./secrets/files_service_token

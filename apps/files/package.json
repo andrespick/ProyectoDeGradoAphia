@@ -1,0 +1,11 @@
+{
+  "name": "@aphia/files",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../scripts/run.mjs uv run uvicorn main:create_app --factory --app-dir src --reload --reload-dir src --host 127.0.0.1 --port 4000",
+    "lint": "uv run ruff check . && uv run ruff format --check .",
+    "format": "uv run ruff format . && uv run ruff check --fix .",
+    "test": "uv run pytest"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "aphia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "env:init": "node scripts/env-init.mjs",
+    "dev": "node scripts/env-init.mjs --if-missing && node scripts/infra.mjs up && concurrently -k -n web,api -c cyan,magenta \"pnpm --filter @aphia/web dev\" \"pnpm --filter @aphia/api dev\"",
+    "dev:asgi": "node scripts/env-init.mjs --if-missing && node scripts/infra.mjs up && concurrently -k -n web,api -c cyan,magenta \"pnpm --filter @aphia/web dev\" \"pnpm --filter @aphia/api dev:asgi\"",
+    "infra:up": "node scripts/infra.mjs up",
+    "infra:down": "node scripts/infra.mjs down",
+    "infra:logs": "node scripts/infra.mjs logs",
+    "infra:ps": "node scripts/infra.mjs ps",
+    "infra:reset": "node scripts/infra.mjs reset",
+    "db:migrate": "node scripts/run.mjs uv run --project apps/api python database/scripts/migrate.py",
+    "db:status": "node scripts/run.mjs uv run --project apps/api python database/scripts/migrate.py --status",
+    "db:seed": "node scripts/run.mjs uv run --project apps/api python database/scripts/seed.py",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm --filter @aphia/web typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:integration": "node scripts/test-integration.mjs",
+    "test:e2e": "node scripts/infra.mjs up && pnpm db:migrate && playwright test",
+    "test:e2e:install": "playwright install chromium",
+    "build": "pnpm --filter @aphia/web build",
+    "check:worker": "pnpm --filter @aphia/api check:worker"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "concurrently": "^10.0.6"
+  }
+}

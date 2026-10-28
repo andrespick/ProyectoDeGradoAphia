@@ -1,0 +1,30 @@
+# Configuración de MySQL 8.4 para un VPS pequeño (2 vCPU, 2–4 GB RAM).
+# Con 4 GB de RAM puede subirse innodb_buffer_pool_size a 1G y MYSQL_MEMORY_LIMIT a 2000m.
+[mysqld]
+character-set-server = utf8mb4
+collation-server = utf8mb4_0900_ai_ci
+default-time-zone = '+00:00'
+skip-name-resolve = ON
+
+# Seguridad
+require_secure_transport = ON
+local_infile = OFF
+# Hyperdrive y los clientes usan TLS; MySQL genera certificados propios al inicializar.
+tls_version = TLSv1.2,TLSv1.3
+
+# Memoria
+innodb_buffer_pool_size = 512M
+innodb_log_buffer_size = 16M
+max_connections = 60
+performance_schema = OFF
+table_open_cache = 400
+
+# Durabilidad y recuperación
+innodb_flush_log_at_trx_commit = 1
+sync_binlog = 1
+binlog_expire_logs_seconds = 604800
+
+# Registro
+log_error_verbosity = 2
+slow_query_log = ON
+long_query_time = 2
