@@ -154,8 +154,7 @@ jobs:
       - run: pnpm db:migrate
       - run: pnpm db:seed
       # Secreto efímero del Worker local (AUTH_MODE=database); no es un secreto real.
-      - run: printf 'AUTH_SECRET=%s
-' "ci-solo-pruebas-$(openssl rand -hex 24)" > apps/api/.dev.vars
+      - run: printf 'AUTH_SECRET=%s\n' "ci-solo-pruebas-$(openssl rand -hex 24)" > apps/api/.dev.vars
       - run: pnpm exec playwright test
       - if: failure()
         uses: actions/upload-artifact@v4

@@ -85,6 +85,14 @@ async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
   } catch {
+    // Un 2xx sin JSON no viene de la API: p. ej. el index.html que devuelve Cloudflare Pages
+    // cuando la web se construyó sin VITE_API_BASE_URL. Nunca debe pasar por respuesta válida.
+    if (response.ok) {
+      throw new ApiError("La API respondió con un formato inesperado. Verifique la URL de la API.", {
+        status: response.status,
+        code: "respuesta_invalida",
+      });
+    }
     return null;
   }
 }

@@ -150,6 +150,7 @@ Responsabilidades de cada carpeta y reglas de trabajo: [docs/desarrollo](docs/de
 | La API responde 500 `configuracion_invalida` al arrancar | Falta `AUTH_SECRET` (≥ 32 caracteres): `pnpm env:init` lo genera en `.env` y `apps/api/.dev.vars`. |
 | `pnpm install` avisa de *build scripts* ignorados | Ya están aprobados en `pnpm-workspace.yaml` (`allowBuilds`); si agrega otro, use `pnpm approve-builds`. |
 | `test:e2e` falla con «Executable doesn't exist» | Instale los navegadores: `pnpm test:e2e:install` (Chromium, Firefox y WebKit). |
+| En Pages la web muestra el gestor sin pedir usuario y sin datos | Se construyó sin `VITE_API_BASE_URL`: defínala en Pages con la URL del Worker y redespliegue (ver [cloudflare-pages.md](docs/despliegue/cloudflare-pages.md)). |
 | Cambié la contraseña en `.env` y MySQL rechaza la conexión | MySQL solo usa las variables al crear el volumen. `pnpm infra:reset -- --yes` (borra datos locales) y repita la instalación. |
 
 ## Documentación
