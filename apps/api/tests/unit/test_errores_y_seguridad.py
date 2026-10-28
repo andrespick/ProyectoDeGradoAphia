@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from core.config import ConfigurationError, Settings
 from core.errors import DatabaseUnavailableError
 from main import create_app
-from modules.clientes.router import get_clientes_repository
+from modules.personas.router import get_personas_repository
 from tests.conftest import ORIGEN_WEB, make_settings
 
 pytestmark = pytest.mark.anyio
@@ -37,10 +37,10 @@ async def test_excepcion_no_controlada_responde_500_generico(
     app: FastAPI, capsys: pytest.CaptureFixture[str]
 ) -> None:
     class Explota:
-        async def listar(self, **_: object) -> None:
+        async def listar(self, *_: object, **__: object) -> None:
             raise RuntimeError("detalle interno con secreto=abc123")
 
-    app.dependency_overrides[get_clientes_repository] = lambda: Explota()
+    app.dependency_overrides[get_personas_repository] = lambda: Explota()
 
     async with _client(app) as client:
         response = await client.get("/api/v1/clientes")
@@ -58,10 +58,10 @@ async def test_excepcion_no_controlada_responde_500_generico(
 
 async def test_base_de_datos_caida_responde_503(app: FastAPI) -> None:
     class SinBaseDeDatos:
-        async def listar(self, **_: object) -> None:
+        async def listar(self, *_: object, **__: object) -> None:
             raise DatabaseUnavailableError()
 
-    app.dependency_overrides[get_clientes_repository] = lambda: SinBaseDeDatos()
+    app.dependency_overrides[get_personas_repository] = lambda: SinBaseDeDatos()
 
     async with _client(app) as client:
         response = await client.get("/api/v1/clientes")

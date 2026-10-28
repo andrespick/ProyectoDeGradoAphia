@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- |
 | 0 | Base: catálogos, papeles de persona, bloqueo, identidad visual, componentes compartidos | «Agrega catálogos base, papeles de persona y columnas de bloqueo (fase 0)» | hecha | 2026-10-28 |
 | 1 | Usuarios y login real | «Implementa usuarios, inicio de sesión y bloqueo temporal (fase 1)» | hecha | 2026-10-28 |
-| 2 | Clientes, propietarios y codeudores sobre `person` | — | pendiente | — |
+| 2 | Clientes, propietarios y codeudores sobre `person` | «Implementa clientes, propietarios y codeudores sobre el modelo de personas (fase 2)» | hecha | 2026-10-28 |
 | 3 | Inmuebles | — | pendiente | — |
 | 4 | Contratos | — | pendiente | — |
 | 5 | Ayuda, responsive, respaldo local y documentación | — | pendiente | — |
@@ -1201,3 +1201,5 @@ Comprobaciones manuales mínimas:
 | 2026-10-28 | 1 | `GET /api/v1/resumen` se implementó completo en la fase 1 (personas, inmuebles, contratos y usuarios con `COUNT` sobre las tablas, que aún están vacías) en lugar de ceros provisionales. |
 | 2026-10-28 | 1 | El enlace «¿Olvidó su contraseña?» del login es texto estático hasta que exista `/ayuda` (fase 5). La tarjeta demo de clientes sigue en el tablero hasta la fase 2. |
 | 2026-10-28 | 1 | Las cuentas de usuario comparten la fila `person` con un cliente de la misma identificación (una persona por identificación); al eliminar la cuenta la persona se conserva. |
+| 2026-10-28 | 2 | `Persona` expone `total_inmuebles` (conteo de `property_owner`) en todas las listas; el detalle expone `inmuebles` como lista. El registro desde Propietarios exige dirección, teléfono, correo y cuenta bancaria (validación en la web; la API los deja opcionales para los demás papeles). |
+| 2026-10-28 | 2 | Los helpers `guardar_documento` y `buscar_persona_id` viven en `modules/personas/repository.py` y los reutiliza `usuarios` (sin duplicar SQL). El seed `0001_clientes_ficticios.sql` se eliminó; la tabla `clientes` se borra en la fase 3 (0011). |

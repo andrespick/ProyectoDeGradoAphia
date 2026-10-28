@@ -3,11 +3,11 @@
 Aplicación web interna para **APHIA S.A.S.**, inmobiliaria ubicada en Colombia. Administrará
 clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y trazabilidad.
 
-> **Estado actual (v0.1.0):** fundamentos técnicos más la fase 1 del
-> [plan de implementación](docs/plan-de-implementacion.md): inicio de sesión real (usuario y
-> contraseña, bloqueo tras 3 intentos), gestión de usuarios y roles, catálogos, tablero e
-> identidad visual. La base de datos tiene el [modelo 3FN completo](docs/arquitectura/modelo-de-datos.md).
-> Clientes, propietarios, codeudores, inmuebles y contratos llegan en las fases 2–4.
+> **Estado actual (v0.1.0):** fases 0–2 del [plan de implementación](docs/plan-de-implementacion.md):
+> inicio de sesión real (usuario y contraseña, bloqueo tras 3 intentos), usuarios y roles,
+> clientes, propietarios y codeudores sobre el [modelo 3FN](docs/arquitectura/modelo-de-datos.md)
+> (una persona puede tener varios papeles), tablero e identidad visual. Inmuebles y contratos
+> llegan en las fases 3 y 4.
 
 ## Arquitectura en una línea
 
@@ -93,9 +93,9 @@ desarrollo (los crea `pnpm db:seed`; contraseña `Aphia.2026`, solo para develop
 ## Pruebas
 
 ```bash
-pnpm test               # 196 pruebas unitarias (42 web + 123 API + 31 documentos)
-pnpm test:integration   # 35 API↔MySQL (login, usuarios, catálogos, modelo 3FN, migraciones) + 5 documentos en Docker
-pnpm test:e2e           # 10 escenarios en Chromium contra el stack completo (login real)
+pnpm test               # 217 pruebas unitarias (50 web + 136 API + 31 documentos)
+pnpm test:integration   # 37 API↔MySQL (personas, login, usuarios, catálogos, modelo 3FN, migraciones) + 5 documentos en Docker
+pnpm test:e2e           # 13 escenarios en Chromium contra el stack completo (login real)
 ```
 
 Estrategia y cobertura: [docs/pruebas](docs/pruebas/README.md).
@@ -144,7 +144,6 @@ Responsabilidades de cada carpeta y reglas de trabajo: [docs/desarrollo](docs/de
 | La primera solicitud a la API tarda ~10 s | Normal en `pywrangler dev`: carga Pyodide la primera vez. Las siguientes tardan milisegundos. |
 | `UnicodeDecodeError: 'charmap'` al ejecutar pywrangler en Windows | Use los scripts de pnpm (definen `PYTHONUTF8=1`) o defina esa variable en su terminal. |
 | `/api/ready` responde `not_ready` | MySQL no está arriba o faltan migraciones: `pnpm infra:up && pnpm db:migrate`. |
-| `Table 'aphia.clientes' doesn't exist` | Ejecute `pnpm db:migrate`. |
 | El login responde «Usuario o contraseña incorrectos» con `admin` | Falta cargar los usuarios de desarrollo: `pnpm db:seed`. |
 | La API responde 500 `configuracion_invalida` al arrancar | Falta `AUTH_SECRET` (≥ 32 caracteres): `pnpm env:init` lo genera en `.env` y `apps/api/.dev.vars`. |
 | `pnpm install` avisa de *build scripts* ignorados | Ya están aprobados en `pnpm-workspace.yaml` (`allowBuilds`); si agrega otro, use `pnpm approve-builds`. |

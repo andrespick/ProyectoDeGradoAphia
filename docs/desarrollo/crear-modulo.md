@@ -1,6 +1,8 @@
 # Cómo crear un módulo
 
-Ejemplo: módulo `propietarios`. El módulo de referencia es `apps/api/src/modules/clientes`.
+Ejemplo: módulo `propietarios`. El módulo de referencia es `apps/api/src/modules/personas`
+(compartido por los routers delgados `clientes`, `propietarios` y `codeudores`, que lo
+configuran con `build_personas_router(prefix, tag, papel_fijo)`).
 
 ## 1. Tablas
 

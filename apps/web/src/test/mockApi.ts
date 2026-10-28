@@ -27,6 +27,10 @@ export function mockApi(routes: Record<string, Handler>) {
   return fetchMock;
 }
 
+export function page<T>(items: T[]) {
+  return { items, total: items.length, limit: 20, offset: 0 };
+}
+
 export const HEALTH_OK = {
   status: "ok",
   service: "aphia-api",
@@ -108,13 +112,37 @@ export const CATALOGOS = {
   proveedores_servicios: ["EPM"],
 };
 
-export function cliente(id: number, nombre: string, correo: string) {
+export function persona(
+  id: number,
+  nombre: string,
+  identificacion: string,
+  papeles: ("propietario" | "arrendatario" | "codeudor")[],
+  extras: Record<string, unknown> = {},
+) {
   return {
     id,
     nombre,
-    correo,
-    creado_en: "2026-10-27T15:00:00Z",
-    actualizado_en: "2026-10-27T15:00:00Z",
+    tipo_identificacion: "CC",
+    identificacion,
+    telefono: "3001234567",
+    correo: `${identificacion}@example.test`,
+    direccion: null,
+    papeles,
+    cuenta_bancaria: null,
+    total_inmuebles: 0,
+    ...extras,
+  };
+}
+
+export function personaDetalle(base: ReturnType<typeof persona>, extras: Record<string, unknown> = {}) {
+  return {
+    ...base,
+    inmuebles: [],
+    contratos_como_propietario: [],
+    contratos_como_arrendatario: [],
+    contratos_como_codeudor: [],
+    usuario: null,
+    ...extras,
   };
 }
 
@@ -149,6 +177,5 @@ export function baseRoutes(principal: unknown = DEV_PRINCIPAL): Record<string, H
     "GET /api/v1/auth/me": () => json(principal),
     "GET /api/v1/resumen": () => json(RESUMEN),
     "GET /api/v1/catalogos": () => json(CATALOGOS),
-    "GET /api/v1/clientes": () => json({ items: [], total: 0, limit: 20, offset: 0 }),
   };
 }

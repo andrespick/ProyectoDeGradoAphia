@@ -26,9 +26,9 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Requisito | Pruebas | Resultado |
 | --- | --- | --- |
 | 1. Disponibilidad de la API | `test_health.py` (health, ready OK/503, MySQL inaccesible), integración `test_ready_con_mysql_real`, E2E «API conectada» | ✅ |
-| 2. Validación de entradas | `test_clientes.py` (correo, longitudes, caracteres de control, campos extra, paginación), `ClienteForm.test.tsx`, E2E validación | ✅ |
-| 3. Creación y consulta de cliente ficticio | unitarias + integración + E2E | ✅ |
-| 4. Persistencia en MySQL | integración (lectura directa por SQL, nueva instancia de la API, rollback, idempotencia de migraciones), E2E recarga | ✅ |
+| 2. Validación de entradas | `test_personas.py` (identificación, correo, teléfono, papeles, cuenta bancaria, campos extra, paginación), `PersonaForm.test.tsx`, E2E | ✅ |
+| 3. Clientes, propietarios y codeudores (RF-01…RF-06, RF-10, RF-12) | `test_personas.py` (papeles por lista, filtros, detalle, papel en uso, dependencias al eliminar, permisos del asesor, búsqueda), `test_personas_mysql.py` (tablas hijas, acentos, duplicados sin filas parciales, propietario con inmueble), `PersonasListPage.test.tsx`, `PersonaPicker.test.tsx`, E2E `clientes/propietarios/codeudores.spec.ts` | ✅ |
+| 4. Persistencia en MySQL | integración (lectura directa por SQL, nueva instancia de la API, duplicado sin filas parciales, idempotencia de migraciones), E2E | ✅ |
 | 5. Subida y recuperación de documento | `apps/files/tests` + `tests/integration/files-service.test.mjs` (incluye recrear el contenedor) | ✅ |
 | 6. Rechazo de archivos no permitidos | ejecutable, HTML, texto, GIF, tipo declarado falso, demasiado grande (con y sin Content-Length), vacío, ids con *path traversal* | ✅ |
 | 7. Manejo de errores | 404/405/422/409/401/403/500/503 con formato uniforme, sin trazas ni datos reflejados; configuración inválida | ✅ |
@@ -42,8 +42,8 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Tablero e indicadores | `test_resumen.py`, `HomePage.test.tsx` | ✅ |
 | Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
 
-Totales: 42 (web) + 123 (API) + 31 (documentos) unitarias; 35 (API ↔ MySQL) + 5 (documentos)
-de integración; 10 E2E (con inicio de sesión real contra el Worker local).
+Totales: 50 (web) + 136 (API) + 31 (documentos) unitarias; 37 (API ↔ MySQL) + 5 (documentos)
+de integración; 13 E2E (con inicio de sesión real contra el Worker local).
 
 ## CI
 

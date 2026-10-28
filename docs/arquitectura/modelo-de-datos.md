@@ -146,13 +146,19 @@ una base vacía, aplicando todas las migraciones) comprueba:
 
 ## Tabla `clientes` de demostración
 
-`clientes` (migración `0001`) sostiene el flujo mínimo que valida la arquitectura (API,
-frontend y E2E). **No forma parte del modelo.** Al implementar el módulo de clientes sobre
-`person`:
+`clientes` (migración `0001`) sostuvo el flujo mínimo de la fase anterior. **No forma parte del
+modelo** y desde la fase 2 ningún código la usa: los módulos `clientes`, `propietarios` y
+`codeudores` trabajan sobre `person` y sus tablas hijas (`modules/personas`). Pendiente el
+segundo paso del cambio destructivo: `0011_eliminar_tabla_clientes.sql` (fase 3).
 
-1. Cambiar el repositorio de `modules/clientes` para usar `person` + `person_email`.
-2. Ajustar las pruebas y el frontend.
-3. En una versión posterior, eliminar la tabla con una migración nueva (`DROP TABLE clientes`).
+### Personas: una fila hija por campo del formulario
+
+El formulario guarda un documento, un teléfono, un correo y una cuenta bancaria por persona.
+Las lecturas toman la fila de menor id de cada tabla hija (`MIN(id)`), de modo que datos
+migrados con varias filas no duplican resultados. Las escrituras reemplazan teléfono, correo y
+cuenta (`DELETE` + `INSERT`) y actualizan el documento principal; los papeles se agregan con
+`INSERT IGNORE` y solo se quitan los que el formulario deja de marcar, siempre que no tengan
+vínculos (`papel_en_uso`). Los bancos se crean por nombre exacto (`financial_institution`).
 
 ## Datos de catálogos
 

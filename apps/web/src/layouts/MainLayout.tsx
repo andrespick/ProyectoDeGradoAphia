@@ -13,6 +13,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { Avatar } from "../components/Avatar";
 import { useAuth } from "../features/auth/AuthProvider";
 import { GESTION_USUARIOS, LECTURA, NOMBRE_ROL } from "../features/auth/roles";
+import { MODULOS } from "../features/personas/modulos";
 import { useApiStatus } from "../hooks/useApiStatus";
 import type { Role } from "../types/auth";
 
@@ -24,9 +25,12 @@ interface NavItem {
   end?: boolean;
 }
 
-// Los módulos de negocio se agregan en las fases 2–4 del plan.
+// Inmuebles y contratos se agregan en las fases 3 y 4 del plan.
 const NAV: readonly NavItem[] = [
   { to: "/", label: "Inicio", icon: LayoutDashboard, roles: LECTURA, end: true },
+  { to: MODULOS.clientes.ruta, label: "Clientes", icon: MODULOS.clientes.icon, roles: LECTURA },
+  { to: MODULOS.propietarios.ruta, label: "Propietarios", icon: MODULOS.propietarios.icon, roles: LECTURA },
+  { to: MODULOS.codeudores.ruta, label: "Codeudores", icon: MODULOS.codeudores.icon, roles: LECTURA },
   { to: "/usuarios", label: "Usuarios", icon: ShieldUser, roles: GESTION_USUARIOS },
 ];
 

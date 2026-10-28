@@ -5,12 +5,22 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
+from core.errors import IdentificacionDuplicadaError
 from modules.auth.passwords import hash_password
 from modules.auth.repository import CuentaLogin
 from modules.auth.schemas import Role
 from modules.catalogos.schemas import Catalogos, Ciudad, Opcion
-from modules.clientes.schemas import Cliente
-from modules.clientes.service import CorreoDuplicadoError
+from modules.personas.schemas import (
+    ContratoResumen,
+    CuentaBancaria,
+    Dependencias,
+    InmuebleResumen,
+    Papel,
+    Persona,
+    PersonaCreate,
+    PersonaDetalle,
+    PersonaFiltros,
+)
 from modules.resumen.schemas import (
     Resumen,
     ResumenContratos,
@@ -25,23 +35,136 @@ from modules.usuarios.schemas import EstadoUsuario, Usuario, UsuarioCreate, Usua
 ITERACIONES_PRUEBA = 1_000
 
 
-class InMemoryClientesRepository:
+class InMemoryPersonasRepository:
     def __init__(self) -> None:
-        self.items: list[Cliente] = []
+        self.items: dict[int, Persona] = {}
+        self.dependencias: dict[int, Dependencias] = {}
+        self.inmuebles: dict[int, list[InmuebleResumen]] = {}
+        self.contratos: dict[int, dict[str, list[ContratoResumen]]] = {}
+        self.usuarios: dict[int, str] = {}
+        self.codeudores_por_contrato: dict[int, set[int]] = {}
 
-    async def listar(self, *, limit: int, offset: int) -> tuple[list[Cliente], int]:
-        ordered = sorted(self.items, key=lambda c: c.id, reverse=True)
-        return ordered[offset : offset + limit], len(self.items)
-
-    async def crear(self, *, nombre: str, correo: str) -> Cliente:
-        if any(c.correo == correo for c in self.items):
-            raise CorreoDuplicadoError()
-        now = datetime.now(UTC)
-        cliente = Cliente(
-            id=len(self.items) + 1, nombre=nombre, correo=correo, creado_en=now, actualizado_en=now
+    def agregar(
+        self,
+        nombre: str,
+        identificacion: str,
+        papeles: list[Papel],
+        *,
+        tipo: str = "CC",
+        correo: str | None = None,
+        telefono: str | None = None,
+        total_inmuebles: int = 0,
+    ) -> Persona:
+        person_id = len(self.items) + 1
+        persona = Persona(
+            id=person_id,
+            nombre=nombre,
+            tipo_identificacion=tipo,
+            identificacion=identificacion,
+            telefono=telefono,
+            correo=correo,
+            direccion=None,
+            papeles=papeles,
+            cuenta_bancaria=None,
+            total_inmuebles=total_inmuebles,
         )
-        self.items.append(cliente)
-        return cliente
+        self.items[person_id] = persona
+        return persona
+
+    async def listar(
+        self, filtros: PersonaFiltros, *, limit: int, offset: int
+    ) -> tuple[list[Persona], int]:
+        items = sorted(self.items.values(), key=lambda p: p.id, reverse=True)
+        if filtros.solo_con_papel:
+            items = [p for p in items if p.papeles]
+        if filtros.papel:
+            items = [p for p in items if filtros.papel in p.papeles]
+        if filtros.q:
+            q = filtros.q.lower()
+            items = [p for p in items if q in p.nombre.lower() or q in (p.identificacion or "")]
+        if filtros.correo:
+            items = [p for p in items if filtros.correo.lower() in (p.correo or "")]
+        if filtros.contrato_id is not None:
+            ids = self.codeudores_por_contrato.get(filtros.contrato_id, set())
+            items = [p for p in items if p.id in ids]
+        return items[offset : offset + limit], len(items)
+
+    async def obtener(self, person_id: int) -> Persona | None:
+        return self.items.get(person_id)
+
+    async def buscar_por_identificacion(self, tipo: str, numero: str) -> Persona | None:
+        return next(
+            (
+                p
+                for p in self.items.values()
+                if (p.tipo_identificacion, p.identificacion) == (tipo, numero)
+            ),
+            None,
+        )
+
+    async def crear(self, datos: PersonaCreate, papeles: list[Papel]) -> Persona:
+        self._exigir_identificacion_libre(datos, excepto=None)
+        person_id = len(self.items) + 1
+        persona = self._desde(person_id, datos, papeles)
+        self.items[person_id] = persona
+        return persona
+
+    async def actualizar(
+        self, person_id: int, datos: PersonaCreate, papeles: list[Papel]
+    ) -> Persona | None:
+        if person_id not in self.items:
+            return None
+        self._exigir_identificacion_libre(datos, excepto=person_id)
+        persona = self._desde(person_id, datos, papeles)
+        self.items[person_id] = persona
+        return persona
+
+    async def contar_dependencias(self, person_id: int) -> Dependencias:
+        return self.dependencias.get(person_id, Dependencias())
+
+    async def eliminar(self, person_id: int) -> bool:
+        return self.items.pop(person_id, None) is not None
+
+    async def detalle(self, person_id: int) -> PersonaDetalle | None:
+        persona = self.items.get(person_id)
+        if persona is None:
+            return None
+        contratos = self.contratos.get(person_id, {})
+        return PersonaDetalle(
+            **persona.model_dump(),
+            inmuebles=self.inmuebles.get(person_id, []),
+            contratos_como_propietario=contratos.get("propietario", []),
+            contratos_como_arrendatario=contratos.get("arrendatario", []),
+            contratos_como_codeudor=contratos.get("codeudor", []),
+            usuario=self.usuarios.get(person_id),
+        )
+
+    def _exigir_identificacion_libre(self, datos: PersonaCreate, excepto: int | None) -> None:
+        for persona in self.items.values():
+            if persona.id == excepto:
+                continue
+            if (persona.tipo_identificacion, persona.identificacion) == (
+                datos.tipo_identificacion,
+                datos.identificacion,
+            ):
+                raise IdentificacionDuplicadaError()
+
+    def _desde(self, person_id: int, datos: PersonaCreate, papeles: list[Papel]) -> Persona:
+        cuenta = datos.cuenta_bancaria
+        return Persona(
+            id=person_id,
+            nombre=datos.nombre,
+            tipo_identificacion=datos.tipo_identificacion,
+            identificacion=datos.identificacion,
+            telefono=datos.telefono,
+            correo=datos.correo,
+            direccion=datos.direccion,
+            papeles=papeles,
+            cuenta_bancaria=None
+            if cuenta is None
+            else CuentaBancaria(id=person_id, **cuenta.model_dump()),
+            total_inmuebles=self.items[person_id].total_inmuebles if person_id in self.items else 0,
+        )
 
 
 CATALOGOS_DE_PRUEBA = Catalogos(

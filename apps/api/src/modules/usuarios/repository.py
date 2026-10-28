@@ -12,6 +12,7 @@ from db.connection import Database
 from db.sql import ER_DUP_ENTRY, like_pattern, mysql_error_code
 from modules.auth.repository import en_utc
 from modules.auth.schemas import Role
+from modules.personas.repository import buscar_persona_id, guardar_documento
 from modules.usuarios.schemas import EstadoUsuario, Usuario, UsuarioCreate, UsuarioUpdate
 
 _SELECT = (
@@ -89,7 +90,7 @@ class UsuariosRepository:
                 self._db.transaction() as conn,
                 conn.cursor(aiomysql.DictCursor) as cursor,
             ):
-                person_id = await _buscar_persona(
+                person_id = await buscar_persona_id(
                     cursor, datos.tipo_identificacion, datos.identificacion
                 )
                 if person_id is None:
@@ -129,7 +130,7 @@ class UsuariosRepository:
                     "UPDATE person SET full_name = %s WHERE person_id = %s",
                     (datos.nombre, person_id),
                 )
-                await _guardar_documento(
+                await guardar_documento(
                     cursor, person_id, datos.tipo_identificacion, datos.identificacion
                 )
                 campos = "login_email = %s, is_active = %s"
@@ -189,17 +190,6 @@ async def _fetch(cursor: aiomysql.DictCursor, account_id: int) -> Usuario | None
     return None if row is None else _usuario(row)
 
 
-async def _buscar_persona(cursor: aiomysql.DictCursor, tipo: str, numero: str) -> int | None:
-    await cursor.execute(
-        "SELECT d.person_id FROM person_document d "
-        "JOIN document_type dt ON dt.document_type_id = d.document_type_id "
-        "WHERE dt.issuer_scope = 'CO' AND dt.code = %s AND d.document_identifier = %s",
-        (tipo, numero),
-    )
-    row = await cursor.fetchone()
-    return None if row is None else int(row["person_id"])
-
-
 async def _crear_persona(cursor: aiomysql.DictCursor, datos: UsuarioCreate) -> int:
     await cursor.execute("INSERT INTO person (full_name) VALUES (%s)", (datos.nombre,))
     person_id = cursor.lastrowid
@@ -211,27 +201,6 @@ async def _crear_persona(cursor: aiomysql.DictCursor, datos: UsuarioCreate) -> i
     if cursor.rowcount == 0:
         raise CatalogoInvalidoError("tipo_identificacion")
     return int(person_id)
-
-
-async def _guardar_documento(
-    cursor: aiomysql.DictCursor, person_id: int, tipo: str, numero: str
-) -> None:
-    await cursor.execute(_TIPO_DOCUMENTO, (tipo,))
-    row = await cursor.fetchone()
-    if row is None:
-        raise CatalogoInvalidoError("tipo_identificacion")
-    await cursor.execute(
-        "UPDATE person_document SET document_type_id = %s, document_identifier = %s "
-        "WHERE person_document_id = (SELECT id FROM (SELECT MIN(person_document_id) AS id "
-        "FROM person_document WHERE person_id = %s) AS x)",
-        (row["document_type_id"], numero, person_id),
-    )
-    if cursor.rowcount == 0:
-        await cursor.execute(
-            "INSERT IGNORE INTO person_document (person_id, document_type_id, document_identifier) "
-            "VALUES (%s, %s, %s)",
-            (person_id, row["document_type_id"], numero),
-        )
 
 
 async def _asignar_rol(cursor: aiomysql.DictCursor, account_id: int, rol: Role) -> None:

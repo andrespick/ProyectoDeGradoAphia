@@ -13,8 +13,9 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 
 | Dominio | Tablas | Estado de la aplicación |
 | --- | --- | --- |
-| Clientes | `person` y contactos | Flujo mínimo de prueba sobre la tabla demo `clientes`; pendiente migrarlo a `person` |
-| Propietarios | `person`, `property_owner` | Pendiente |
+| Clientes | `person`, `person_document`, `person_phone`, `person_email`, `person_party_role` | Implementado (fase 2): CRUD, filtros por nombre/identificación y tipo de cliente, detalle con relaciones |
+| Propietarios | `person`, `bank_account`, `property_owner` | Implementado (fase 2): CRUD con cuenta bancaria, filtros por nombre/identificación/correo, bloqueo de eliminación con inmuebles |
+| Codeudores | `person`, `agreement_party` (`CO_DEBTOR`) | Implementado (fase 2): CRUD y consulta por identificación o contrato |
 | Inmuebles | `property` y relacionadas | Pendiente |
 | Contratos | `property_agreement`, `agreement_party` | Pendiente |
 | Finanzas | `financial_record`, `bank_account` | Pendiente (submodelo de pagos por definir) |

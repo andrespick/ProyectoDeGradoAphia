@@ -4,11 +4,10 @@ import { Link } from "react-router";
 import { KpiCard } from "../components/KpiCard";
 import { useAuth } from "../features/auth/AuthProvider";
 import { GESTION_USUARIOS } from "../features/auth/roles";
-import { ClienteForm } from "../features/clientes/ClienteForm";
-import { ClientesTable } from "../features/clientes/ClientesTable";
-import { useClientes } from "../features/clientes/useClientes";
+import { MODULOS } from "../features/personas/modulos";
 import { useResumen } from "../features/resumen/useResumen";
 import type { Role } from "../types/auth";
+import type { Resumen } from "../types/resumen";
 
 interface Modulo {
   to: string;
@@ -16,18 +15,43 @@ interface Modulo {
   descripcion: string;
   icon: LucideIcon;
   roles?: readonly Role[];
-  conteo: (r: NonNullable<ReturnType<typeof useResumen>["resumen"]>) => string;
+  conteo: (r: Resumen) => string;
 }
 
-// Las tarjetas de clientes, propietarios, codeudores, inmuebles y contratos llegan en las fases 2–4.
-const MODULOS: readonly Modulo[] = [
+function plural(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
+
+// Inmuebles y contratos llegan en las fases 3 y 4.
+const MODULOS_TABLERO: readonly Modulo[] = [
+  {
+    to: MODULOS.clientes.ruta,
+    titulo: "Clientes",
+    descripcion: MODULOS.clientes.descripcion,
+    icon: MODULOS.clientes.icon,
+    conteo: (r) => plural(r.personas.total, "registro", "registros"),
+  },
+  {
+    to: MODULOS.propietarios.ruta,
+    titulo: "Propietarios",
+    descripcion: MODULOS.propietarios.descripcion,
+    icon: MODULOS.propietarios.icon,
+    conteo: (r) => plural(r.personas.propietarios, "propietario", "propietarios"),
+  },
+  {
+    to: MODULOS.codeudores.ruta,
+    titulo: "Codeudores",
+    descripcion: MODULOS.codeudores.descripcion,
+    icon: MODULOS.codeudores.icon,
+    conteo: (r) => plural(r.personas.codeudores, "codeudor", "codeudores"),
+  },
   {
     to: "/usuarios",
     titulo: "Gestión de usuarios",
     descripcion: "Roles de administradores, administrativos y asesores; bloqueos y desbloqueos.",
     icon: ShieldUser,
     roles: GESTION_USUARIOS,
-    conteo: (r) => `${r.usuarios.total} cuenta${r.usuarios.total === 1 ? "" : "s"}`,
+    conteo: (r) => plural(r.usuarios.total, "cuenta", "cuentas"),
   },
 ];
 
@@ -36,7 +60,6 @@ const fechaLarga = new Intl.DateTimeFormat("es-CO", { dateStyle: "full", timeZon
 export function HomePage() {
   const { principal, tiene } = useAuth();
   const { resumen, error } = useResumen();
-  const clientes = useClientes();
   const nombre = principal?.nombre.split(" ")[0] ?? "";
 
   return (
@@ -72,6 +95,7 @@ export function HomePage() {
             detalle={`${resumen.personas.propietarios} propietarios · ${resumen.personas.arrendatarios} arrendatarios · ${resumen.personas.codeudores} codeudores`}
             icono={<Users size={20} />}
             tono="info"
+            to={MODULOS.clientes.ruta}
           />
           <KpiCard
             etiqueta="Contratos vigentes"
@@ -93,7 +117,7 @@ export function HomePage() {
       <section aria-labelledby="modulos-titulo">
         <h2 id="modulos-titulo">Módulos de gestión</h2>
         <div className="module-grid">
-          {MODULOS.filter((m) => !m.roles || tiene(m.roles)).map(({ icon: Icon, ...modulo }) => (
+          {MODULOS_TABLERO.filter((m) => !m.roles || tiene(m.roles)).map(({ icon: Icon, ...modulo }) => (
             <Link key={modulo.to} to={modulo.to} className="card module-card">
               <span className="icon-box" aria-hidden="true">
                 <Icon size={20} />
@@ -108,25 +132,6 @@ export function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* Flujo de demostración de la fase anterior; se reemplaza por el módulo real en la fase 2. */}
-      <div className="grid">
-        <section className="card" aria-labelledby="form-titulo">
-          <h2 id="form-titulo">Nuevo cliente de prueba</h2>
-          <p className="muted">Use únicamente datos ficticios.</p>
-          <ClienteForm onSubmit={clientes.create} />
-        </section>
-        <section className="card" aria-labelledby="lista-titulo">
-          <h2 id="lista-titulo">Clientes</h2>
-          <ClientesTable
-            items={clientes.items}
-            total={clientes.total}
-            loading={clientes.loading}
-            error={clientes.error}
-            onRetry={clientes.reload}
-          />
-        </section>
-      </div>
     </>
   );
 }

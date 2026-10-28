@@ -13,13 +13,13 @@ from modules.auth.dependencies import get_auth_repository
 from modules.auth.schemas import Role
 from modules.auth.tokens import TokenPayload, issue_token
 from modules.catalogos.router import get_catalogos_repository
-from modules.clientes.router import get_clientes_repository
+from modules.personas.router import get_personas_repository
 from modules.resumen.router import get_resumen_repository
 from modules.usuarios.router import get_usuarios_repository
 from tests.fakes import (
     InMemoryAuthRepository,
     InMemoryCatalogosRepository,
-    InMemoryClientesRepository,
+    InMemoryPersonasRepository,
     InMemoryResumenRepository,
     InMemoryUsuariosRepository,
 )
@@ -60,8 +60,8 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-def repository() -> InMemoryClientesRepository:
-    return InMemoryClientesRepository()
+def personas_repository() -> InMemoryPersonasRepository:
+    return InMemoryPersonasRepository()
 
 
 @pytest.fixture
@@ -76,11 +76,11 @@ def usuarios_repository() -> InMemoryUsuariosRepository:
 
 def _with_fakes(
     application: FastAPI,
-    repository: InMemoryClientesRepository,
+    personas_repository: InMemoryPersonasRepository,
     auth_repository: InMemoryAuthRepository,
     usuarios_repository: InMemoryUsuariosRepository,
 ) -> FastAPI:
-    application.dependency_overrides[get_clientes_repository] = lambda: repository
+    application.dependency_overrides[get_personas_repository] = lambda: personas_repository
     application.dependency_overrides[get_catalogos_repository] = InMemoryCatalogosRepository
     application.dependency_overrides[get_auth_repository] = lambda: auth_repository
     application.dependency_overrides[get_usuarios_repository] = lambda: usuarios_repository
@@ -91,23 +91,25 @@ def _with_fakes(
 @pytest.fixture
 def app(
     settings: Settings,
-    repository: InMemoryClientesRepository,
+    personas_repository: InMemoryPersonasRepository,
     auth_repository: InMemoryAuthRepository,
     usuarios_repository: InMemoryUsuariosRepository,
 ) -> FastAPI:
     """Aplicación en modo development (usuario ficticio admin_sistemas)."""
-    return _with_fakes(create_app(settings), repository, auth_repository, usuarios_repository)
+    return _with_fakes(
+        create_app(settings), personas_repository, auth_repository, usuarios_repository
+    )
 
 
 @pytest.fixture
 def db_app(
-    repository: InMemoryClientesRepository,
+    personas_repository: InMemoryPersonasRepository,
     auth_repository: InMemoryAuthRepository,
     usuarios_repository: InMemoryUsuariosRepository,
 ) -> FastAPI:
     """Aplicación en modo database: exige un token (ver ``bearer``) o iniciar sesión."""
     application = create_app(make_settings(auth_mode="database", auth_secret=SECRET))
-    return _with_fakes(application, repository, auth_repository, usuarios_repository)
+    return _with_fakes(application, personas_repository, auth_repository, usuarios_repository)
 
 
 @pytest.fixture
