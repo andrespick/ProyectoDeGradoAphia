@@ -54,7 +54,7 @@
       "name": "aphia-api",
       "vars": {
         "APP_ENV": "production",
-        "CORS_ORIGINS": "https://REEMPLAZAR_PROYECTO_PAGES.pages.dev",
+        "CORS_ORIGINS": "https://app.aphia.com.co,https://REEMPLAZAR_PROYECTO_PAGES.pages.dev",
         "AUTH_MODE": "database",
         "LOG_LEVEL": "INFO"
       },

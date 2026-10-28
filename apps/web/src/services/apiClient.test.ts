@@ -102,6 +102,17 @@ describe("apiRequest", () => {
   });
 });
 
+describe("apiRequest con respuestas que no son de la API", () => {
+  it("rechaza un 200 que no es JSON (index.html de Pages sin VITE_API_BASE_URL)", async () => {
+    mockApi({
+      "GET /api/v1/auth/me": () =>
+        new Response("<!doctype html><title>APHIA</title>", { status: 200, headers: { "Content-Type": "text/html" } }),
+    });
+
+    await expect(apiRequest("/api/v1/auth/me")).rejects.toMatchObject({ status: 200, code: "respuesta_invalida" });
+  });
+});
+
 describe("errorMessage", () => {
   it("añade el código de soporte cuando la API devolvió request_id", () => {
     const conCodigo = new ApiError("No se puede eliminar.", { status: 409, code: "x", requestId: "abc123" });
