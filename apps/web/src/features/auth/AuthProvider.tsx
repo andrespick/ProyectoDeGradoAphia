@@ -1,22 +1,37 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-import { getCurrentPrincipal } from "../../services/authService";
-import type { Principal } from "../../types/auth";
+import { getCurrentPrincipal, login as loginRequest } from "../../services/authService";
+import { clearToken, SESSION_EXPIRED_EVENT, setToken } from "../../services/session";
+import type { Principal, Role } from "../../types/auth";
+import { tieneRol } from "./roles";
 
-/**
- * Estado de autenticación de la aplicación.
- *
- * FASE ACTUAL: no hay inicio de sesión real. La API solo reconoce el usuario ficticio de
- * desarrollo (AUTH_MODE=development); en cualquier otro entorno responde 401 y la
- * aplicación queda como "anonimo". Aquí se conectará el proveedor de identidad.
- */
 export interface AuthState {
   status: "cargando" | "autenticado" | "anonimo";
   principal: Principal | null;
 }
 
-const AuthContext = createContext<AuthState | null>(null);
+export interface AuthContextValue extends AuthState {
+  login: (usuario: string, clave: string, recordar: boolean) => Promise<void>;
+  logout: () => void;
+  /** ¿El usuario actual tiene alguno de los roles indicados? */
+  tiene: (roles: readonly Role[]) => boolean;
+}
 
+const AuthContext = createContext<AuthContextValue | null>(null);
+const ANONIMO: AuthState = { status: "anonimo", principal: null };
+
+/**
+ * Sesión de la aplicación. Al cargar consulta `/auth/me` con el token guardado (si existe);
+ * en AUTH_MODE=development la API responde con el usuario ficticio aunque no haya token.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "cargando", principal: null });
 
@@ -25,15 +40,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getCurrentPrincipal(controller.signal)
       .then((principal) => setState({ status: "autenticado", principal }))
       .catch(() => {
-        if (!controller.signal.aborted) setState({ status: "anonimo", principal: null });
+        if (controller.signal.aborted) return;
+        clearToken();
+        setState(ANONIMO);
       });
     return () => controller.abort();
   }, []);
 
-  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
+  useEffect(() => {
+    const onExpired = () => setState(ANONIMO);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
+
+  const login = useCallback(async (usuario: string, clave: string, recordar: boolean) => {
+    const response = await loginRequest(usuario, clave);
+    setToken(response.token, recordar);
+    setState({ status: "autenticado", principal: response.principal });
+  }, []);
+
+  const logout = useCallback(() => {
+    clearToken();
+    setState(ANONIMO);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      ...state,
+      login,
+      logout,
+      tiene: (roles) => (state.principal ? tieneRol(state.principal.roles, roles) : false),
+    }),
+    [state, login, logout],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth(): AuthState {
+export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth debe usarse dentro de <AuthProvider>.");
   return context;

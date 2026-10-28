@@ -4,7 +4,8 @@ interface AvatarProps {
 }
 
 export function iniciales(nombre: string): string {
-  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  // Solo letras y números: «Ana (ficticia)» → «AF», no «A(».
+  const partes = nombre.replace(/[^\p{L}\p{N}\s]/gu, "").trim().split(/\s+/).filter(Boolean);
   const primera = partes[0]?.[0] ?? "";
   const segunda = partes.length > 1 ? (partes[partes.length - 1]?.[0] ?? "") : (partes[0]?.[1] ?? "");
   return `${primera}${segunda}`.toUpperCase() || "?";

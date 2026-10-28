@@ -1054,6 +1054,7 @@ button.link {
 /* ── Tablas ─────────────────────────────────────────────────────────────────── */
 
 .table-wrap {
+  position: relative; /* contiene los textos ocultos (.visually-hidden) dentro del recorte */
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -1106,6 +1107,7 @@ tbody tr:last-child td {
 
 td.wrap-anywhere {
   overflow-wrap: anywhere;
+  min-width: 160px;
 }
 
 .nowrap,
@@ -1407,7 +1409,9 @@ th.num {
     display: none;
   }
 
-  .topbar-user-text {
+  .topbar-user-text,
+  .topbar .nav-label,
+  .topbar .brand-tagline {
     display: none;
   }
 
@@ -1506,4 +1510,236 @@ th.num {
   line-height: 1.6;
   font: inherit;
   margin: 0;
+}
+
+/* ── Diseño público (login) ─────────────────────────────────────────────────── */
+
+.app-public {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 1px 1px, var(--slate-200) 1px, transparent 0) 0 0 / 24px 24px,
+    var(--bg);
+}
+
+.public-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+}
+
+.public-bar .brand {
+  padding: 0;
+}
+
+.login-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  gap: 3rem;
+  align-items: center;
+  max-width: 1040px;
+  margin: 2rem auto;
+  width: 100%;
+}
+
+.login-intro h1 {
+  font-size: 2rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.login-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--slate-700);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.login-card {
+  padding: 2rem;
+  text-align: center;
+}
+
+.login-card .form {
+  text-align: left;
+  margin-top: 1.25rem;
+}
+
+.login-logo {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 0.75rem;
+}
+
+.field-with-action {
+  position: relative;
+}
+
+.field-action {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.1rem;
+  min-height: 36px;
+  min-width: 36px;
+}
+
+.field-with-action input {
+  padding-right: 2.75rem;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.login-submit {
+  width: 100%;
+  min-height: 46px;
+  font-size: 1rem;
+}
+
+.accent {
+  color: var(--primary);
+}
+
+@media (max-width: 900px) {
+  .login-layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 480px;
+    gap: 1.5rem;
+  }
+
+  .login-intro {
+    display: none;
+  }
+}
+
+/* ── Utilidades de módulo ───────────────────────────────────────────────────── */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.button-link:hover {
+  background: var(--primary-hover);
+}
+
+.button-link.secondary {
+  background: var(--surface);
+  color: var(--slate-700);
+  border: 1px solid var(--border);
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.switch input {
+  appearance: none;
+  width: 36px;
+  height: 20px;
+  min-height: 0;
+  border-radius: 9999px;
+  background: var(--slate-300);
+  border: 0;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.switch input:checked {
+  background: var(--status-active);
+}
+
+.switch input:checked::after {
+  transform: translateX(16px);
+}
+
+.switch input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field-label-text {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--slate-700);
+}
+
+.form-actions {
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.meta-stack {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.meta-stack dd {
+  font-weight: 400;
+  color: var(--slate-700);
+}
+
+.alert-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }

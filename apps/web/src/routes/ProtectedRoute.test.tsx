@@ -3,7 +3,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { AuthProvider } from "../features/auth/AuthProvider";
-import { apiError, DEV_PRINCIPAL, json, mockApi } from "../test/mockApi";
+import { apiError, baseRoutes, DEV_PRINCIPAL, json, mockApi } from "../test/mockApi";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { routes } from "./routes";
 
@@ -21,22 +21,33 @@ describe("ProtectedRoute", () => {
   it("redirige a /login cuando no hay sesión", async () => {
     mockApi({ "GET /api/v1/auth/me": () => apiError(401, "no_autenticado", "Se requiere autenticación.") });
 
-    const router = renderAt("/panel");
+    const router = renderAt("/usuarios");
 
     expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/login");
+    expect(router.state.location.state).toEqual({ from: "/usuarios" });
   });
 
-  it("muestra la ruta protegida con el usuario de desarrollo", async () => {
-    mockApi({ "GET /api/v1/auth/me": () => json(DEV_PRINCIPAL) });
+  it("muestra la ruta protegida al administrador de sistemas", async () => {
+    mockApi({
+      ...baseRoutes(),
+      "GET /api/v1/usuarios": () => json({ items: [], total: 0, limit: 20, offset: 0 }),
+    });
 
-    renderAt("/panel");
+    renderAt("/usuarios");
 
-    expect(await screen.findByRole("heading", { name: "Panel" })).toBeInTheDocument();
-    expect(screen.getByText("Usuario de desarrollo")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Usuarios y roles/ })).toBeInTheDocument();
   });
 
-  it("niega el acceso sin el rol requerido", async () => {
+  it("niega /usuarios a un asesor", async () => {
+    mockApi(baseRoutes({ ...DEV_PRINCIPAL, roles: ["asesor"] }));
+
+    renderAt("/usuarios");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No tiene permisos");
+  });
+
+  it("niega el acceso sin el rol requerido en una ruta cualquiera", async () => {
     mockApi({ "GET /api/v1/auth/me": () => json({ ...DEV_PRINCIPAL, roles: ["asesor"] }) });
     const router = createMemoryRouter(
       [

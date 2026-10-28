@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Role(StrEnum):
@@ -36,3 +37,22 @@ class Principal(BaseModel):
     nombre: str
     roles: list[Role]
     modo: Literal["development", "database"]
+
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    usuario: str = Field(min_length=1, max_length=255)
+    # La clave no se recorta: los espacios pueden ser parte de ella.
+    clave: str = Field(min_length=1, max_length=128)
+
+    @field_validator("usuario")
+    @classmethod
+    def recortar_usuario(cls, value: str) -> str:
+        return value.strip()
+
+
+class LoginResponse(BaseModel):
+    token: str
+    expira_en: datetime
+    principal: Principal

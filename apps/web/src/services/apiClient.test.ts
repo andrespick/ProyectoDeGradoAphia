@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiError, json, mockApi } from "../test/mockApi";
 import { ApiError, apiRequest } from "./apiClient";
+import { SESSION_EXPIRED_EVENT } from "./session";
+
+beforeEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
+});
 
 describe("apiRequest", () => {
   it("devuelve el cuerpo JSON en respuestas exitosas", async () => {
@@ -62,5 +68,36 @@ describe("apiRequest", () => {
       status: 502,
       code: "error_http",
     });
+  });
+
+  it("envía el token guardado como Bearer y no envía nada sin token", async () => {
+    const fetchMock = mockApi({ "GET /api/v1/resumen": () => json({}) });
+
+    await apiRequest("/api/v1/resumen");
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty("Authorization");
+
+    sessionStorage.setItem("aphia.token", "tok.en");
+    await apiRequest("/api/v1/resumen");
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toMatchObject({ Authorization: "Bearer tok.en" });
+  });
+
+  it("un 401 con token borra la sesión y avisa; en el login no", async () => {
+    sessionStorage.setItem("aphia.token", "tok.en");
+    mockApi({
+      "GET /api/v1/usuarios": () => apiError(401, "no_autenticado", "Inicie sesión."),
+      "POST /api/v1/auth/login": () => apiError(401, "credenciales_invalidas", "Incorrectas."),
+    });
+    let avisos = 0;
+    window.addEventListener(SESSION_EXPIRED_EVENT, () => (avisos += 1));
+
+    await expect(apiRequest("/api/v1/auth/login", { method: "POST", body: {} })).rejects.toMatchObject({
+      code: "credenciales_invalidas",
+    });
+    expect(avisos).toBe(0);
+    expect(sessionStorage.getItem("aphia.token")).toBe("tok.en");
+
+    await expect(apiRequest("/api/v1/usuarios")).rejects.toMatchObject({ status: 401 });
+    expect(avisos).toBe(1);
+    expect(sessionStorage.getItem("aphia.token")).toBeNull();
   });
 });

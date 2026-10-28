@@ -1,15 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+import { iniciarSesion } from "./helpers";
+
 // Datos ficticios únicos por ejecución (dominio reservado .test).
 const unique = `${Date.now()}`;
 
 test.describe("APHIA de extremo a extremo", () => {
-  test("la pantalla inicial muestra la API conectada", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    await iniciarSesion(page, "admin");
+  });
+
+  test("la pantalla inicial muestra el estado del sistema y el runtime real", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("complementary", { name: "Barra lateral" }).getByText("APHIA")).toBeVisible();
-    await expect(page.getByText("API conectada")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Cloudflare Workers")).toBeVisible();
+    const sidebar = page.getByRole("complementary", { name: "Barra lateral" });
+    await expect(sidebar.getByText("APHIA")).toBeVisible({ timeout: 30_000 });
+    await expect(sidebar.getByText("En línea")).toBeVisible({ timeout: 30_000 });
+    await expect(sidebar.getByText("Cloudflare Workers · development")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Indicadores" })).toBeVisible();
   });
 
   test("registra un cliente ficticio y lo muestra en la lista", async ({ page }) => {
@@ -17,7 +25,7 @@ test.describe("APHIA de extremo a extremo", () => {
     const correo = `e2e-${unique}@example.test`;
 
     await page.goto("/");
-    await expect(page.getByText("API conectada")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Bienvenido de nuevo/ })).toBeVisible({ timeout: 30_000 });
 
     await page.getByLabel("Nombre").fill(nombre);
     await page.getByLabel("Correo electrónico").fill(correo);
@@ -39,7 +47,7 @@ test.describe("APHIA de extremo a extremo", () => {
   test("informa el correo duplicado devuelto por la API", async ({ page }) => {
     const correo = `duplicado-${unique}@example.test`;
     await page.goto("/");
-    await expect(page.getByText("API conectada")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Bienvenido de nuevo/ })).toBeVisible({ timeout: 30_000 });
 
     for (const attempt of [1, 2]) {
       await page.getByLabel("Nombre").fill(`Cliente Duplicado ${attempt}`);
@@ -53,17 +61,11 @@ test.describe("APHIA de extremo a extremo", () => {
 
   test("valida el formulario en el navegador", async ({ page }) => {
     await page.goto("/");
+    await expect(page.getByRole("heading", { name: /Bienvenido de nuevo/ })).toBeVisible({ timeout: 30_000 });
 
     await page.getByLabel("Correo electrónico").fill("no-es-un-correo");
     await page.getByRole("button", { name: "Registrar cliente" }).click();
 
     await expect(page.getByText("Ingrese un correo electrónico válido.")).toBeVisible();
-  });
-
-  test("la ruta protegida usa el usuario de desarrollo", async ({ page }) => {
-    await page.goto("/panel");
-
-    await expect(page.getByRole("heading", { name: "Panel" })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Usuario de desarrollo")).toBeVisible();
   });
 });

@@ -58,6 +58,26 @@ class PermissionDeniedError(AppError):
     default_message = "No tiene permisos para realizar esta operación."
 
 
+class CatalogoInvalidoError(AppError):
+    status_code = 422
+    code = "catalogo_invalido"
+    default_message = "El valor indicado no existe en el catálogo."
+
+    def __init__(self, campo: str) -> None:
+        super().__init__(f"El valor indicado en «{campo}» no existe en el catálogo.")
+        self.campo = campo
+
+
+class IdentificacionDuplicadaError(ConflictError):
+    code = "identificacion_duplicada"
+    default_message = "Ya existe una persona registrada con ese tipo y número de identificación."
+
+
+class RegistroReferenciadoError(ConflictError):
+    code = "registro_referenciado"
+    default_message = "No se puede eliminar: otros registros dependen de este."
+
+
 class ServiceUnavailableError(AppError):
     status_code = 503
     code = "servicio_no_disponible"

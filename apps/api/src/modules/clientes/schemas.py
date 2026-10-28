@@ -1,17 +1,10 @@
 from __future__ import annotations
 
-import re
-import unicodedata
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-# Validación sintáctica conservadora; no comprueba que el buzón exista.
-_EMAIL_RE = re.compile(
-    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+"
-    r"@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
-    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
-)
+from core.text import normalizar_correo, normalizar_nombre
 
 
 class ClienteCreate(BaseModel):
@@ -23,16 +16,12 @@ class ClienteCreate(BaseModel):
     @field_validator("nombre")
     @classmethod
     def validar_nombre(cls, value: str) -> str:
-        if any(unicodedata.category(char).startswith("C") for char in value):
-            raise ValueError("El nombre contiene caracteres no permitidos")
-        return " ".join(value.split())
+        return normalizar_nombre(value)
 
     @field_validator("correo")
     @classmethod
     def validar_correo(cls, value: str) -> str:
-        if not _EMAIL_RE.fullmatch(value):
-            raise ValueError("El correo electrónico no es válido")
-        return value.lower()
+        return normalizar_correo(value)
 
 
 class Cliente(BaseModel):

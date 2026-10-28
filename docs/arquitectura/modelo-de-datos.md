@@ -117,9 +117,8 @@ Propuesta para los archivos nuevos (por confirmar al implementar el módulo):
 ### Autenticación
 
 `user_account.hashed_password` es obligatorio y el análisis pide conservar los hashes
-originales. La autenticación propia (usuario y contraseña con PBKDF2-SHA256, bloqueo tras 3
-intentos con las columnas de `0010`) se implementa en la fase 1 del plan; los hashes heredados
-se migrarán cuando se defina su formato.
+originales. Las cuentas nuevas guardan `pbkdf2_sha256$iteraciones$sal$hash` (fase 1); los
+hashes heredados se migrarán cuando se defina su formato (decisión 10).
 
 ## Reglas físicas
 

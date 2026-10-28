@@ -44,6 +44,33 @@ export const DEV_PRINCIPAL = {
   modo: "development",
 };
 
+export const DB_PRINCIPAL = {
+  sujeto: "1",
+  nombre: "Administradora Ficticia",
+  roles: ["admin_sistemas"],
+  modo: "database",
+};
+
+export const LOGIN_OK = {
+  token: "cuerpo.firma",
+  expira_en: "2026-10-28T23:00:00Z",
+  principal: DB_PRINCIPAL,
+};
+
+export const RESUMEN = {
+  personas: { total: 6, propietarios: 2, arrendatarios: 2, codeudores: 3 },
+  inmuebles: { total: 3, ocupados: 1, disponibles: 1 },
+  contratos: {
+    total: 2,
+    vigentes: 2,
+    por_vencer_30: 1,
+    por_vencer_60: 1,
+    finalizados: 0,
+    codeudores_vinculados: 3,
+  },
+  usuarios: { total: 3, activos: 2, bloqueados: 1 },
+};
+
 export const CATALOGOS = {
   tipos_identificacion: [
     { codigo: "CC", nombre: "Cédula de ciudadanía" },
@@ -88,5 +115,40 @@ export function cliente(id: number, nombre: string, correo: string) {
     correo,
     creado_en: "2026-10-27T15:00:00Z",
     actualizado_en: "2026-10-27T15:00:00Z",
+  };
+}
+
+export function usuario(
+  id: number,
+  usuario: string,
+  rol: "admin_sistemas" | "administrativo" | "asesor",
+  extras: Record<string, unknown> = {},
+) {
+  return {
+    id,
+    usuario,
+    nombre: `Persona ${usuario}`,
+    tipo_identificacion: "CC",
+    identificacion: `10000${id}`,
+    correo: `${usuario}@example.test`,
+    rol,
+    activo: true,
+    bloqueada: false,
+    bloqueada_hasta: null,
+    intentos_fallidos: 0,
+    creado_en: "2026-10-27T15:00:00Z",
+    ...extras,
+  };
+}
+
+/** Mocks mínimos para que el cascarón autenticado cargue (sesión, estado, resumen). */
+export function baseRoutes(principal: unknown = DEV_PRINCIPAL): Record<string, Handler> {
+  return {
+    "GET /api/health": () => json(HEALTH_OK),
+    "GET /api/ready": () => json(READY_OK),
+    "GET /api/v1/auth/me": () => json(principal),
+    "GET /api/v1/resumen": () => json(RESUMEN),
+    "GET /api/v1/catalogos": () => json(CATALOGOS),
+    "GET /api/v1/clientes": () => json({ items: [], total: 0, limit: 20, offset: 0 }),
   };
 }

@@ -16,7 +16,8 @@
 datos en memoria), aplica las migraciones automáticamente, ejecuta las pruebas y lo elimina
 (`--keep` para conservarlo). Las pruebas se niegan a correr si la base no termina en `_test`.
 
-`pnpm test:e2e` levanta la infraestructura local, migra, y Playwright inicia (o reutiliza) el
+`pnpm test:e2e` levanta la infraestructura local, migra, carga los seeds (usuarios de desarrollo)
+y Playwright inicia (o reutiliza) el
 frontend y la API en **Python Workers local**, de modo que la prueba recorre el mismo runtime
 que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 
@@ -36,10 +37,13 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Catálogos para formularios | `test_catalogos.py` (contenido y 401), `test_catalogos_mysql.py` (códigos de `0008` sobre MySQL) | ✅ |
 | Roles y configuración de autenticación | `test_auth.py`: roles `admin_sistemas`/`administrativo`/`asesor`, 403 por rol insuficiente, `AUTH_MODE=database` exige `AUTH_SECRET` de 32 caracteres | ✅ |
 | Componentes compartidos de la web | `Field.test.tsx`, `Pagination.test.tsx`, `usePagedList.test.tsx` (filtros y paginación en la URL) | ✅ |
+| Inicio de sesión y bloqueo (RF-17, RF-18) | `test_passwords.py` (formato, verificación, implementación pura = `hashlib`), `test_tokens.py` (firma, expiración, manipulación), `test_auth.py` (login, `/me`, 3 intentos → 423, bloqueo vencido, inactivo, logs sin credenciales), `test_auth_mysql.py` (bloqueo persistido y desbloqueo por el admin), `LoginPage.test.tsx`, `AuthProvider.test.tsx`, `apiClient.test.ts` (Bearer, 401), E2E `auth.spec.ts` | ✅ |
+| Usuarios y roles (RF-16, RNF-03) | `test_usuarios.py` (CRUD, validaciones, último administrador, cuenta propia, desbloqueo, 403 por rol), `test_usuarios_mysql.py` (persona + documento + cuenta + rol; reutilización de persona; 409 de identificación), `UsuariosPage.test.tsx`, `UsuarioForm.test.tsx`, `MainLayout.test.tsx`, E2E `usuarios.spec.ts` | ✅ |
+| Tablero e indicadores | `test_resumen.py`, `HomePage.test.tsx` | ✅ |
 | Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
 
-Totales: 23 (web) + 73 (API) + 31 (documentos) unitarias; 26 (API ↔ MySQL) + 5 (documentos)
-de integración; 5 E2E.
+Totales: 42 (web) + 123 (API) + 31 (documentos) unitarias; 35 (API ↔ MySQL) + 5 (documentos)
+de integración; 10 E2E (con inicio de sesión real contra el Worker local).
 
 ## CI
 

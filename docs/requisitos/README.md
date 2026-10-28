@@ -19,7 +19,7 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | Contratos | `property_agreement`, `agreement_party` | Pendiente |
 | Finanzas | `financial_record`, `bank_account` | Pendiente (submodelo de pagos por definir) |
 | Documentos | `file_record` y vínculos | Servicio de almacenamiento listo; integración con la API pendiente |
-| Usuarios, permisos y trazabilidad | `user_account`, `app_role`, `user_role` | Estructura de roles preparada; autenticación y auditoría pendientes |
+| Usuarios, permisos y trazabilidad | `user_account`, `app_role`, `user_role` | Implementado (fase 1): login con contraseña, bloqueo tras 3 intentos, CRUD de usuarios y roles. Auditoría pendiente |
 
 ## Prioridades no funcionales (en orden)
 
@@ -44,7 +44,8 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 - Las 10 decisiones de negocio del modelo de datos (identidad, roles, histórico, contratos
   simultáneos, finanzas, monedas, banca, archivos, permisos): ver
   [modelo de datos](../arquitectura/modelo-de-datos.md#decisiones-de-negocio-pendientes-antes-de-producción).
-- Roles reales y matriz de permisos (borrador actual: `admin`, `asesor`, `consulta`).
+- ~~Roles reales y matriz de permisos~~ → definidos el 2026-10-28: `admin_sistemas` (todo),
+  `administrativo` (crear, editar, eliminar), `asesor` (crear y editar, sin eliminar).
 - Tipos y tamaños de documentos esperados; tiempo de retención.
 - Requisitos legales aplicables al tratamiento de datos personales en Colombia
   (Ley 1581 de 2012 y normas reglamentarias) — validar con el asesor del proyecto.

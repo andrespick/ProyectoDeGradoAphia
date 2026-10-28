@@ -1,6 +1,8 @@
 import type { ApiErrorBody, ApiErrorDetail } from "../types/api";
+import { clearToken, getToken, SESSION_EXPIRED_EVENT } from "./session";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
+const LOGIN_PATH = "/api/v1/auth/login";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -39,6 +41,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const cancel = () => controller.abort();
   options.signal?.addEventListener("abort", cancel, { once: true });
+  const token = getToken();
 
   let response: Response;
   try {
@@ -47,6 +50,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       headers: {
         Accept: "application/json",
         ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
@@ -61,6 +65,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   } finally {
     clearTimeout(timer);
     options.signal?.removeEventListener("abort", cancel);
+  }
+
+  // Token rechazado (vencido o rotado): se cierra la sesión en toda la aplicación.
+  if (response.status === 401 && token && path !== LOGIN_PATH) {
+    clearToken();
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
   }
 
   const payload = await readJson(response);

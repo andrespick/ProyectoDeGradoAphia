@@ -16,11 +16,12 @@
   "observability": { "enabled": true },
 
   // ── Desarrollo local (pnpm dev) ────────────────────────────────────────────────
-  // Variables no secretas. Los secretos van en .dev.vars (local) o `wrangler secret put`.
+  // Variables no secretas. Los secretos van en .dev.vars (local, lo crea `pnpm env:init`) o
+  // `wrangler secret put` (AUTH_SECRET: clave de firma de los tokens de sesión, mínimo 32 caracteres).
   "vars": {
     "APP_ENV": "development",
     "CORS_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
-    "AUTH_MODE": "development",
+    "AUTH_MODE": "database",
     "LOG_LEVEL": "INFO"
   },
   // En local la conexión real llega por la variable de entorno
@@ -37,7 +38,7 @@
       "vars": {
         "APP_ENV": "staging",
         "CORS_ORIGINS": "https://staging.REEMPLAZAR_PROYECTO_PAGES.pages.dev",
-        "AUTH_MODE": "disabled",
+        "AUTH_MODE": "database",
         "LOG_LEVEL": "INFO"
       },
       "hyperdrive": [
@@ -54,7 +55,7 @@
       "vars": {
         "APP_ENV": "production",
         "CORS_ORIGINS": "https://REEMPLAZAR_PROYECTO_PAGES.pages.dev",
-        "AUTH_MODE": "disabled",
+        "AUTH_MODE": "database",
         "LOG_LEVEL": "INFO"
       },
       "hyperdrive": [

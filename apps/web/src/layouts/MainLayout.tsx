@@ -1,37 +1,51 @@
-import { Building2, Gauge, LayoutDashboard, type LucideIcon, Menu, X } from "lucide-react";
+import {
+  Building2,
+  LayoutDashboard,
+  LogOut,
+  type LucideIcon,
+  Menu,
+  ShieldUser,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
+import { Avatar } from "../components/Avatar";
+import { useAuth } from "../features/auth/AuthProvider";
+import { GESTION_USUARIOS, LECTURA, NOMBRE_ROL } from "../features/auth/roles";
 import { useApiStatus } from "../hooks/useApiStatus";
+import type { Role } from "../types/auth";
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  roles: readonly Role[];
   end?: boolean;
 }
 
-// Los módulos de negocio y «Usuarios» se agregan en las fases 1–5 según el rol.
+// Los módulos de negocio se agregan en las fases 2–4 del plan.
 const NAV: readonly NavItem[] = [
-  { to: "/", label: "Inicio", icon: LayoutDashboard, end: true },
-  { to: "/panel", label: "Panel", icon: Gauge },
+  { to: "/", label: "Inicio", icon: LayoutDashboard, roles: LECTURA, end: true },
+  { to: "/usuarios", label: "Usuarios", icon: ShieldUser, roles: GESTION_USUARIOS },
 ];
 
+const RUNTIME_LABELS = { workers: "Cloudflare Workers", asgi: "ASGI (Uvicorn)" } as const;
 const STATUS_LABEL = {
   verificando: "Verificando…",
   conectada: "En línea",
   degradada: "Sin base de datos",
   sin_conexion: "Sin conexión",
 } as const;
-
-const STATUS_DOT = {
-  verificando: "status-dot-warn",
-  conectada: "status-dot-ok",
-  degradada: "status-dot-warn",
-  sin_conexion: "status-dot-error",
+const STATUS_BADGE = {
+  verificando: "badge-warn",
+  conectada: "badge-ok",
+  degradada: "badge-warn",
+  sin_conexion: "badge-error",
 } as const;
 
 export function MainLayout() {
+  const auth = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
 
@@ -48,6 +62,27 @@ export function MainLayout() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [drawerOpen]);
 
+  if (auth.status !== "autenticado") {
+    return (
+      <div className="app-public">
+        <header className="public-bar">
+          <Brand />
+          <SystemStatus compact />
+        </header>
+        <main id="contenido" className="app-main">
+          {auth.status === "cargando" ? (
+            <p className="muted" role="status">
+              Verificando sesión…
+            </p>
+          ) : (
+            <Outlet />
+          )}
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <a className="skip-link" href="#contenido">
@@ -57,7 +92,7 @@ export function MainLayout() {
         <SidebarContent />
       </aside>
       <div className="app-body">
-        <header className="topbar">
+        <header className="topbar" aria-label="Barra superior">
           <button
             type="button"
             className="secondary icon-button menu-button"
@@ -69,19 +104,18 @@ export function MainLayout() {
           </button>
           <Brand />
           <span className="topbar-spacer" />
+          <UserMenu />
         </header>
         <main id="contenido" className="app-main">
           <Outlet />
         </main>
-        <footer className="app-footer">APHIA S.A.S. · Gestión inmobiliaria · v0.1.0</footer>
+        <Footer />
       </div>
       {drawerOpen && (
         <>
           <div className="drawer-backdrop" onClick={() => setDrawerOpen(false)} />
           <aside className="sidebar drawer" aria-label="Menú de navegación">
-            <SidebarContent
-              onClose={() => setDrawerOpen(false)}
-            />
+            <SidebarContent onClose={() => setDrawerOpen(false)} />
           </aside>
         </>
       )}
@@ -103,8 +137,59 @@ function Brand() {
   );
 }
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
+function Footer() {
+  return <footer className="app-footer">APHIA S.A.S. · Gestión inmobiliaria · v0.1.0</footer>;
+}
+
+function SystemStatus({ compact = false }: { compact?: boolean }) {
   const api = useApiStatus();
+  const badge = (
+    <span className={`badge ${STATUS_BADGE[api.status]}`}>{STATUS_LABEL[api.status]}</span>
+  );
+  if (compact) return badge;
+  return (
+    <div className="system-status">
+      <div className="system-status-row">
+        <span>Estado del sistema</span>
+        {badge}
+      </div>
+      <span className="muted">
+        {api.health ? `${RUNTIME_LABELS[api.health.runtime]} · ${api.health.environment}` : "—"}
+      </span>
+    </div>
+  );
+}
+
+function UserMenu() {
+  const { principal, logout } = useAuth();
+  const navigate = useNavigate();
+  if (!principal) return null;
+  const rol = principal.roles[0];
+  return (
+    <div className="topbar-user">
+      <Avatar nombre={principal.nombre} tono="primary" />
+      <span className="topbar-user-text">
+        <strong>{principal.nombre}</strong>
+        <span>{rol ? NOMBRE_ROL[rol] : ""}</span>
+      </span>
+      <button
+        type="button"
+        className="ghost"
+        onClick={() => {
+          logout();
+          navigate("/login");
+        }}
+      >
+        <LogOut size={18} aria-hidden="true" />
+        <span className="nav-label">Cerrar sesión</span>
+      </button>
+    </div>
+  );
+}
+
+function SidebarContent({ onClose }: { onClose?: () => void }) {
+  const { tiene, logout } = useAuth();
+  const navigate = useNavigate();
   return (
     <>
       <div className="brand-row">
@@ -121,7 +206,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         )}
       </div>
       <nav aria-label="Principal">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.filter((item) => tiene(item.roles)).map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} title={label}>
             <Icon size={20} aria-hidden="true" />
             <span className="nav-label">{label}</span>
@@ -129,16 +214,18 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <div className="system-status">
-          <div className="system-status-row">
-            <span>Estado del sistema</span>
-            <span className={`badge ${api.status === "conectada" ? "badge-ok" : api.status === "sin_conexion" ? "badge-error" : "badge-warn"}`}>
-              <span className={STATUS_DOT[api.status]} aria-hidden="true" />
-              {STATUS_LABEL[api.status]}
-            </span>
-          </div>
-          <span className="muted">Servidor {api.health ? api.health.environment : "—"}</span>
-        </div>
+        <SystemStatus />
+        <button
+          type="button"
+          className="link"
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+        >
+          <LogOut size={18} aria-hidden="true" />
+          <span className="label">Salir</span>
+        </button>
       </div>
     </>
   );

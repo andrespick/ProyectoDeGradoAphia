@@ -2,9 +2,10 @@
 
 Modos (``AUTH_MODE``):
 
-- ``development``: usuario ficticio con rol ``admin_sistemas``; solo en development/test.
-- ``database``: usuarios de MySQL (``user_account``) con contraseña y token firmado
-  (se implementa en la fase 1 del plan; ver docs/plan-de-implementacion.md).
+- ``database`` (local, staging, producción): usuarios de MySQL (``user_account``) con
+  contraseña PBKDF2-SHA256 (``passwords.py``) y token de sesión HMAC (``tokens.py``);
+  bloqueo de 15 minutos tras 3 intentos fallidos (``service.py``).
+- ``development``: usuario ficticio con rol ``admin_sistemas``; solo pruebas unitarias.
 - ``disabled``: todo endpoint protegido responde 401.
 
 Los routers declaran roles con ``require_roles`` y los grupos de ``schemas.py``.

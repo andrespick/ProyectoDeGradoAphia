@@ -9,7 +9,7 @@
 | Fase | Contenido | Commit | Estado | Fecha |
 | --- | --- | --- | --- | --- |
 | 0 | Base: catálogos, papeles de persona, bloqueo, identidad visual, componentes compartidos | «Agrega catálogos base, papeles de persona y columnas de bloqueo (fase 0)» | hecha | 2026-10-28 |
-| 1 | Usuarios y login real | — | pendiente | — |
+| 1 | Usuarios y login real | «Implementa usuarios, inicio de sesión y bloqueo temporal (fase 1)» | hecha | 2026-10-28 |
 | 2 | Clientes, propietarios y codeudores sobre `person` | — | pendiente | — |
 | 3 | Inmuebles | — | pendiente | — |
 | 4 | Contratos | — | pendiente | — |
@@ -1197,3 +1197,7 @@ Comprobaciones manuales mínimas:
 | 2026-10-28 | 0 | Iconos con `lucide-react` (SVG en línea, MIT) en lugar de Material Symbols: la CSP no permite la fuente de iconos de Google y así no hay dependencias externas en tiempo de ejecución. |
 | 2026-10-28 | 0 | `PAPEL_POR_CODIGO` vive en `modules/catalogos/schemas.py` (módulo hoja); `personas` lo importará desde ahí en la fase 2. |
 | 2026-10-28 | 0 | Los códigos de catálogo se validan contra la tabla en el repositorio (no con `Literal`), para que agregar un valor sea una migración y no un cambio de código. |
+| 2026-10-28 | 1 | Pyodide no incluye `hashlib.pbkdf2_hmac`: `passwords.py` usa una implementación pura de PBKDF2-SHA256 (probada contra `hashlib`) cuando falta. Login medido en el Worker local: ~260 ms con 100 000 iteraciones. El plan gratuito de Workers (10 ms de CPU) no sirve para el login; se requiere plan de pago o servir la API con Uvicorn. |
+| 2026-10-28 | 1 | `GET /api/v1/resumen` se implementó completo en la fase 1 (personas, inmuebles, contratos y usuarios con `COUNT` sobre las tablas, que aún están vacías) en lugar de ceros provisionales. |
+| 2026-10-28 | 1 | El enlace «¿Olvidó su contraseña?» del login es texto estático hasta que exista `/ayuda` (fase 5). La tarjeta demo de clientes sigue en el tablero hasta la fase 2. |
+| 2026-10-28 | 1 | Las cuentas de usuario comparten la fila `person` con un cliente de la misma identificación (una persona por identificación); al eliminar la cuenta la persona se conserva. |
