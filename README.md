@@ -124,7 +124,7 @@ docs          Requisitos, arquitectura, desarrollo, despliegue, seguridad y prue
 scripts       Utilidades Node multiplataforma (dev, infra, entorno)
 ```
 
-Responsabilidades de cada carpeta y reglas de trabajo: [AGENTS.md](AGENTS.md).
+Responsabilidades de cada carpeta y reglas de trabajo: [docs/desarrollo](docs/desarrollo/README.md).
 
 ## Solución de problemas
 

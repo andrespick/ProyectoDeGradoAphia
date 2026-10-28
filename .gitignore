@@ -49,6 +49,39 @@ backups/
 *.log
 logs/
 
+# ── Herramientas de IA (instrucciones, skills, agentes y configuración local) ───
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.md
+GEMINI.md
+SKILL.md
+**/SKILL.md
+/skills/
+/agents/
+.claude/
+.agents/
+.codex/
+.gemini/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.clinerules
+.roo/
+.kiro/
+.continue/
+.junie/
+.amazonq/
+.aider*
+.mcp.json
+.github/copilot-instructions.md
+.github/instructions/
+.github/prompts/
+.github/chatmodes/
+.github/agents/
+
 # ── Editores / IDE ──────────────────────────────────────────────────────────────
 .vscode/
 .idea/
