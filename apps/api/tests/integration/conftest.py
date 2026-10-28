@@ -44,7 +44,6 @@ TABLAS_A_LIMPIAR = [
     "city",
     "service_provider",
     "financial_institution",
-    "clientes",
 ]
 
 

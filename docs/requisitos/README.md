@@ -16,7 +16,7 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | Clientes | `person`, `person_document`, `person_phone`, `person_email`, `person_party_role` | Implementado (fase 2): CRUD, filtros por nombre/identificación y tipo de cliente, detalle con relaciones |
 | Propietarios | `person`, `bank_account`, `property_owner` | Implementado (fase 2): CRUD con cuenta bancaria, filtros por nombre/identificación/correo, bloqueo de eliminación con inmuebles |
 | Codeudores | `person`, `agreement_party` (`CO_DEBTOR`) | Implementado (fase 2): CRUD y consulta por identificación o contrato |
-| Inmuebles | `property` y relacionadas | Pendiente |
+| Inmuebles | `property`, `property_owner`, `property_utility`, `city`, `service_provider` | Implementado (fase 3): CRUD con propietarios (papel automático), canon COP, estado y servicios públicos; filtros por estado, ciudad, propietario y texto; bloqueo de eliminación con contratos |
 | Contratos | `property_agreement`, `agreement_party` | Pendiente |
 | Finanzas | `financial_record`, `bank_account` | Pendiente (submodelo de pagos por definir) |
 | Documentos | `file_record` y vínculos | Servicio de almacenamiento listo; integración con la API pendiente |

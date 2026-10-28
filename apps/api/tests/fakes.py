@@ -5,11 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from core.errors import IdentificacionDuplicadaError
+from core.errors import CatalogoInvalidoError, IdentificacionDuplicadaError
 from modules.auth.passwords import hash_password
 from modules.auth.repository import CuentaLogin
 from modules.auth.schemas import Role
 from modules.catalogos.schemas import Catalogos, Ciudad, Opcion
+from modules.inmuebles.schemas import Inmueble, InmuebleCreate, InmuebleFiltros, ServicioPublico
 from modules.personas.schemas import (
     ContratoResumen,
     CuentaBancaria,
@@ -20,7 +21,9 @@ from modules.personas.schemas import (
     PersonaCreate,
     PersonaDetalle,
     PersonaFiltros,
+    PersonaResumen,
 )
+from modules.personas.service import PersonaNoEncontradaError
 from modules.resumen.schemas import (
     Resumen,
     ResumenContratos,
@@ -395,3 +398,86 @@ RESUMEN_DE_PRUEBA = Resumen(
 class InMemoryResumenRepository:
     async def obtener(self) -> Resumen:
         return RESUMEN_DE_PRUEBA
+
+
+class InMemoryInmueblesRepository:
+    def __init__(self) -> None:
+        self.items: dict[int, Inmueble] = {}
+        self.personas: dict[int, PersonaResumen] = {}
+        self.contratos: dict[int, int] = {}
+        self.papeles_agregados: list[tuple[int, str]] = []
+
+    def persona(self, person_id: int, nombre: str) -> PersonaResumen:
+        resumen = PersonaResumen(
+            id=person_id,
+            nombre=nombre,
+            tipo_identificacion="CC",
+            identificacion=f"100{person_id}",
+            telefono=None,
+            correo=None,
+        )
+        self.personas[person_id] = resumen
+        return resumen
+
+    async def listar(
+        self, filtros: InmuebleFiltros, *, limit: int, offset: int
+    ) -> tuple[list[Inmueble], int]:
+        items = sorted(self.items.values(), key=lambda i: i.id, reverse=True)
+        if filtros.estado:
+            items = [i for i in items if i.estado == filtros.estado.upper()]
+        if filtros.ciudad:
+            items = [i for i in items if filtros.ciudad.lower() in (i.ciudad or "").lower()]
+        if filtros.propietario_id is not None:
+            items = [
+                i for i in items if any(p.id == filtros.propietario_id for p in i.propietarios)
+            ]
+        if filtros.q:
+            q = filtros.q.lower()
+            items = [
+                i for i in items if q in i.direccion.lower() or q in (i.matricula or "").lower()
+            ]
+        return items[offset : offset + limit], len(items)
+
+    async def obtener(self, property_id: int) -> Inmueble | None:
+        return self.items.get(property_id)
+
+    async def crear(self, datos: InmuebleCreate) -> Inmueble:
+        property_id = len(self.items) + 1
+        self.items[property_id] = self._desde(property_id, datos)
+        return self.items[property_id]
+
+    async def actualizar(self, property_id: int, datos: InmuebleCreate) -> Inmueble | None:
+        if property_id not in self.items:
+            return None
+        self.items[property_id] = self._desde(property_id, datos)
+        return self.items[property_id]
+
+    async def contar_contratos(self, property_id: int) -> int:
+        return self.contratos.get(property_id, 0)
+
+    async def eliminar(self, property_id: int) -> bool:
+        return self.items.pop(property_id, None) is not None
+
+    def _desde(self, property_id: int, datos: InmuebleCreate) -> Inmueble:
+        if datos.estado and datos.estado not in {"DISPONIBLE", "OCUPADO"}:
+            raise CatalogoInvalidoError("estado")
+        propietarios = []
+        for person_id in datos.propietarios_ids:
+            if person_id not in self.personas:
+                raise PersonaNoEncontradaError(f"La persona {person_id} no existe.")
+            propietarios.append(self.personas[person_id])
+            self.papeles_agregados.append((person_id, "propietario"))
+        return Inmueble(
+            id=property_id,
+            direccion=datos.direccion,
+            ciudad=datos.ciudad,
+            matricula=datos.matricula,
+            canon=datos.canon,
+            moneda="COP" if datos.canon is not None else None,
+            estado=datos.estado,
+            servicios=[
+                ServicioPublico(id=n, **s.model_dump()) for n, s in enumerate(datos.servicios, 1)
+            ],
+            propietarios=propietarios,
+            total_contratos=self.contratos.get(property_id, 0),
+        )

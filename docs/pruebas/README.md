@@ -40,10 +40,11 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Inicio de sesión y bloqueo (RF-17, RF-18) | `test_passwords.py` (formato, verificación, implementación pura = `hashlib`), `test_tokens.py` (firma, expiración, manipulación), `test_auth.py` (login, `/me`, 3 intentos → 423, bloqueo vencido, inactivo, logs sin credenciales), `test_auth_mysql.py` (bloqueo persistido y desbloqueo por el admin), `LoginPage.test.tsx`, `AuthProvider.test.tsx`, `apiClient.test.ts` (Bearer, 401), E2E `auth.spec.ts` | ✅ |
 | Usuarios y roles (RF-16, RNF-03) | `test_usuarios.py` (CRUD, validaciones, último administrador, cuenta propia, desbloqueo, 403 por rol), `test_usuarios_mysql.py` (persona + documento + cuenta + rol; reutilización de persona; 409 de identificación), `UsuariosPage.test.tsx`, `UsuarioForm.test.tsx`, `MainLayout.test.tsx`, E2E `usuarios.spec.ts` | ✅ |
 | Tablero e indicadores | `test_resumen.py`, `HomePage.test.tsx` | ✅ |
+| Inmuebles (RF-07…RF-09) | `test_inmuebles.py` (crear con propietarios y servicios, moneda solo con canon, 422 parametrizados, propietario inexistente 404, filtros, actualizar reemplaza listas, eliminar con contratos 409, asesor 403), `test_inmuebles_mysql.py` (ciudad única por nombre exacto, canon→COP, papel OWNER automático visible en `/propietarios`, bloqueo por contrato, filtros sin mayúsculas ni acentos), `InmuebleForm.test.tsx` (normalización del canon, propietario obligatorio, servicios, error de API), `InmueblesPage.test.tsx` (filtros de URL, 409 al eliminar, asesor, edición en panel), E2E `inmuebles.spec.ts` y `propietarios.spec.ts` (propietario con inmuebles no se elimina; el inscrito desde el inmueble aparece en Propietarios) | ✅ |
 | Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
 
-Totales: 50 (web) + 136 (API) + 31 (documentos) unitarias; 37 (API ↔ MySQL) + 5 (documentos)
-de integración; 13 E2E (con inicio de sesión real contra el Worker local).
+Totales: 58 (web) + 149 (API) + 31 (documentos) unitarias; 42 (API ↔ MySQL) + 5 (documentos)
+de integración; 15 E2E (con inicio de sesión real contra el Worker local).
 
 ## CI
 

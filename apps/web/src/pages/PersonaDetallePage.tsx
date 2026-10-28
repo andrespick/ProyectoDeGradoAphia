@@ -143,7 +143,9 @@ export function PersonaDetallePage({ modulo }: { modulo: Modulo }) {
                   <ul className="plain-list">
                     {persona.inmuebles.map((inmueble) => (
                       <li key={inmueble.id}>
-                        <strong>{inmueble.direccion}</strong>
+                        <Link to={`/inmuebles/${inmueble.id}/editar`}>
+                          <strong>{inmueble.direccion}</strong>
+                        </Link>
                         {inmueble.ciudad && <span className="muted"> · {inmueble.ciudad}</span>}
                         {inmueble.estado && <span className="badge badge-muted">{inmueble.estado}</span>}
                       </li>

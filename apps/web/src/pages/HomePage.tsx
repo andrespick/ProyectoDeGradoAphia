@@ -22,7 +22,7 @@ function plural(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
-// Inmuebles y contratos llegan en las fases 3 y 4.
+// Contratos llega en la fase 4.
 const MODULOS_TABLERO: readonly Modulo[] = [
   {
     to: MODULOS.clientes.ruta,
@@ -44,6 +44,13 @@ const MODULOS_TABLERO: readonly Modulo[] = [
     descripcion: MODULOS.codeudores.descripcion,
     icon: MODULOS.codeudores.icon,
     conteo: (r) => plural(r.personas.codeudores, "codeudor", "codeudores"),
+  },
+  {
+    to: "/inmuebles",
+    titulo: "Inmuebles",
+    descripcion: "Apartamentos, locales, oficinas y bodegas con sus propietarios y servicios públicos.",
+    icon: Building2,
+    conteo: (r) => plural(r.inmuebles.total, "inmueble", "inmuebles"),
   },
   {
     to: "/usuarios",
@@ -88,6 +95,7 @@ export function HomePage() {
             valor={resumen.inmuebles.total}
             detalle={`${resumen.inmuebles.ocupados} ocupados · ${resumen.inmuebles.disponibles} disponibles`}
             icono={<Building2 size={20} />}
+            to="/inmuebles"
           />
           <KpiCard
             etiqueta="Clientes activos"

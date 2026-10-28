@@ -145,7 +145,13 @@ export function PersonaPicker({
             }
           }}
         />
-        <button type="button" className="secondary" disabled={ocupado} onClick={() => void buscar()}>
+        <button
+          type="button"
+          className="secondary"
+          disabled={ocupado}
+          aria-label={`Buscar ${label.toLowerCase()}`}
+          onClick={() => void buscar()}
+        >
           <Search size={16} aria-hidden="true" /> Buscar
         </button>
       </div>

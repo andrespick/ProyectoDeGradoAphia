@@ -24,6 +24,7 @@ from modules.clientes.router import router as clientes_router
 from modules.codeudores.router import router as codeudores_router
 from modules.health.router import API_VERSION
 from modules.health.router import router as health_router
+from modules.inmuebles.router import router as inmuebles_router
 from modules.personas.router import router as personas_router
 from modules.propietarios.router import router as propietarios_router
 from modules.resumen.router import router as resumen_router
@@ -48,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(clientes_router)
     app.include_router(propietarios_router)
     app.include_router(codeudores_router)
+    app.include_router(inmuebles_router)
     app.include_router(catalogos_router)
     app.include_router(usuarios_router)
     app.include_router(resumen_router)

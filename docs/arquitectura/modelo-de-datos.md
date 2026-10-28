@@ -71,13 +71,14 @@ erDiagram
 Las 36 relaciones usan `ON DELETE RESTRICT ON UPDATE RESTRICT`: no se borra ni se cambia el
 identificador de un registro referenciado.
 
-## Migraciones 0008–0010 (fase 0 del plan de implementación)
+## Migraciones 0008–0011 (plan de implementación)
 
 | Migración | Contenido | Motivo |
 | --- | --- | --- |
 | `0008_catalogos_base` | `INSERT` de los códigos que la API usa: `app_role` (ADMIN_SISTEMAS, ADMINISTRATIVO, ASESOR), `party_role` (OWNER, TENANT, CO_DEBTOR), `occupancy_state` (DISPONIBLE, OCUPADO), `currency` (COP), `document_type` (CO: CC, CE, NIT, PAS, TI), `agreement_category` (ARRENDAMIENTO, ADMINISTRACION), `bank_account_category` (AHORROS, CORRIENTE), `utility_type` (AGUA, ENERGIA, GAS, INTERNET, ASEO) | Producción los necesita; los nombres libres (ciudades, bancos, proveedores) los crea la aplicación por nombre exacto |
 | `0009_person_party_role` | Tabla `person_party_role (person_id, party_role_id)` con FK `RESTRICT` | Papeles declarados de una persona independientes de un contrato o inmueble |
 | `0010_user_account_bloqueo` | `user_account.failed_login_attempts INT NOT NULL DEFAULT 0`, `locked_until DATETIME(6) NULL` | Bloqueo temporal tras 3 intentos fallidos |
+| `0011_eliminar_tabla_clientes` | `DROP TABLE IF EXISTS clientes` | Segundo paso del cambio destructivo: la tabla de demostración no se usa desde la fase 2 |
 
 ### Personas con varios papeles (decisión con el responsable, 2026-10-28)
 
@@ -146,10 +147,10 @@ una base vacía, aplicando todas las migraciones) comprueba:
 
 ## Tabla `clientes` de demostración
 
-`clientes` (migración `0001`) sostuvo el flujo mínimo de la fase anterior. **No forma parte del
-modelo** y desde la fase 2 ningún código la usa: los módulos `clientes`, `propietarios` y
-`codeudores` trabajan sobre `person` y sus tablas hijas (`modules/personas`). Pendiente el
-segundo paso del cambio destructivo: `0011_eliminar_tabla_clientes.sql` (fase 3).
+`clientes` (migración `0001`) sostuvo el flujo mínimo inicial. **No formaba parte del modelo**:
+desde la fase 2 los módulos `clientes`, `propietarios` y `codeudores` trabajan sobre `person`
+(`modules/personas`) y la migración `0011` la eliminó (fase 3). Una base nueva la crea con
+`0001` y la borra con `0011`; el historial de migraciones se conserva íntegro.
 
 ### Personas: una fila hija por campo del formulario
 
@@ -159,6 +160,19 @@ migrados con varias filas no duplican resultados. Las escrituras reemplazan tel�
 cuenta (`DELETE` + `INSERT`) y actualizan el documento principal; los papeles se agregan con
 `INSERT IGNORE` y solo se quitan los que el formulario deja de marcar, siempre que no tengan
 vínculos (`papel_en_uso`). Los bancos se crean por nombre exacto (`financial_institution`).
+
+### Inmuebles (fase 3)
+
+`property` guarda la dirección, la ciudad (`city`, *buscar o crear* por nombre exacto y
+`country_code = 'CO'`: «Bogotá» y «bogota» son dos filas distintas hasta que se decida la
+unicidad de ciudades), la matrícula (`registration_identifier`, sin unicidad), el canon
+(`rental_value` con `currency_code = 'COP'` solo cuando hay canon, por `ck_property_rental_currency`)
+y el estado (`occupancy_state`, que no se deriva de los contratos). Los propietarios van en
+`property_owner` (mínimo uno; la API exige la lista) y al asociarlos reciben el papel `OWNER` en
+`person_party_role`; **quitar a alguien del inmueble no le quita el papel**, que se retira a mano
+desde Clientes y queda bloqueado mientras posea algo. Los servicios públicos (`property_utility`:
+`utility_type` por código, `service_provider` *buscar o crear*, número de contrato) se reemplazan
+completos en cada edición. Eliminar un inmueble con contratos responde 409 `inmueble_con_contratos`.
 
 ## Datos de catálogos
 

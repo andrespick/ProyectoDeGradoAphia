@@ -1829,3 +1829,45 @@ legend {
   padding: 0;
   margin-bottom: 0.3rem;
 }
+
+/* ── Inmuebles ─────────────────────────────────────────────────────────────── */
+
+.servicios-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.servicio-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+  width: 100%;
+}
+
+.servicio-quitar {
+  margin-bottom: 0.1rem;
+}
+
+.filters-row {
+  flex-basis: 100%;
+}
+
+.cell-link {
+  display: block;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.cell-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 767px) {
+  .servicio-fila {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

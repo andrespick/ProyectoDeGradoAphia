@@ -52,5 +52,14 @@ test.describe("Propietarios", () => {
     await expect(fila).toBeVisible({ timeout: 30_000 });
     await expect(fila.getByText("Laura Propietaria Ficticia")).toBeVisible();
     await expect(fila.getByText("Propietario", { exact: true })).toBeVisible();
+    await expect(fila.getByText("2 inmuebles")).toBeVisible();
+
+    // No se puede eliminar un propietario con inmuebles (409 persona_con_dependencias).
+    page.on("dialog", (dialog) => dialog.accept());
+    await page.getByRole("link", { name: "Ver Laura Propietaria Ficticia" }).click();
+    await expect(page.getByRole("heading", { name: "Laura Propietaria Ficticia" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Calle 93B # 11A-44/ })).toHaveAttribute("href", /\/inmuebles\/9201\/editar/);
+    await page.getByRole("button", { name: "Eliminar" }).click();
+    await expect(page.getByRole("alert")).toContainText(/propietaria de 2 inmueble/);
   });
 });

@@ -11,7 +11,7 @@
 | 0 | Base: catálogos, papeles de persona, bloqueo, identidad visual, componentes compartidos | «Agrega catálogos base, papeles de persona y columnas de bloqueo (fase 0)» | hecha | 2026-10-28 |
 | 1 | Usuarios y login real | «Implementa usuarios, inicio de sesión y bloqueo temporal (fase 1)» | hecha | 2026-10-28 |
 | 2 | Clientes, propietarios y codeudores sobre `person` | «Implementa clientes, propietarios y codeudores sobre el modelo de personas (fase 2)» | hecha | 2026-10-28 |
-| 3 | Inmuebles | — | pendiente | — |
+| 3 | Inmuebles | «Implementa inmuebles y elimina la tabla de demostración (fase 3)» | hecha | 2026-10-28 |
 | 4 | Contratos | — | pendiente | — |
 | 5 | Ayuda, responsive, respaldo local y documentación | — | pendiente | — |
 
@@ -1203,3 +1203,6 @@ Comprobaciones manuales mínimas:
 | 2026-10-28 | 1 | Las cuentas de usuario comparten la fila `person` con un cliente de la misma identificación (una persona por identificación); al eliminar la cuenta la persona se conserva. |
 | 2026-10-28 | 2 | `Persona` expone `total_inmuebles` (conteo de `property_owner`) en todas las listas; el detalle expone `inmuebles` como lista. El registro desde Propietarios exige dirección, teléfono, correo y cuenta bancaria (validación en la web; la API los deja opcionales para los demás papeles). |
 | 2026-10-28 | 2 | Los helpers `guardar_documento` y `buscar_persona_id` viven en `modules/personas/repository.py` y los reutiliza `usuarios` (sin duplicar SQL). El seed `0001_clientes_ficticios.sql` se eliminó; la tabla `clientes` se borra en la fase 3 (0011). |
+| 2026-10-28 | 3 | `Inmueble` expone `total_contratos` y los servicios con su `id`; el formulario web normaliza el canon escrito «a la colombiana» (`1.500.000,50` → `1500000.50`). Sin hook `useInmuebles`: la página usa `usePagedList` directamente, como Usuarios. |
+| 2026-10-28 | 3 | La acción «Ver contratos» de la tabla de inmuebles y el enlace del propietario al inmueble llegan con la fase 4 (`/contratos?inmueble_id=`); por ahora el detalle del propietario enlaza a `/inmuebles/:id/editar`. El botón «Buscar» del selector de personas lleva `aria-label` «Buscar <papel>» para no confundirse con el buscador de la lista. |
+| 2026-10-28 | 3 | El filtro `q` de inmuebles compara dirección y matrícula sin distinguir mayúsculas ni acentos (`COLLATE utf8mb4_0900_ai_ci` en ambas columnas). |

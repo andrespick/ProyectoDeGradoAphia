@@ -4,6 +4,8 @@ import { GESTION_USUARIOS, LECTURA } from "../features/auth/roles";
 import { type Modulo, MODULOS } from "../features/personas/modulos";
 import { MainLayout } from "../layouts/MainLayout";
 import { HomePage } from "../pages/HomePage";
+import { InmuebleFormPage } from "../pages/InmuebleFormPage";
+import { InmueblesPage } from "../pages/InmueblesPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PersonaDetallePage } from "../pages/PersonaDetallePage";
@@ -40,6 +42,14 @@ export const routes: RouteObject[] = [
           ...rutasDePersonas("clientes"),
           ...rutasDePersonas("propietarios"),
           ...rutasDePersonas("codeudores"),
+          {
+            path: "inmuebles",
+            element: <InmueblesPage />,
+            children: [
+              { path: "nuevo", element: <InmuebleFormPage modo="crear" /> },
+              { path: ":id/editar", element: <InmuebleFormPage modo="editar" /> },
+            ],
+          },
         ],
       },
       {
