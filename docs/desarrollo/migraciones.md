@@ -7,11 +7,14 @@ Las migraciones son archivos SQL en `database/migrations/` aplicados en orden po
 ## Agregar una migración
 
 1. Cree `database/migrations/NNNN_descripcion.sql` con el siguiente número libre
-   (`0002_crear_propietarios.sql`). Solo minúsculas, números y `_`.
+   (la última es `0007`, así que la próxima es `0008_...`). Solo minúsculas, números y `_`.
 2. Escriba una sentencia DDL por archivo cuando sea posible. Termine cada sentencia con `;`
    al final de la línea. Comentarios con `--`. No use `DELIMITER` ni procedimientos.
-3. Use `ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci`,
-   `BIGINT UNSIGNED` para ids y `DATETIME(6)` para fechas (UTC).
+3. Siga las reglas físicas del [modelo de datos](../arquitectura/modelo-de-datos.md):
+   tablas y columnas en inglés `snake_case`, `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+   COLLATE=utf8mb4_0900_bin`, claves `BIGINT` con signo, FK con índice y
+   `ON DELETE RESTRICT ON UPDATE RESTRICT`, importes `DECIMAL` con moneda explícita y fechas
+   de operación `DATETIME(6)` en UTC.
 4. Aplique y verifique:
 
 ```bash
@@ -25,7 +28,11 @@ pnpm test:integration
 - **Nunca edite una migración aplicada.** `migrate.py` compara el checksum y se detiene si
   cambió. Corrija con una migración nueva.
 - MySQL confirma implícitamente cada DDL: si una migración con dos DDL falla en la segunda,
-  la primera queda aplicada. Por eso, una DDL por archivo.
+  la primera queda aplicada. Por eso, una DDL por archivo. Excepción: las migraciones
+  `0002`–`0007` crean el esquema inicial completo agrupado por dominio sobre una base vacía.
+  Si una sentencia falla, `migrate.py` informa cuántas de la misma migración ya se aplicaron
+  (`falló la sentencia N de M ... Las N-1 anteriores ya se aplicaron`); revise el esquema o
+  restaure el respaldo antes de reintentar.
 - Cambios destructivos en dos fases: (1) agregar lo nuevo y adaptar el código; (2) en una
   versión posterior, eliminar lo viejo.
 - Un candado (`GET_LOCK`) impide dos ejecuciones simultáneas.

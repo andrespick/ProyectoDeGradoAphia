@@ -8,7 +8,8 @@ Reglas:
 - Una migración aplicada nunca se modifica: se valida su checksum SHA-256.
 - Un candado de MySQL (GET_LOCK) evita ejecuciones simultáneas.
 - MySQL confirma implícitamente cada sentencia DDL: una migración con varias sentencias
-  DDL no es atómica. Preferir una sola sentencia DDL por migración.
+  DDL no es atómica. Preferir una sola sentencia DDL por migración. Si una sentencia
+  falla, el error indica cuáles de la misma migración ya quedaron aplicadas.
 - En APP_ENV=production o staging se exige --confirm-backup (respaldo previo verificado).
 """
 
@@ -70,8 +71,17 @@ def apply_migrations(
         pending = pending_migrations(applied_migrations(conn), migrations)
         for migration in pending:
             with conn.cursor() as cursor:
-                for statement in migration.statements:
-                    cursor.execute(statement)
+                statements = migration.statements
+                for number, statement in enumerate(statements, start=1):
+                    try:
+                        cursor.execute(statement)
+                    except pymysql.err.MySQLError as exc:
+                        raise ScriptError(
+                            f"{migration.path.name}: falló la sentencia {number} de "
+                            f"{len(statements)} ({_summary(statement)}): {exc}. "
+                            f"Las {number - 1} anteriores ya se aplicaron (DDL no transaccional); "
+                            "revise el esquema antes de reintentar o restaure el respaldo."
+                        ) from exc
                 cursor.execute(
                     "INSERT INTO schema_migrations (version, nombre, checksum) VALUES (%s, %s, %s)",
                     (migration.version, migration.name, migration.checksum),
@@ -85,6 +95,11 @@ def apply_migrations(
     finally:
         with conn.cursor() as cursor:
             cursor.execute("SELECT RELEASE_LOCK(%s)", (LOCK_NAME,))
+
+
+def _summary(statement: str) -> str:
+    first_line = statement.strip().split("\n", 1)[0]
+    return first_line[:80]
 
 
 def main(argv: Sequence[str] | None = None) -> int:

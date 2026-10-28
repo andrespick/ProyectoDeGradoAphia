@@ -3,9 +3,11 @@
 Aplicación web interna para **APHIA S.A.S.**, inmobiliaria ubicada en Colombia. Administrará
 clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y trazabilidad.
 
-> **Estado actual (v0.1.0):** fundamentos técnicos. Existe un flujo mínimo de *clientes de
-> prueba* que valida la arquitectura de extremo a extremo (navegador → API → MySQL) y un
-> servicio privado de documentos. Los módulos de negocio están pendientes.
+> **Estado actual (v0.1.0):** fundamentos técnicos. La base de datos ya tiene el
+> [modelo 3FN completo](docs/arquitectura/modelo-de-datos.md) (32 tablas). Existe un flujo
+> mínimo de *clientes de prueba* que valida la arquitectura de extremo a extremo
+> (navegador → API → MySQL) y un servicio privado de documentos. Los módulos de negocio
+> (API y pantallas) están pendientes.
 
 ## Arquitectura en una línea
 
@@ -85,7 +87,7 @@ Las dependencias de Python se instalan solas con `uv run` la primera vez.
 
 ```bash
 pnpm test               # 108 pruebas unitarias (17 web + 60 API + 31 documentos)
-pnpm test:integration   # 7 API↔MySQL + 5 documentos en Docker (incluye recrear el contenedor)
+pnpm test:integration   # 21 API↔MySQL (clientes, modelo 3FN, migraciones) + 5 documentos en Docker
 pnpm test:e2e           # 5 escenarios en Chromium contra el stack completo
 ```
 
@@ -115,7 +117,7 @@ Con Python Workers, las variables no secretas de cada entorno están en
 apps/web      Frontend React + Vite (Cloudflare Pages)
 apps/api      API FastAPI (Cloudflare Python Workers / Uvicorn)
 apps/files    Servicio privado de documentos (Docker en el VPS)
-database      Migraciones SQL versionadas, datos ficticios y scripts
+database      Migraciones SQL versionadas (modelo 3FN), datos ficticios y scripts
 infra         Docker Compose local y de producción, túnel, respaldos
 tests         Pruebas de integración entre servicios y E2E (Playwright)
 docs          Requisitos, arquitectura, desarrollo, despliegue, seguridad y pruebas
@@ -142,7 +144,7 @@ Responsabilidades de cada carpeta y reglas de trabajo: [AGENTS.md](AGENTS.md).
 ## Documentación
 
 - [Requisitos y alcance](docs/requisitos/README.md)
-- [Arquitectura](docs/arquitectura/README.md)
+- [Arquitectura](docs/arquitectura/README.md) y [modelo de datos](docs/arquitectura/modelo-de-datos.md)
 - [Desarrollo](docs/desarrollo/README.md)
 - [Pruebas](docs/pruebas/README.md)
 - [Seguridad](docs/seguridad/README.md)

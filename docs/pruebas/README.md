@@ -32,8 +32,11 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | 6. Rechazo de archivos no permitidos | ejecutable, HTML, texto, GIF, tipo declarado falso, demasiado grande (con y sin Content-Length), vacío, ids con *path traversal* | ✅ |
 | 7. Manejo de errores | 404/405/422/409/401/403/500/503 con formato uniforme, sin trazas ni datos reflejados; configuración inválida | ✅ |
 | 8. Comunicación frontend-backend | `apiClient.test.ts`, `HomePage.test.tsx` (mock de fetch), E2E real con CORS | ✅ |
+| Integridad del modelo 3FN | `test_modelo_3fn.py`: 32 tablas, 36 FK con `RESTRICT`, escenarios válidos y 9 violaciones rechazadas con su código MySQL | ✅ |
+| Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
 
-Totales: 17 (web) + 60 (API) + 31 (documentos) unitarias; 7 + 5 de integración; 5 E2E.
+Totales: 17 (web) + 60 (API) + 31 (documentos) unitarias; 21 (API ↔ MySQL) + 5 (documentos)
+de integración; 5 E2E.
 
 ## CI
 
