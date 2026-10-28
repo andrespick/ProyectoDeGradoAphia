@@ -7,14 +7,19 @@ usuarios simultáneos y carga moderada.
 
 ## Dominios del sistema
 
-| Dominio | Estado |
-| --- | --- |
-| Clientes | Versión mínima de prueba (nombre, correo, fechas) para validar la arquitectura |
-| Propietarios | Pendiente |
-| Inmuebles | Pendiente |
-| Contratos | Pendiente |
-| Documentos | Servicio de almacenamiento listo; integración con la API pendiente |
-| Usuarios, permisos y trazabilidad | Estructura de roles preparada; autenticación pendiente |
+El esquema de base de datos de todos los dominios ya está creado (modelo 3FN, migraciones
+`0002`–`0007`, ver [modelo de datos](../arquitectura/modelo-de-datos.md)). Lo pendiente son
+los módulos de la API y las pantallas, y las decisiones de negocio que el modelo deja abiertas.
+
+| Dominio | Tablas | Estado de la aplicación |
+| --- | --- | --- |
+| Clientes | `person` y contactos | Flujo mínimo de prueba sobre la tabla demo `clientes`; pendiente migrarlo a `person` |
+| Propietarios | `person`, `property_owner` | Pendiente |
+| Inmuebles | `property` y relacionadas | Pendiente |
+| Contratos | `property_agreement`, `agreement_party` | Pendiente |
+| Finanzas | `financial_record`, `bank_account` | Pendiente (submodelo de pagos por definir) |
+| Documentos | `file_record` y vínculos | Servicio de almacenamiento listo; integración con la API pendiente |
+| Usuarios, permisos y trazabilidad | `user_account`, `app_role`, `user_role` | Estructura de roles preparada; autenticación y auditoría pendientes |
 
 ## Prioridades no funcionales (en orden)
 
@@ -36,7 +41,9 @@ usuarios simultáneos y carga moderada.
 
 ## Pendiente de levantar con la empresa
 
-- Campos y reglas de negocio de propietarios, inmuebles, contratos y clientes.
+- Las 10 decisiones de negocio del modelo de datos (identidad, roles, histórico, contratos
+  simultáneos, finanzas, monedas, banca, archivos, permisos): ver
+  [modelo de datos](../arquitectura/modelo-de-datos.md#decisiones-de-negocio-pendientes-antes-de-producción).
 - Roles reales y matriz de permisos (borrador actual: `admin`, `asesor`, `consulta`).
 - Tipos y tamaños de documentos esperados; tiempo de retención.
 - Requisitos legales aplicables al tratamiento de datos personales en Colombia

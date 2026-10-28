@@ -2,11 +2,18 @@
 
 Ejemplo: módulo `propietarios`. El módulo de referencia es `apps/api/src/modules/clientes`.
 
-## 1. Migración
+## 1. Tablas
 
-Cree `database/migrations/0002_crear_propietarios.sql` (ver [migraciones](migraciones.md)) y
-aplíquela con `pnpm db:migrate`. Si necesita datos de ejemplo, agregue un archivo idempotente
-en `database/seeds/` (solo datos ficticios).
+Las tablas del negocio ya existen (migraciones `0002`–`0007`, ver
+[modelo de datos](../arquitectura/modelo-de-datos.md)). Para propietarios se usan `person`,
+`person_document`, `person_phone`, `person_email` y el vínculo `property_owner`.
+
+Solo si el módulo necesita un cambio de esquema, cree una migración nueva (`0008_...`, ver
+[migraciones](migraciones.md)) y aplíquela con `pnpm db:migrate`. Si necesita datos de ejemplo,
+agregue un archivo idempotente en `database/seeds/` (solo datos ficticios).
+
+Los nombres de tablas y columnas están en inglés (modelo 3FN); los esquemas Pydantic y la API
+usan español. La traducción entre ambos ocurre en `repository.py`.
 
 ## 2. Backend (`apps/api/src/modules/propietarios/`)
 

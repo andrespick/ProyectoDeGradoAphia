@@ -1,5 +1,8 @@
 # Arquitectura de APHIA
 
+Modelo de datos (32 tablas en 3FN, relaciones y decisiones pendientes):
+[modelo-de-datos.md](modelo-de-datos.md).
+
 ## Diagrama de componentes
 
 ```mermaid
