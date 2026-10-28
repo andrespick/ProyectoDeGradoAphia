@@ -3,6 +3,7 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 
 import { Field } from "../components/Field";
+import { AyudaLink } from "../components/AyudaLink";
 import { KpiCard } from "../components/KpiCard";
 import { Pagination } from "../components/Pagination";
 import { Segmented } from "../components/Segmented";
@@ -141,6 +142,7 @@ export function UsuariosPage() {
           <Link to={{ pathname: "/usuarios/nuevo", search: location.search }} className="button-link">
             <UserPlus size={18} aria-hidden="true" /> Registrar usuario
           </Link>
+          <AyudaLink seccion="usuarios" etiqueta="usuarios" />
         </div>
       </header>
 

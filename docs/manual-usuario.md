@@ -1,22 +1,89 @@
 # Manual de usuario de APHIA
 
-> Borrador en construcción: cada fase del [plan de implementación](plan-de-implementacion.md)
-> agrega la sección de su módulo. La versión completa (inicio de sesión, clientes, propietarios,
-> codeudores, contratos, usuarios, mensajes de error y soporte) se cierra en la fase 5 y se
-> publica también como ayuda en línea en `/ayuda`.
+Guía para el personal de APHIA S.A.S. El mismo contenido está disponible dentro de la
+aplicación en **Ayuda** (`/ayuda`), sin necesidad de iniciar sesión; cada pantalla tiene un
+enlace «Ayuda» que lleva a su sección. Al cambiar una pantalla, actualice este manual y la
+página de ayuda.
+
+## Roles
+
+| Rol | Qué puede hacer |
+| --- | --- |
+| Administrador de Sistemas | Todo, incluida la gestión de usuarios y el desbloqueo de cuentas |
+| Administrativo | Consultar, registrar, modificar y eliminar clientes, propietarios, codeudores, inmuebles y contratos |
+| Asesor | Consultar, registrar y modificar; **no** elimina |
+
+## Inicio de sesión y bloqueo
+
+1. Abra la aplicación e ingrese el usuario y la contraseña que le asignó el Administrador de
+   Sistemas. «Recordarme en este equipo» mantiene la sesión al cerrar la pestaña; no lo use en
+   equipos compartidos. La sesión dura 8 horas.
+2. Tras **3 intentos fallidos** la cuenta queda bloqueada **15 minutos**. Espere o pida al
+   Administrador de Sistemas que la desbloquee desde Usuarios. El mensaje indica los minutos
+   que faltan.
+3. No hay recuperación de contraseña por correo: el enlace «¿Olvidó su contraseña?» explica que
+   el Administrador de Sistemas le asigna una nueva desde Usuarios.
+4. Si la sesión expira, la aplicación vuelve al inicio de sesión y, al entrar, lo lleva a la
+   pantalla donde estaba.
+
+## Navegación
+
+- Barra lateral: Inicio, Clientes, Propietarios, Codeudores, Inmuebles, Contratos, Usuarios
+  (solo Administrador de Sistemas) y Ayuda; abajo, el estado del sistema y «Salir».
+- En tabletas la barra se reduce a iconos; en el celular se abre con «Abrir menú» y se cierra
+  con Escape, al tocar fuera o al navegar.
+- La caja **Buscar inmueble, cliente, contrato…** de la barra superior (computador y tableta)
+  muestra hasta cinco resultados por grupo; Enter abre el primero y Escape cierra la lista.
+- **Inicio** resume inmuebles, clientes por papel, contratos vigentes y vencimientos en menos
+  de 30 días, lista los contratos que vencen pronto y enlaza a cada módulo.
+- Todas las listas comparten la misma estructura: cabecera con «Registrar…», indicadores,
+  filtros (los aplicados aparecen como fichas con «Restablecer»), tabla y paginación
+  («Mostrando a–b de N», tamaño de página 10/20/50).
+
+## Clientes
+
+Un cliente es cualquier persona registrada. Su **tipo de cliente** son los papeles que tiene:
+propietario, arrendatario o codeudor. Al registrarlo se elige uno; los demás se agregan al
+editarlo o, automáticamente, al asociarlo a un inmueble o a un contrato.
+
+| Acción | Cómo |
+| --- | --- |
+| Registrar | «Registrar cliente»: nombre, tipo y número de identificación, teléfono, correo, dirección y tipo de cliente. La identificación no puede repetirse; si ya existe, el sistema lo informa y puede abrir la persona existente. |
+| Buscar | Por nombre o identificación (sin importar mayúsculas ni tildes) y por papel con los segmentos Todos / Arrendatarios / Propietarios / Codeudores. |
+| Ver | Datos, papeles, cuenta bancaria, usuario del sistema, inmuebles de los que es propietario y contratos separados por papel (propietario, arrendatario, codeudor), con enlaces. |
+| Modificar | «Editar»: datos de contacto, papeles y cuenta bancaria. No se puede quitar un papel con inmuebles o contratos vinculados. |
+| Eliminar | Solo si no tiene inmuebles, contratos ni cuenta de usuario; el mensaje indica qué lo impide. |
+
+## Propietarios
+
+- Registrar un propietario exige dirección, teléfono, correo y cuenta bancaria (banco con
+  sugerencias, tipo y número). En las listas el número se muestra enmascarado (•••• 4902).
+- La lista muestra solo personas con papel propietario, con la cuenta bancaria y el chip
+  «N inmuebles» / «Sin inmuebles»; se filtra por nombre, identificación o correo.
+- Un propietario con inmuebles **no se puede eliminar**: primero reasigne o elimine sus
+  inmuebles.
+- Quien se asocia como propietario desde un inmueble aparece aquí automáticamente.
+
+## Codeudores
+
+- Se registran, modifican y eliminan con las mismas reglas que los clientes y quedan con el
+  papel codeudor.
+- Filtre por identificación o por número de contrato para ver los codeudores de un contrato.
+- Desde el formulario o el detalle de un contrato se busca un codeudor por identificación o se
+  registra en el momento (nombre, teléfono y correo).
 
 ## Inmuebles
 
-Menú **Inmuebles** (todos los roles pueden consultar; Asesor y Administrativo registran y
-editan; solo Administrativo y Administrador de Sistemas eliminan).
+Menú **Inmuebles** (todos los roles consultan; Asesor y Administrativo registran y editan;
+solo Administrativo y Administrador de Sistemas eliminan).
 
 ### Consultar
 
 - La lista muestra matrícula, dirección y ciudad, propietarios (enlace a su ficha), canon
-  mensual en pesos, estado (Disponible / Ocupado) y los contratos de servicios públicos.
+  mensual en pesos, estado (Disponible / Ocupado), los contratos de servicios públicos y el
+  enlace «Contratos (N)» que abre la lista de contratos del inmueble.
 - Filtre por **estado**, **ciudad** (no importan mayúsculas ni tildes), **propietario** (busque
   por identificación en el selector) o escriba parte de la **dirección o matrícula** en «Buscar».
-  Los filtros activos aparecen como fichas; «Restablecer filtros» los quita todos.
 - Las tarjetas superiores muestran el total de inmuebles, los ocupados y los disponibles.
 
 ### Registrar
@@ -32,26 +99,12 @@ editan; solo Administrativo y Administrador de Sistemas eliminan).
    sugerencias y número de contrato, obligatorio). «Quitar» elimina la fila.
 5. **Guardar inmueble.** La fila aparece de inmediato en la lista.
 
-### Modificar
+### Modificar y eliminar
 
-Pulse **Editar** en la fila. Puede cambiar cualquier dato, quitar o agregar propietarios y
-servicios. Quitar a un propietario del inmueble **no** le quita su papel de propietario en
-Clientes; ese papel se retira desde su ficha cuando ya no posea inmuebles.
-
-### Eliminar
-
-Pulse **Eliminar** y confirme. Un inmueble con contratos no se puede eliminar: el sistema indica
-cuántos contratos tiene; elimínelos primero desde Contratos.
-
-### Mensajes frecuentes
-
-| Mensaje | Qué hacer |
-| --- | --- |
-| «Ingrese la dirección del inmueble.» | La dirección es obligatoria (mínimo 3 caracteres). |
-| «Asocie al menos un propietario.» | Todo inmueble necesita un propietario; búsquelo o regístrelo en el selector. |
-| «Ingrese el canon en pesos, con máximo dos decimales.» | Use solo dígitos, puntos de miles y coma decimal (`1.500.000,50`). |
-| «No se puede eliminar el inmueble: tiene N contrato(s).» | Elimine o reasigne primero esos contratos. |
-| «La persona N no existe.» | El propietario fue eliminado mientras editaba; vuelva a buscarlo. |
+«Editar» permite cambiar cualquier dato, quitar o agregar propietarios y servicios. Quitar a un
+propietario del inmueble **no** le quita su papel en Clientes; ese papel se retira desde su
+ficha cuando ya no posea inmuebles. Un inmueble con contratos no se puede eliminar: el sistema
+indica cuántos tiene.
 
 ## Contratos
 
@@ -65,10 +118,7 @@ Administrativo y Administrador de Sistemas eliminan).
   codeudores, canon y estado.
 - Filtros: texto (dirección del inmueble o nombre de una parte), **vigente desde / hasta** (se
   listan los contratos cuya vigencia se cruza con ese rango, incluidos los indefinidos), tipo,
-  inmueble, propietario y arrendatario. Desde Inmuebles, el enlace «Contratos (N)» abre la lista
-  filtrada por ese inmueble.
-- La caja **Buscar inmueble, cliente, contrato…** de la barra superior muestra hasta cinco
-  resultados por grupo; Enter abre el primero y Escape cierra la lista.
+  inmueble, propietario y arrendatario.
 
 ### Registrar
 
@@ -100,12 +150,46 @@ Administrativo y Administrador de Sistemas eliminan).
 financieros o archivos asociados no se puede modificar ni eliminar: el mensaje indica cuántos
 tiene.
 
-### Mensajes frecuentes
+## Usuarios (Administrador de Sistemas)
+
+- «Registrar usuario»: nombre de usuario (minúsculas, único), nombre, identificación, correo,
+  contraseña (mínimo 8 caracteres con letra y dígito) y rol. Si la identificación ya pertenece
+  a un cliente, la cuenta se vincula a esa persona.
+- Cada cuenta bloqueada aparece con una alerta y el botón «Desbloquear». El conmutador
+  Activo/Inactivo impide iniciar sesión sin borrar la cuenta.
+- «Editar» cambia nombre, identificación, correo, rol, estado y, si se indica, la contraseña.
+  Los cambios de rol aplican en el siguiente inicio de sesión del usuario.
+- No se puede eliminar, desactivar ni degradar al último administrador activo, ni eliminar o
+  desactivar la cuenta propia.
+
+## Mensajes de error frecuentes
 
 | Mensaje | Qué hacer |
 | --- | --- |
-| «Seleccione el inmueble del contrato.» | Busque el inmueble por dirección o matrícula y pulse «Seleccionar». |
+| «Usuario o contraseña incorrectos.» | Revise los datos; tras tres fallos la cuenta se bloquea 15 minutos. |
+| «La cuenta está bloqueada. Intente de nuevo en N minutos.» | Espere o pida el desbloqueo al Administrador de Sistemas. |
+| «Inicie sesión para continuar.» | La sesión expiró (8 horas) o se cerró en otra pestaña. |
+| «Ya existe una persona con esa identificación.» | Búsquela en Clientes y edítela o agréguele el papel que falta. |
+| «No se puede eliminar…» (persona, inmueble, contrato) | El registro tiene vínculos; elimine o reasigne primero lo que indica el mensaje. |
+| «No se puede quitar el papel…» | La persona tiene inmuebles o contratos con ese papel. |
+| «Ingrese la dirección del inmueble.» / «Asocie al menos un propietario.» | Complete los datos obligatorios del inmueble. |
+| «Ingrese el canon en pesos, con máximo dos decimales.» | Use solo dígitos, puntos de miles y coma decimal (`1.500.000,50`). |
 | «La fecha de fin no puede ser anterior a la de inicio.» | Corrija las fechas o deje la de fin vacía. |
 | «El arrendatario no puede ser también codeudor del contrato.» | Quite a esa persona de una de las dos listas. |
 | «El inmueble no tiene propietarios registrados.» | Asócielos en Inmuebles o indíquelos en el contrato. |
-| «No se puede modificar ni eliminar el contrato: tiene N registro(s) financiero(s)…» | Elimine primero esos registros o archivos. |
+| «No se puede modificar ni eliminar el contrato: tiene N registro(s)…» | Elimine primero esos registros o archivos. |
+| «Código de soporte: …» | Acompaña a los errores de la API; cítelo al pedir ayuda. |
+| «API sin conexión» (barra lateral) | El servidor no responde; espere y, si persiste, avise a soporte. |
+
+## Navegadores y dispositivos
+
+Funciona en las versiones vigentes de Chrome, Firefox y Safari, en computador, tableta y
+celular. En pantallas angostas las tablas se desplazan dentro de su recuadro, los formularios
+ocupan toda la pantalla y la búsqueda global se oculta (cada módulo conserva su buscador). Para
+guardar un contrato en PDF use el diálogo de impresión del navegador.
+
+## Soporte
+
+Contacte al Administrador de Sistemas de APHIA. Indique qué intentaba hacer, el mensaje
+recibido y, si aparece, el código de soporte. Los datos de los clientes son confidenciales: no
+los comparta fuera de la empresa.

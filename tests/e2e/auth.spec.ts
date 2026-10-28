@@ -5,7 +5,7 @@ import { API, auth, CLAVE_DEV, iniciarSesion, obtenerToken } from "./helpers";
 const unique = `${Date.now()}`;
 
 test.describe("Acceso", () => {
-  test("inicia sesión desde el formulario, muestra el usuario y cierra la sesión", async ({ page }) => {
+  test("inicia sesión desde el formulario, muestra el usuario y cierra la sesión @smoke", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible({ timeout: 30_000 });
 

@@ -3,6 +3,7 @@ import type { RouteObject } from "react-router";
 import { GESTION_USUARIOS, LECTURA } from "../features/auth/roles";
 import { type Modulo, MODULOS } from "../features/personas/modulos";
 import { MainLayout } from "../layouts/MainLayout";
+import { AyudaPage } from "../pages/AyudaPage";
 import { ContratoDetallePage } from "../pages/ContratoDetallePage";
 import { ContratoFormPage } from "../pages/ContratoFormPage";
 import { ContratosPage } from "../pages/ContratosPage";
@@ -38,6 +39,7 @@ export const routes: RouteObject[] = [
     element: <MainLayout />,
     children: [
       { path: "login", element: <LoginPage /> },
+      { path: "ayuda", element: <AyudaPage /> },
       {
         element: <ProtectedRoute roles={LECTURA} />,
         children: [

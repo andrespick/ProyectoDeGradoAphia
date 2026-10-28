@@ -150,7 +150,7 @@ jobs:
           enable-cache: true
       - run: pnpm install --frozen-lockfile
       - run: uv sync --frozen --project apps/api
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm db:migrate
       - run: pnpm db:seed
       # Secreto efímero del Worker local (AUTH_MODE=database); no es un secreto real.

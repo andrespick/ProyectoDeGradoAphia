@@ -2,7 +2,7 @@ import { type FormEvent, useState } from "react";
 
 import { Field } from "../../components/Field";
 import { SelectField } from "../../components/SelectField";
-import { ApiError } from "../../services/apiClient";
+import { ApiError, errorMessage } from "../../services/apiClient";
 import type { Role } from "../../types/auth";
 import type { Usuario, UsuarioCreate, UsuarioUpdate } from "../../types/usuario";
 import { useCatalogos } from "../catalogos/useCatalogos";
@@ -78,7 +78,7 @@ export function UsuarioForm({ modo, inicial, onSubmit, onCancel }: UsuarioFormPr
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(errorsFromApi(error.details, CAMPOS_USUARIO));
-        setFormError(error.message);
+        setFormError(errorMessage(error));
       } else {
         setFormError("No fue posible guardar el usuario.");
       }

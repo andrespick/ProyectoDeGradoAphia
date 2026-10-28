@@ -16,6 +16,7 @@
 7. [Cloudflare Pages (frontend)](cloudflare-pages.md)
 8. [GitHub Actions](github-actions.md)
 9. [Respaldos, restauración y recuperación ante fallos](restauracion.md)
+10. [Guía de instalación y mantenimiento](instalacion-y-mantenimiento.md) (primer administrador, rotación de secretos, tareas recurrentes, logs)
 
 ## Elementos que requieren credenciales o acción manual
 

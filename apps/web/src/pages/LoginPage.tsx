@@ -1,6 +1,6 @@
 import { Building2, Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { Navigate, useLocation } from "react-router";
+import { Link, Navigate, useLocation } from "react-router";
 
 import { Field } from "../components/Field";
 import { useAuth } from "../features/auth/AuthProvider";
@@ -99,7 +99,9 @@ export function LoginPage() {
               />
               Recordarme en este equipo
             </label>
-            <span className="muted">¿Olvidó su contraseña? Pídala al Administrador de Sistemas.</span>
+            <Link to="/ayuda#inicio-de-sesion" className="muted">
+              ¿Olvidó su contraseña?
+            </Link>
           </div>
           {error && (
             <p className="alert alert-error" role="alert">

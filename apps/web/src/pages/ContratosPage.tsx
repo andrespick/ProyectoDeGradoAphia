@@ -2,6 +2,7 @@ import { FileText, Plus, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Link, useLocation } from "react-router";
 
+import { AyudaLink } from "../components/AyudaLink";
 import { Field } from "../components/Field";
 import { KpiCard } from "../components/KpiCard";
 import { Pagination } from "../components/Pagination";
@@ -118,13 +119,14 @@ export function ContratosPage() {
             <p>Arrendamientos y administraciones con sus propietarios, arrendatarios y codeudores.</p>
           </div>
         </div>
-        {tiene(ESCRITURA) && (
-          <div className="actions">
+        <div className="actions">
+          {tiene(ESCRITURA) && (
             <Link to="/contratos/nuevo" className="button-link">
               <Plus size={18} aria-hidden="true" /> Nuevo contrato
             </Link>
-          </div>
-        )}
+          )}
+          <AyudaLink seccion="contratos" etiqueta="contratos" />
+        </div>
       </header>
 
       <p className="alert alert-warn">

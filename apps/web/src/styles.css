@@ -1974,3 +1974,57 @@ legend {
     margin: 2cm;
   }
 }
+
+/* ── Ayuda en línea ────────────────────────────────────────────────────────── */
+
+.ayuda {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 880px;
+}
+
+.ayuda-indice ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  columns: 2;
+  column-gap: 2rem;
+}
+
+.ayuda-seccion {
+  scroll-margin-top: calc(var(--topbar-height) + 1rem);
+}
+
+.ayuda-seccion:focus {
+  outline: none;
+}
+
+.ayuda-seccion ul,
+.ayuda-seccion p {
+  margin-top: 0.5rem;
+}
+
+.ayuda-seccion li + li {
+  margin-top: 0.35rem;
+}
+
+.ayuda-link {
+  min-height: 40px;
+}
+
+.public-bar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  margin-right: 1rem;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 767px) {
+  .ayuda-indice ol {
+    columns: 1;
+  }
+}

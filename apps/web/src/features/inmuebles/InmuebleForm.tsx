@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from "react";
 
 import { Field } from "../../components/Field";
-import { ApiError } from "../../services/apiClient";
+import { ApiError, errorMessage } from "../../services/apiClient";
 import type { Inmueble, InmuebleCreate } from "../../types/inmueble";
 import { useCatalogos } from "../catalogos/useCatalogos";
 import { PersonaListPicker } from "../personas/PersonaListPicker";
@@ -48,7 +48,7 @@ export function InmuebleForm({ modo, inicial, onSubmit, onCancel }: InmuebleForm
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(errorsFromApi(error.details, CAMPOS_INMUEBLE));
-        setFormError(error.message);
+        setFormError(errorMessage(error));
       } else {
         setFormError("No fue posible guardar el inmueble.");
       }

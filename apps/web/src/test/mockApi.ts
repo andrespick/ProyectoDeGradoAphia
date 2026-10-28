@@ -197,5 +197,6 @@ export function baseRoutes(principal: unknown = DEV_PRINCIPAL): Record<string, H
     "GET /api/v1/auth/me": () => json(principal),
     "GET /api/v1/resumen": () => json(RESUMEN),
     "GET /api/v1/catalogos": () => json(CATALOGOS),
+    "GET /api/v1/contratos": () => json(page([])),
   };
 }

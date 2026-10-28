@@ -4,7 +4,8 @@
 | --- | --- |
 | [plan de implementación](plan-de-implementacion.md) | Plan por fases aprobado, criterios de aceptación, estado y bitácora |
 | [requisitos](requisitos/README.md) | Contexto, alcance y prioridades |
-| [manual de usuario](manual-usuario.md) | Guía por módulo para el personal de APHIA (borrador; se completa en la fase 5) |
+| [manual de usuario](manual-usuario.md) | Guía por módulo para el personal de APHIA (misma información que `/ayuda`) |
+| [instalación y mantenimiento](despliegue/instalacion-y-mantenimiento.md) | Guía para quien opera el sistema: instalación, primer administrador, tareas recurrentes y logs |
 | [diseño](diseno/README.md) | Identidad visual: tokens, cascarón, componentes e inventario de pantallas |
 | [arquitectura](arquitectura/README.md) | Componentes, comunicación, tecnologías, entornos, portabilidad y compatibilidad con Workers |
 | [desarrollo](desarrollo/README.md) | Crear módulos, convenciones, migraciones, Docker |

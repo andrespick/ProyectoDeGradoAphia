@@ -60,6 +60,19 @@ Flujo de una solicitud:
 4. El repositorio obtiene `Database` de `get_database`: en Workers usa los parámetros del
    binding Hyperdrive; en Uvicorn, `DB_*`.
 
+## Flujo de autenticación
+
+1. `POST /api/v1/auth/login` recibe usuario y contraseña; el repositorio lee `user_account`
+   (con `GROUP_CONCAT` de roles) y el servicio verifica el hash PBKDF2-HMAC-SHA256 en tiempo
+   constante (hash ficticio si el usuario no existe).
+2. Tres fallos seguidos fijan `locked_until = ahora + 15 min` (423 `cuenta_bloqueada`); un
+   inicio correcto reinicia el contador.
+3. La API emite un token firmado con HMAC-SHA256 (`AUTH_SECRET`), válido 8 h, con sujeto,
+   nombre y roles; la web lo guarda en `sessionStorage` (o `localStorage` con «Recordarme») y
+   lo envía como `Authorization: Bearer`.
+4. `get_current_principal` verifica firma y vigencia en cada solicitud; `require_roles`
+   aplica los grupos de roles por router. Un 401 en la web limpia la sesión y vuelve a `/login`.
+
 ## Justificación de tecnologías
 
 | Decisión | Motivo |

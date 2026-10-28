@@ -20,7 +20,7 @@ test.describe("Clientes", () => {
     await expect(page.getByRole("region", { name: "Indicadores" })).toBeVisible();
   });
 
-  test("registra, filtra, edita y elimina un cliente", async ({ page }) => {
+  test("registra, filtra, edita y elimina un cliente @smoke", async ({ page }) => {
     const nombre = `Cliente E2E ${unique}`;
     const identificacion = `7${unique.slice(-9)}`;
     page.on("dialog", (dialog) => dialog.accept());

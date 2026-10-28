@@ -13,7 +13,7 @@
 | 2 | Clientes, propietarios y codeudores sobre `person` | «Implementa clientes, propietarios y codeudores sobre el modelo de personas (fase 2)» | hecha | 2026-10-28 |
 | 3 | Inmuebles | «Implementa inmuebles y elimina la tabla de demostración (fase 3)» | hecha | 2026-10-28 |
 | 4 | Contratos | «Implementa contratos con partes, filtros e impresión (fase 4)» | hecha | 2026-10-28 |
-| 5 | Ayuda, responsive, respaldo local y documentación | — | pendiente | — |
+| 5 | Ayuda, responsive, respaldo local y documentación | «Agrega ayuda en línea, diseño adaptable, respaldo local y documentación final (fase 5)» | hecha | 2026-10-28 |
 
 ## Contexto
 
@@ -1209,3 +1209,6 @@ Comprobaciones manuales mínimas:
 | 2026-10-28 | 4 | `ContratoUpdate = ContratoCreate`: en PUT, `propietarios_ids` ausente también significa «los dueños actuales del inmueble» (la web siempre envía la lista). El listado expone `estado` (`programado`/`vigente`/`finalizado`) y `dias_restantes`; «por vencer» (≤ 60 días) es un filtro y una insignia derivada en la web, no un estado. |
 | 2026-10-28 | 4 | Un 409 `contrato_con_dependencias` al editar se muestra como alerta sobre el formulario (no se deshabilita el formulario). La lista «Contratos que vencen pronto» del tablero queda para la versión final del tablero (fase 5); por ahora los KPI de contratos enlazan a `/contratos?estado=…`. |
 | 2026-10-28 | 4 | La búsqueda global (`GET /api/v1/buscar`, `components/BusquedaGlobal.tsx`) vive en la barra superior solo en escritorio y tableta; en móvil se oculta (cada módulo conserva su buscador). Los contratos exponen `PERSONA_JOINS` compartido desde `modules/inmuebles/repository.py` para el resumen de persona. |
+| 2026-10-28 | 5 | Sin componente `ErrorAlert`: `errorMessage()` añade «Código de soporte: <request_id>» y los formularios lo usan; las alertas existentes no cambian de marcado. `AyudaLink` va en la zona de acciones de cada cabecera (visible también para quien no puede escribir). |
+| 2026-10-28 | 5 | El pie de página no muestra la versión de la API (la barra lateral ya muestra runtime y entorno); se evita una segunda consulta a `/api/health`. La búsqueda global se oculta en móvil. |
+| 2026-10-28 | 5 | `backup.sh` deja la copia local siempre y la copia externa solo si `BACKUP_RCLONE_REMOTE` está definido; el ciclo completo se probó solo con revisión de comandos (no hay VPS). Firefox y WebKit ejecutan únicamente las dos pruebas `@smoke` (login y CRUD de clientes). |

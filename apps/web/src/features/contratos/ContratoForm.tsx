@@ -3,7 +3,7 @@ import { type FormEvent, useState } from "react";
 import { Field } from "../../components/Field";
 import { SelectField } from "../../components/SelectField";
 import { TextAreaField } from "../../components/TextAreaField";
-import { ApiError } from "../../services/apiClient";
+import { ApiError, errorMessage } from "../../services/apiClient";
 import type { Contrato, ContratoCreate } from "../../types/contrato";
 import { useCatalogos } from "../catalogos/useCatalogos";
 import { PersonaListPicker } from "../personas/PersonaListPicker";
@@ -58,7 +58,7 @@ export function ContratoForm({ modo, inicial, onSubmit, onCancel }: ContratoForm
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(errorsFromApi(error.details, CAMPOS_CONTRATO));
-        setFormError(error.message);
+        setFormError(errorMessage(error));
       } else {
         setFormError("No fue posible guardar el contrato.");
       }

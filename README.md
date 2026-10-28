@@ -3,12 +3,13 @@
 Aplicación web interna para **APHIA S.A.S.**, inmobiliaria ubicada en Colombia. Administrará
 clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y trazabilidad.
 
-> **Estado actual (v0.1.0):** fases 0–4 del [plan de implementación](docs/plan-de-implementacion.md):
+> **Estado actual (v0.1.0):** las seis fases del [plan de implementación](docs/plan-de-implementacion.md) están hechas:
 > inicio de sesión real (usuario y contraseña, bloqueo tras 3 intentos), usuarios y roles,
 > clientes, propietarios y codeudores sobre el [modelo 3FN](docs/arquitectura/modelo-de-datos.md)
 > (una persona puede tener varios papeles), inmuebles con propietarios y servicios públicos,
-> contratos con partes, filtros e impresión, búsqueda global, tablero e identidad visual. La
-> ayuda en línea, el manual y el respaldo local llegan en la fase 5.
+> contratos con partes, filtros e impresión, búsqueda global, tablero, identidad visual, ayuda en
+> línea (`/ayuda`), [manual de usuario](docs/manual-usuario.md), respaldo local cifrado y
+> [guía de instalación y mantenimiento](docs/despliegue/instalacion-y-mantenimiento.md).
 
 ## Arquitectura en una línea
 
@@ -96,7 +97,7 @@ desarrollo (los crea `pnpm db:seed`; contraseña `Aphia.2026`, solo para develop
 ```bash
 pnpm test               # 217 pruebas unitarias (50 web + 136 API + 31 documentos)
 pnpm test:integration   # 37 API↔MySQL (personas, login, usuarios, catálogos, modelo 3FN, migraciones) + 5 documentos en Docker
-pnpm test:e2e           # 13 escenarios en Chromium contra el stack completo (login real)
+pnpm test:e2e           # 21 escenarios en Chromium (+ smoke en Firefox y WebKit) contra el stack completo
 ```
 
 Estrategia y cobertura: [docs/pruebas](docs/pruebas/README.md).
@@ -148,7 +149,7 @@ Responsabilidades de cada carpeta y reglas de trabajo: [docs/desarrollo](docs/de
 | El login responde «Usuario o contraseña incorrectos» con `admin` | Falta cargar los usuarios de desarrollo: `pnpm db:seed`. |
 | La API responde 500 `configuracion_invalida` al arrancar | Falta `AUTH_SECRET` (≥ 32 caracteres): `pnpm env:init` lo genera en `.env` y `apps/api/.dev.vars`. |
 | `pnpm install` avisa de *build scripts* ignorados | Ya están aprobados en `pnpm-workspace.yaml` (`allowBuilds`); si agrega otro, use `pnpm approve-builds`. |
-| `test:e2e` falla con «Executable doesn't exist» | Instale el navegador: `pnpm test:e2e:install`. |
+| `test:e2e` falla con «Executable doesn't exist» | Instale los navegadores: `pnpm test:e2e:install` (Chromium, Firefox y WebKit). |
 | Cambié la contraseña en `.env` y MySQL rechaza la conexión | MySQL solo usa las variables al crear el volumen. `pnpm infra:reset -- --yes` (borra datos locales) y repita la instalación. |
 
 ## Documentación

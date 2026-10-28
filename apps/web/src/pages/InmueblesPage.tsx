@@ -2,6 +2,7 @@ import { Building2, Plus, X } from "lucide-react";
 import { type FormEvent, useCallback, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 
+import { AyudaLink } from "../components/AyudaLink";
 import { Field } from "../components/Field";
 import { KpiCard } from "../components/KpiCard";
 import { Pagination } from "../components/Pagination";
@@ -96,13 +97,14 @@ export function InmueblesPage() {
             <p>Registro catastral, titularidad y contratos de servicios públicos de cada inmueble.</p>
           </div>
         </div>
-        {tiene(ESCRITURA) && (
-          <div className="actions">
+        <div className="actions">
+          {tiene(ESCRITURA) && (
             <Link to={{ pathname: "/inmuebles/nuevo", search: location.search }} className="button-link">
               <Plus size={18} aria-hidden="true" /> Registrar inmueble
             </Link>
-          </div>
-        )}
+          )}
+          <AyudaLink seccion="inmuebles" etiqueta="inmuebles" />
+        </div>
       </header>
 
       {inmuebles && (

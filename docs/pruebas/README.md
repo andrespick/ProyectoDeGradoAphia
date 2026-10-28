@@ -10,7 +10,7 @@
 | Todas las unitarias | | `pnpm test` | — |
 | Lint / tipos | Ruff · TypeScript | `pnpm lint` · `pnpm typecheck` | — |
 | Integración | Pytest contra MySQL real · `node --test` contra Docker | `pnpm test:integration` | Docker |
-| Extremo a extremo | Playwright (Chromium) | `pnpm test:e2e` | Docker, navegador instalado |
+| Extremo a extremo | Playwright: Chromium (todo) + Firefox y WebKit (pruebas `@smoke`) | `pnpm test:e2e` | Docker, navegadores (`pnpm test:e2e:install`) |
 
 `pnpm test:integration` levanta el contenedor **separado** `mysql-test` (base `aphia_test`,
 datos en memoria), aplica las migraciones automáticamente, ejecuta las pruebas y lo elimina
@@ -43,9 +43,14 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Inmuebles (RF-07…RF-09) | `test_inmuebles.py` (crear con propietarios y servicios, moneda solo con canon, 422 parametrizados, propietario inexistente 404, filtros, actualizar reemplaza listas, eliminar con contratos 409, asesor 403), `test_inmuebles_mysql.py` (ciudad única por nombre exacto, canon→COP, papel OWNER automático visible en `/propietarios`, bloqueo por contrato, filtros sin mayúsculas ni acentos), `InmuebleForm.test.tsx` (normalización del canon, propietario obligatorio, servicios, error de API), `InmueblesPage.test.tsx` (filtros de URL, 409 al eliminar, asesor, edición en panel), E2E `inmuebles.spec.ts` y `propietarios.spec.ts` (propietario con inmuebles no se elimina; el inscrito desde el inmueble aparece en Propietarios) | ✅ |
 | Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
 | Contratos y codeudores (RF-10…RF-15) | `test_contratos.py` (propietarios del inmueble o explícitos, papeles automáticos, 422 parametrizados, 404/409, matriz de solapamiento de fechas, filtros, listado sin texto, actualizar reemplaza partes, dependencias en PUT y DELETE, asesor 403), `test_contratos_mysql.py` (partes con sus códigos, `/codeudores?contrato_id=`, filtros por fechas y estado sobre MySQL, bloqueo por `financial_record`, búsqueda global), `ContratoForm.test.tsx`, `ContratosPage.test.tsx`, `ContratoDetallePage.test.tsx` (impresión y asociar codeudor), `BusquedaGlobal.test.tsx`, E2E `contratos.spec.ts` | ✅ |
+| Ayuda en línea y diseño adaptable (RNF-06, RNF-07) | E2E `ayuda.spec.ts` (pública, enlace del login y de Clientes), `responsive.spec.ts` (375 px: sin desplazamiento horizontal, cajón, tabla desplazable, panel a pantalla completa) | ✅ |
+| Compatibilidad de navegadores (RNF-08) | `auth.spec.ts` y `clientes.spec.ts` etiquetadas `@smoke` en Firefox y WebKit | ✅ |
+| Rendimiento (RNF-01) | `test_rendimiento_mysql.py`: 500 personas; `GET /clientes?q=`, `/propietarios` y `/contratos?fecha_desde=` en menos de 3 s | ✅ |
+| Código de soporte en errores | `errorMessage()` añade el `request_id` (`apiClient.test.ts`) | ✅ |
 
-Totales: 66 (web) + 178 (API) + 31 (documentos) unitarias; 46 (API ↔ MySQL) + 5 (documentos)
-de integración; 17 E2E (con inicio de sesión real contra el Worker local).
+Totales: 67 (web) + 178 (API) + 31 (documentos) unitarias; 47 (API ↔ MySQL) + 5 (documentos)
+de integración; 21 E2E en Chromium + 2 `@smoke` en Firefox y 2 en WebKit (inicio de sesión real
+contra el Worker local).
 
 ## CI
 

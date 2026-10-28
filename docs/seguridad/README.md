@@ -19,7 +19,8 @@
 | MySQL y documentos sin puertos públicos; red interna sin salida a Internet; TLS obligatorio a MySQL | `infra/production/compose.yaml`, `aphia.cnf` | ✅ (en réplica local) |
 | Bases separadas por entorno (desarrollo, pruebas, staging, producción) | Compose, Hyperdrive por entorno | Parcial (staging/prod por crear) |
 | Despliegue a producción solo con aprobación y desde `main` | `.github/workflows/deploy.yml` | Configurado, no ejecutado |
-| Respaldos cifrados con `age` fuera del VPS | `infra/production/backup` | Comandos de volcado verificados; ciclo completo no ejecutado |
+| Respaldos cifrados con `age`: copia local diaria (directorio 700, archivos 600, retención) y copia externa opcional | `infra/production/backup` | Comandos de volcado verificados; ciclo completo no ejecutado en un VPS real |
+| Código de soporte (`request_id`) en cada error mostrado al usuario, sin exponer trazas | `apiClient.errorMessage` | ✅ |
 
 ## Autenticación
 
@@ -63,7 +64,8 @@ servicio afectado y verifique `/api/ready`. Rote inmediatamente ante cualquier s
 
 ## Pendientes de seguridad
 
-- Auditoría de acciones e intentos de acceso (bitácora con actor y fecha).
+- Auditoría de acciones e intentos de acceso (bitácora con actor y fecha); hoy los intentos
+  fallidos y bloqueos solo quedan en los logs JSON.
 - Límite de tasa (Cloudflare WAF / Rate Limiting) en la API.
 - Endurecimiento del VPS (ver `docs/despliegue/vps.md`) y monitoreo de logs.
 - Integración API ↔ documentos con autorización por entidad (quién puede ver qué contrato).

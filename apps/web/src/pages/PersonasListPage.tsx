@@ -3,6 +3,7 @@ import { type FormEvent, useCallback, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 
 import { Field } from "../components/Field";
+import { AyudaLink } from "../components/AyudaLink";
 import { KpiCard } from "../components/KpiCard";
 import { Pagination } from "../components/Pagination";
 import { Segmented } from "../components/Segmented";
@@ -106,6 +107,7 @@ export function PersonasListPage({ modulo }: { modulo: Modulo }) {
             <Link to={{ pathname: `${config.ruta}/nuevo`, search: location.search }} className="button-link">
               <UserPlus size={18} aria-hidden="true" /> Registrar {config.singular}
             </Link>
+            <AyudaLink seccion={modulo} etiqueta={config.plural} />
           </div>
         )}
       </header>

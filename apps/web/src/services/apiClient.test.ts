@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiError, json, mockApi } from "../test/mockApi";
-import { ApiError, apiRequest } from "./apiClient";
+import { ApiError, apiRequest, errorMessage } from "./apiClient";
 import { SESSION_EXPIRED_EVENT } from "./session";
 
 beforeEach(() => {
@@ -99,5 +99,16 @@ describe("apiRequest", () => {
     await expect(apiRequest("/api/v1/usuarios")).rejects.toMatchObject({ status: 401 });
     expect(avisos).toBe(1);
     expect(sessionStorage.getItem("aphia.token")).toBeNull();
+  });
+});
+
+describe("errorMessage", () => {
+  it("añade el código de soporte cuando la API devolvió request_id", () => {
+    const conCodigo = new ApiError("No se puede eliminar.", { status: 409, code: "x", requestId: "abc123" });
+    const sinCodigo = new ApiError("Sin conexión.", { status: 0, code: "sin_conexion" });
+
+    expect(errorMessage(conCodigo)).toBe("No se puede eliminar. Código de soporte: abc123.");
+    expect(errorMessage(sinCodigo)).toBe("Sin conexión.");
+    expect(errorMessage(new Error("otro"))).toBe("Ocurrió un error inesperado.");
   });
 });

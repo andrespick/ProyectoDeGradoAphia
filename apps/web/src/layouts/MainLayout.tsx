@@ -1,5 +1,6 @@
 import {
   Building2,
+  CircleHelp,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -36,6 +37,7 @@ const NAV: readonly NavItem[] = [
   { to: "/inmuebles", label: "Inmuebles", icon: Building2, roles: LECTURA },
   { to: "/contratos", label: "Contratos", icon: FileText, roles: LECTURA },
   { to: "/usuarios", label: "Usuarios", icon: ShieldUser, roles: GESTION_USUARIOS },
+  { to: "/ayuda", label: "Ayuda", icon: CircleHelp, roles: LECTURA },
 ];
 
 const RUNTIME_LABELS = { workers: "Cloudflare Workers", asgi: "ASGI (Uvicorn)" } as const;
@@ -75,6 +77,9 @@ export function MainLayout() {
       <div className="app-public">
         <header className="public-bar">
           <Brand />
+          <Link to="/ayuda" className="public-bar-link">
+            <CircleHelp size={18} aria-hidden="true" /> Ayuda
+          </Link>
           <SystemStatus compact />
         </header>
         <main id="contenido" className="app-main">

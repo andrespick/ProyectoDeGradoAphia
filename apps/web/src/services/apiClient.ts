@@ -106,6 +106,8 @@ function isErrorBody(payload: unknown): payload is ApiErrorBody {
   );
 }
 
+/** Mensaje para el usuario; los errores de la API llevan el código de soporte (request_id). */
 export function errorMessage(error: unknown): string {
-  return error instanceof ApiError ? error.message : "Ocurrió un error inesperado.";
+  if (!(error instanceof ApiError)) return "Ocurrió un error inesperado.";
+  return error.requestId ? `${error.message} Código de soporte: ${error.requestId}.` : error.message;
 }

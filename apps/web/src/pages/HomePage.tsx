@@ -1,11 +1,15 @@
 import { ArrowRight, Building2, FileText, type LucideIcon, ShieldUser, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { KpiCard } from "../components/KpiCard";
 import { useAuth } from "../features/auth/AuthProvider";
 import { GESTION_USUARIOS } from "../features/auth/roles";
 import { MODULOS } from "../features/personas/modulos";
+import { diasRestantesTexto } from "../features/contratos/ContratosTable";
 import { useResumen } from "../features/resumen/useResumen";
+import { listContratos } from "../services/contratosService";
+import type { ContratoListado } from "../types/contrato";
 import type { Role } from "../types/auth";
 import type { Resumen } from "../types/resumen";
 
@@ -74,6 +78,17 @@ export function HomePage() {
   const { principal, tiene } = useAuth();
   const { resumen, error } = useResumen();
   const nombre = principal?.nombre.split(" ")[0] ?? "";
+  const [porVencer, setPorVencer] = useState<ContratoListado[] | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    listContratos({ filtros: { estado: "por_vencer" }, limit: 5, offset: 0 }, controller.signal)
+      .then((pagina) => setPorVencer(pagina.items))
+      .catch(() => {
+        if (!controller.signal.aborted) setPorVencer([]);
+      });
+    return () => controller.abort();
+  }, []);
 
   return (
     <>
@@ -129,6 +144,31 @@ export function HomePage() {
           />
         </section>
       )}
+
+      <section className="card" aria-labelledby="vencimientos-titulo">
+        <h2 id="vencimientos-titulo">Contratos que vencen pronto</h2>
+        {porVencer === null && (
+          <p className="muted" role="status">
+            Cargando…
+          </p>
+        )}
+        {porVencer && porVencer.length === 0 && <p className="muted">Ningún contrato termina en los próximos 60 días.</p>}
+        {porVencer && porVencer.length > 0 && (
+          <ul className="plain-list">
+            {porVencer.map((c) => (
+              <li key={c.id}>
+                <Link to={`/contratos/${c.id}`}>
+                  <strong>Contrato #{c.id}</strong>
+                </Link>
+                <span className="muted">
+                  {" "}
+                  · {c.inmueble.direccion} · {c.arrendatario?.nombre ?? "sin arrendatario"} · {diasRestantesTexto(c.dias_restantes)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section aria-labelledby="modulos-titulo">
         <h2 id="modulos-titulo">Módulos de gestión</h2>

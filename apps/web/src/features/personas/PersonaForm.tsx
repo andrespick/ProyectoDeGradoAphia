@@ -2,7 +2,7 @@ import { type FormEvent, useState } from "react";
 
 import { Field } from "../../components/Field";
 import { SelectField } from "../../components/SelectField";
-import { ApiError } from "../../services/apiClient";
+import { ApiError, errorMessage } from "../../services/apiClient";
 import { NOMBRE_PAPEL, PAPELES, type Papel, type Persona, type PersonaCreate } from "../../types/persona";
 import { useCatalogos } from "../catalogos/useCatalogos";
 import { errorsFromApi } from "../shared/validation";
@@ -73,7 +73,7 @@ export function PersonaForm({
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(errorsFromApi(error.details, CAMPOS_PERSONA));
-        setFormError(error.message);
+        setFormError(errorMessage(error));
       } else {
         setFormError("No fue posible guardar la información.");
       }
