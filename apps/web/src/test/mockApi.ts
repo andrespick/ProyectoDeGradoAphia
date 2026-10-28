@@ -146,6 +146,26 @@ export function personaDetalle(base: ReturnType<typeof persona>, extras: Record<
   };
 }
 
+export function contrato(id: number, extras: Record<string, unknown> = {}) {
+  return {
+    id,
+    tipo: "ARRENDAMIENTO",
+    inmueble: { id: 1, direccion: "Calle 93B # 11A-44", ciudad: "Bogotá", estado: "OCUPADO" },
+    fecha_inicio: "2026-01-01",
+    fecha_fin: "2026-12-31",
+    canon_pactado: "1500000.00",
+    moneda: "COP",
+    estado: "vigente" as const,
+    dias_restantes: 64,
+    propietarios: [persona(1, "Laura Dueña", "1001", ["propietario"])],
+    arrendatario: persona(3, "Carlos Inquilino", "1003", ["arrendatario"]),
+    codeudores: [persona(4, "Pedro Fiador", "1004", ["codeudor"])],
+    condiciones: "Pago anticipado.",
+    texto: "CONTRATO DE ARRENDAMIENTO\nTexto ficticio.",
+    ...extras,
+  };
+}
+
 export function usuario(
   id: number,
   usuario: string,

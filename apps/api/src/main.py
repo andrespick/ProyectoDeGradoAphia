@@ -19,9 +19,11 @@ from core.logging import configure_logging
 from core.middleware import RequestContextMiddleware, SettingsCORSMiddleware
 from core.runtime import settings_from_scope
 from modules.auth.router import router as auth_router
+from modules.buscar.router import router as buscar_router
 from modules.catalogos.router import router as catalogos_router
 from modules.clientes.router import router as clientes_router
 from modules.codeudores.router import router as codeudores_router
+from modules.contratos.router import router as contratos_router
 from modules.health.router import API_VERSION
 from modules.health.router import router as health_router
 from modules.inmuebles.router import router as inmuebles_router
@@ -50,6 +52,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(propietarios_router)
     app.include_router(codeudores_router)
     app.include_router(inmuebles_router)
+    app.include_router(contratos_router)
+    app.include_router(buscar_router)
     app.include_router(catalogos_router)
     app.include_router(usuarios_router)
     app.include_router(resumen_router)

@@ -1,1 +1,1 @@
-"""Contratos. Pendiente: seguir docs/desarrollo/crear-modulo.md (modelo: modules/clientes)."""
+"""Contratos (property_agreement) con sus partes: propietarios, arrendatario y codeudores."""

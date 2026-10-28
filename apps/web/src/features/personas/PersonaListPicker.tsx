@@ -10,10 +10,11 @@ interface PersonaListPickerProps {
   value: PersonaResumen[];
   onChange: (personas: PersonaResumen[]) => void;
   error?: string;
+  excluir?: readonly number[];
 }
 
 /** Varias personas (propietarios de un inmueble, codeudores de un contrato). */
-export function PersonaListPicker({ idPrefix, label, papel, value, onChange, error }: PersonaListPickerProps) {
+export function PersonaListPicker({ idPrefix, label, papel, value, onChange, error, excluir = [] }: PersonaListPickerProps) {
   return (
     <div className="field">
       {value.length > 0 && (
@@ -37,7 +38,7 @@ export function PersonaListPicker({ idPrefix, label, papel, value, onChange, err
         label={value.length > 0 ? `Agregar otro ${label.toLowerCase()}` : label}
         papel={papel}
         value={null}
-        excluir={value.map((p) => p.id)}
+        excluir={[...value.map((p) => p.id), ...excluir]}
         onChange={(persona) => persona && onChange([...value, persona])}
       />
       {error && (

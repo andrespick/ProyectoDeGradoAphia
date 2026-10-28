@@ -28,6 +28,8 @@ TABLAS_A_LIMPIAR = [
     "file_property",
     "file_record",
     "financial_record",
+    "financial_category",
+    "payment_state",
     "agreement_party",
     "property_agreement",
     "property_utility",

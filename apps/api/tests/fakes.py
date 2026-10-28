@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from core.errors import CatalogoInvalidoError, IdentificacionDuplicadaError
 from modules.auth.passwords import hash_password
 from modules.auth.repository import CuentaLogin
 from modules.auth.schemas import Role
+from modules.buscar.schemas import ResultadosBusqueda
 from modules.catalogos.schemas import Catalogos, Ciudad, Opcion
+from modules.contratos.schemas import (
+    DIAS_POR_VENCER,
+    Contrato,
+    ContratoCreate,
+    ContratoFiltros,
+    estado_de,
+)
 from modules.inmuebles.schemas import Inmueble, InmuebleCreate, InmuebleFiltros, ServicioPublico
 from modules.personas.schemas import (
     ContratoResumen,
@@ -481,3 +489,144 @@ class InMemoryInmueblesRepository:
             propietarios=propietarios,
             total_contratos=self.contratos.get(property_id, 0),
         )
+
+
+class InMemoryContratosRepository:
+    """Contratos en memoria; `hoy` fijo para que estado y días restantes sean deterministas."""
+
+    def __init__(self) -> None:
+        self.items: dict[int, Contrato] = {}
+        self.personas: dict[int, PersonaResumen] = {}
+        self.inmuebles: dict[int, tuple[InmuebleResumen, list[int]]] = {}
+        self.dependencias: dict[int, tuple[int, int]] = {}
+        self.papeles_agregados: list[tuple[int, str]] = []
+        self.hoy = date(2026, 10, 28)
+
+    def persona(self, person_id: int, nombre: str) -> PersonaResumen:
+        resumen = PersonaResumen(
+            id=person_id,
+            nombre=nombre,
+            tipo_identificacion="CC",
+            identificacion=f"100{person_id}",
+            telefono=None,
+            correo=None,
+        )
+        self.personas[person_id] = resumen
+        return resumen
+
+    def inmueble(self, property_id: int, direccion: str, duenos: list[int]) -> InmuebleResumen:
+        resumen = InmuebleResumen(id=property_id, direccion=direccion, ciudad="Bogotá", estado=None)
+        self.inmuebles[property_id] = (resumen, duenos)
+        return resumen
+
+    async def listar(
+        self, filtros: ContratoFiltros, *, limit: int, offset: int
+    ) -> tuple[list[Contrato], int]:
+        items = sorted(self.items.values(), key=lambda c: (c.fecha_inicio, c.id), reverse=True)
+        if filtros.fecha_desde:
+            items = [c for c in items if c.fecha_fin is None or c.fecha_fin >= filtros.fecha_desde]
+        if filtros.fecha_hasta:
+            items = [c for c in items if c.fecha_inicio <= filtros.fecha_hasta]
+        if filtros.inmueble_id is not None:
+            items = [c for c in items if c.inmueble.id == filtros.inmueble_id]
+        if filtros.propietario_id is not None:
+            items = [
+                c for c in items if any(p.id == filtros.propietario_id for p in c.propietarios)
+            ]
+        if filtros.inquilino_id is not None:
+            items = [
+                c for c in items if c.arrendatario and c.arrendatario.id == filtros.inquilino_id
+            ]
+        if filtros.tipo:
+            items = [c for c in items if c.tipo == filtros.tipo.upper()]
+        if filtros.estado == "por_vencer":
+            items = [
+                c
+                for c in items
+                if c.fecha_fin is not None and 0 <= (c.fecha_fin - self.hoy).days <= DIAS_POR_VENCER
+            ]
+        elif filtros.estado:
+            items = [c for c in items if c.estado == filtros.estado]
+        if filtros.q:
+            q = filtros.q.lower()
+            items = [
+                c
+                for c in items
+                if q in c.inmueble.direccion.lower()
+                or any(q in p.nombre.lower() for p in self._partes(c))
+            ]
+        return items[offset : offset + limit], len(items)
+
+    async def obtener(self, agreement_id: int) -> Contrato | None:
+        return self.items.get(agreement_id)
+
+    async def propietarios_del_inmueble(self, property_id: int) -> list[int] | None:
+        return None if property_id not in self.inmuebles else list(self.inmuebles[property_id][1])
+
+    async def crear(self, datos: ContratoCreate, propietarios_ids: list[int]) -> Contrato:
+        agreement_id = len(self.items) + 1
+        self.items[agreement_id] = self._desde(agreement_id, datos, propietarios_ids)
+        return self.items[agreement_id]
+
+    async def actualizar(
+        self, agreement_id: int, datos: ContratoCreate, propietarios_ids: list[int]
+    ) -> Contrato | None:
+        if agreement_id not in self.items:
+            return None
+        self.items[agreement_id] = self._desde(agreement_id, datos, propietarios_ids)
+        return self.items[agreement_id]
+
+    async def contar_dependencias(self, agreement_id: int) -> tuple[int, int]:
+        return self.dependencias.get(agreement_id, (0, 0))
+
+    async def eliminar(self, agreement_id: int) -> bool:
+        return self.items.pop(agreement_id, None) is not None
+
+    @staticmethod
+    def _partes(contrato: Contrato) -> list[PersonaResumen]:
+        return [
+            *contrato.propietarios,
+            *([contrato.arrendatario] if contrato.arrendatario else []),
+            *contrato.codeudores,
+        ]
+
+    def _persona(self, person_id: int, papel: str) -> PersonaResumen:
+        if person_id not in self.personas:
+            raise PersonaNoEncontradaError(f"La persona {person_id} no existe.")
+        self.papeles_agregados.append((person_id, papel))
+        return self.personas[person_id]
+
+    def _desde(self, agreement_id: int, datos: ContratoCreate, propietarios: list[int]) -> Contrato:
+        if datos.tipo not in {"ARRENDAMIENTO", "ADMINISTRACION"}:
+            raise CatalogoInvalidoError("tipo")
+        estado, dias = estado_de(datos.fecha_inicio, datos.fecha_fin, self.hoy)
+        return Contrato(
+            id=agreement_id,
+            tipo=datos.tipo,
+            inmueble=self.inmuebles[datos.inmueble_id][0],
+            fecha_inicio=datos.fecha_inicio,
+            fecha_fin=datos.fecha_fin,
+            canon_pactado=datos.canon_pactado,
+            moneda="COP" if datos.canon_pactado is not None else None,
+            estado=estado,
+            dias_restantes=dias,
+            propietarios=[self._persona(p, "propietario") for p in propietarios],
+            arrendatario=(
+                None
+                if datos.arrendatario_id is None
+                else self._persona(datos.arrendatario_id, "arrendatario")
+            ),
+            codeudores=[self._persona(c, "codeudor") for c in datos.codeudores_ids],
+            condiciones=datos.condiciones,
+            texto=datos.texto,
+        )
+
+
+class InMemoryBuscarRepository:
+    def __init__(self) -> None:
+        self.consultas: list[str] = []
+        self.resultado = ResultadosBusqueda(personas=[], inmuebles=[], contratos=[])
+
+    async def buscar(self, q: str) -> ResultadosBusqueda:
+        self.consultas.append(q)
+        return self.resultado

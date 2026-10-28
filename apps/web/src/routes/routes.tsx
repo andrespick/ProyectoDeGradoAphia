@@ -3,6 +3,9 @@ import type { RouteObject } from "react-router";
 import { GESTION_USUARIOS, LECTURA } from "../features/auth/roles";
 import { type Modulo, MODULOS } from "../features/personas/modulos";
 import { MainLayout } from "../layouts/MainLayout";
+import { ContratoDetallePage } from "../pages/ContratoDetallePage";
+import { ContratoFormPage } from "../pages/ContratoFormPage";
+import { ContratosPage } from "../pages/ContratosPage";
 import { HomePage } from "../pages/HomePage";
 import { InmuebleFormPage } from "../pages/InmuebleFormPage";
 import { InmueblesPage } from "../pages/InmueblesPage";
@@ -50,6 +53,10 @@ export const routes: RouteObject[] = [
               { path: ":id/editar", element: <InmuebleFormPage modo="editar" /> },
             ],
           },
+          { path: "contratos", element: <ContratosPage /> },
+          { path: "contratos/nuevo", element: <ContratoFormPage modo="crear" /> },
+          { path: "contratos/:id", element: <ContratoDetallePage /> },
+          { path: "contratos/:id/editar", element: <ContratoFormPage modo="editar" /> },
         ],
       },
       {

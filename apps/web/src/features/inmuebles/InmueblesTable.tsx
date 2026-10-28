@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 
 import { BADGE_ESTADO, type Inmueble, NOMBRE_ESTADO } from "../../types/inmueble";
@@ -99,6 +99,9 @@ export function InmueblesTable({
               </td>
               <td>
                 <span className="row-actions">
+                  <Link to={`/contratos?inmueble_id=${inmueble.id}`} aria-label={`Ver contratos de ${inmueble.direccion}`}>
+                    <FileText size={16} aria-hidden="true" /> Contratos ({inmueble.total_contratos})
+                  </Link>
                   {puedeEditar && (
                     <Link to={`/inmuebles/${inmueble.id}/editar`} aria-label={`Editar ${inmueble.direccion}`}>
                       <Pencil size={16} aria-hidden="true" /> Editar

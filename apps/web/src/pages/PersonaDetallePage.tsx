@@ -175,9 +175,11 @@ function ListaContratos({ titulo, contratos }: { titulo: string; contratos: Cont
         <ul className="plain-list">
           {contratos.map((contrato) => (
             <li key={contrato.id}>
-              <strong>
-                Contrato #{contrato.id} · {contrato.tipo}
-              </strong>
+              <Link to={`/contratos/${contrato.id}`}>
+                <strong>
+                  Contrato #{contrato.id} · {contrato.tipo}
+                </strong>
+              </Link>
               <span className="muted">
                 {" "}
                 · {contrato.inmueble.direccion} · {fecha.format(new Date(contrato.fecha_inicio))}

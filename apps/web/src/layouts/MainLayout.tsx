@@ -1,5 +1,6 @@
 import {
   Building2,
+  FileText,
   LayoutDashboard,
   LogOut,
   type LucideIcon,
@@ -11,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import { Avatar } from "../components/Avatar";
+import { BusquedaGlobal } from "../components/BusquedaGlobal";
 import { useAuth } from "../features/auth/AuthProvider";
 import { GESTION_USUARIOS, LECTURA, NOMBRE_ROL } from "../features/auth/roles";
 import { MODULOS } from "../features/personas/modulos";
@@ -32,6 +34,7 @@ const NAV: readonly NavItem[] = [
   { to: MODULOS.propietarios.ruta, label: "Propietarios", icon: MODULOS.propietarios.icon, roles: LECTURA },
   { to: MODULOS.codeudores.ruta, label: "Codeudores", icon: MODULOS.codeudores.icon, roles: LECTURA },
   { to: "/inmuebles", label: "Inmuebles", icon: Building2, roles: LECTURA },
+  { to: "/contratos", label: "Contratos", icon: FileText, roles: LECTURA },
   { to: "/usuarios", label: "Usuarios", icon: ShieldUser, roles: GESTION_USUARIOS },
 ];
 
@@ -108,6 +111,7 @@ export function MainLayout() {
             <Menu size={20} aria-hidden="true" />
           </button>
           <Brand />
+          <BusquedaGlobal />
           <span className="topbar-spacer" />
           <UserMenu />
         </header>

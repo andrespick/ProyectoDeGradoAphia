@@ -12,14 +12,18 @@ from main import create_app
 from modules.auth.dependencies import get_auth_repository
 from modules.auth.schemas import Role
 from modules.auth.tokens import TokenPayload, issue_token
+from modules.buscar.router import get_buscar_repository
 from modules.catalogos.router import get_catalogos_repository
+from modules.contratos.router import get_contratos_repository
 from modules.inmuebles.router import get_inmuebles_repository
 from modules.personas.router import get_personas_repository
 from modules.resumen.router import get_resumen_repository
 from modules.usuarios.router import get_usuarios_repository
 from tests.fakes import (
     InMemoryAuthRepository,
+    InMemoryBuscarRepository,
     InMemoryCatalogosRepository,
+    InMemoryContratosRepository,
     InMemoryInmueblesRepository,
     InMemoryPersonasRepository,
     InMemoryResumenRepository,
@@ -72,6 +76,16 @@ def inmuebles_repository() -> InMemoryInmueblesRepository:
 
 
 @pytest.fixture
+def contratos_repository() -> InMemoryContratosRepository:
+    return InMemoryContratosRepository()
+
+
+@pytest.fixture
+def buscar_repository() -> InMemoryBuscarRepository:
+    return InMemoryBuscarRepository()
+
+
+@pytest.fixture
 def auth_repository() -> InMemoryAuthRepository:
     return InMemoryAuthRepository()
 
@@ -87,9 +101,13 @@ def _with_fakes(
     auth_repository: InMemoryAuthRepository,
     usuarios_repository: InMemoryUsuariosRepository,
     inmuebles_repository: InMemoryInmueblesRepository,
+    contratos_repository: InMemoryContratosRepository,
+    buscar_repository: InMemoryBuscarRepository,
 ) -> FastAPI:
     application.dependency_overrides[get_personas_repository] = lambda: personas_repository
     application.dependency_overrides[get_inmuebles_repository] = lambda: inmuebles_repository
+    application.dependency_overrides[get_contratos_repository] = lambda: contratos_repository
+    application.dependency_overrides[get_buscar_repository] = lambda: buscar_repository
     application.dependency_overrides[get_catalogos_repository] = InMemoryCatalogosRepository
     application.dependency_overrides[get_auth_repository] = lambda: auth_repository
     application.dependency_overrides[get_usuarios_repository] = lambda: usuarios_repository
@@ -104,6 +122,8 @@ def app(
     auth_repository: InMemoryAuthRepository,
     usuarios_repository: InMemoryUsuariosRepository,
     inmuebles_repository: InMemoryInmueblesRepository,
+    contratos_repository: InMemoryContratosRepository,
+    buscar_repository: InMemoryBuscarRepository,
 ) -> FastAPI:
     """Aplicación en modo development (usuario ficticio admin_sistemas)."""
     return _with_fakes(
@@ -112,6 +132,8 @@ def app(
         auth_repository,
         usuarios_repository,
         inmuebles_repository,
+        contratos_repository,
+        buscar_repository,
     )
 
 
@@ -121,11 +143,19 @@ def db_app(
     auth_repository: InMemoryAuthRepository,
     usuarios_repository: InMemoryUsuariosRepository,
     inmuebles_repository: InMemoryInmueblesRepository,
+    contratos_repository: InMemoryContratosRepository,
+    buscar_repository: InMemoryBuscarRepository,
 ) -> FastAPI:
     """Aplicación en modo database: exige un token (ver ``bearer``) o iniciar sesión."""
     application = create_app(make_settings(auth_mode="database", auth_secret=SECRET))
     return _with_fakes(
-        application, personas_repository, auth_repository, usuarios_repository, inmuebles_repository
+        application,
+        personas_repository,
+        auth_repository,
+        usuarios_repository,
+        inmuebles_repository,
+        contratos_repository,
+        buscar_repository,
     )
 
 

@@ -22,7 +22,6 @@ function plural(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
-// Contratos llega en la fase 4.
 const MODULOS_TABLERO: readonly Modulo[] = [
   {
     to: MODULOS.clientes.ruta,
@@ -51,6 +50,13 @@ const MODULOS_TABLERO: readonly Modulo[] = [
     descripcion: "Apartamentos, locales, oficinas y bodegas con sus propietarios y servicios públicos.",
     icon: Building2,
     conteo: (r) => plural(r.inmuebles.total, "inmueble", "inmuebles"),
+  },
+  {
+    to: "/contratos",
+    titulo: "Contratos",
+    descripcion: "Arrendamientos y administraciones con propietarios, arrendatarios y codeudores.",
+    icon: FileText,
+    conteo: (r) => plural(r.contratos.vigentes, "contrato vigente", "contratos vigentes"),
   },
   {
     to: "/usuarios",
@@ -111,6 +117,7 @@ export function HomePage() {
             detalle={`${resumen.contratos.total} en total · ${resumen.contratos.codeudores_vinculados} codeudores vinculados`}
             icono={<FileText size={20} />}
             tono="ok"
+            to="/contratos?estado=vigente"
           />
           <KpiCard
             etiqueta="Vencimientos próximos"
@@ -118,6 +125,7 @@ export function HomePage() {
             detalle="contratos que terminan en menos de 30 días"
             icono={<FileText size={20} />}
             tono={resumen.contratos.por_vencer_30 > 0 ? "error" : "neutro"}
+            to="/contratos?estado=por_vencer"
           />
         </section>
       )}

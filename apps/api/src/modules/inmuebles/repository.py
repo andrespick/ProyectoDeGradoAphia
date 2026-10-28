@@ -30,18 +30,20 @@ _SELECT = (
     "LEFT JOIN city c ON c.city_id = p.city_id "
     "LEFT JOIN occupancy_state os ON os.occupancy_state_id = p.occupancy_state_id"
 )
-# Resumen de persona con una fila hija por campo (misma regla que modules.personas).
-PROPIETARIOS_SQL = (
-    "SELECT po.property_id, pe.person_id, pe.full_name, dt.code AS tipo_identificacion, "
-    "d.document_identifier, ph.phone_number, e.email_address "
-    "FROM property_owner po JOIN person pe ON pe.person_id = po.person_id "
+# Resumen de persona `pe` con una fila hija por campo (misma regla que modules.personas).
+PERSONA_JOINS = (
     "LEFT JOIN person_document d ON d.person_document_id = "
     " (SELECT MIN(person_document_id) FROM person_document WHERE person_id = pe.person_id) "
     "LEFT JOIN document_type dt ON dt.document_type_id = d.document_type_id "
     "LEFT JOIN person_phone ph ON ph.phone_id = "
     " (SELECT MIN(phone_id) FROM person_phone WHERE person_id = pe.person_id) "
     "LEFT JOIN person_email e ON e.email_id = "
-    " (SELECT MIN(email_id) FROM person_email WHERE person_id = pe.person_id) "
+    " (SELECT MIN(email_id) FROM person_email WHERE person_id = pe.person_id)"
+)
+PROPIETARIOS_SQL = (
+    "SELECT po.property_id, pe.person_id, pe.full_name, dt.code AS tipo_identificacion, "
+    "d.document_identifier, ph.phone_number, e.email_address "
+    f"FROM property_owner po JOIN person pe ON pe.person_id = po.person_id {PERSONA_JOINS} "
     "WHERE po.property_id IN ({marcadores}) ORDER BY pe.full_name"
 )
 _SERVICIOS = (

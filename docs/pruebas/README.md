@@ -42,9 +42,10 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Tablero e indicadores | `test_resumen.py`, `HomePage.test.tsx` | ✅ |
 | Inmuebles (RF-07…RF-09) | `test_inmuebles.py` (crear con propietarios y servicios, moneda solo con canon, 422 parametrizados, propietario inexistente 404, filtros, actualizar reemplaza listas, eliminar con contratos 409, asesor 403), `test_inmuebles_mysql.py` (ciudad única por nombre exacto, canon→COP, papel OWNER automático visible en `/propietarios`, bloqueo por contrato, filtros sin mayúsculas ni acentos), `InmuebleForm.test.tsx` (normalización del canon, propietario obligatorio, servicios, error de API), `InmueblesPage.test.tsx` (filtros de URL, 409 al eliminar, asesor, edición en panel), E2E `inmuebles.spec.ts` y `propietarios.spec.ts` (propietario con inmuebles no se elimina; el inscrito desde el inmueble aparece en Propietarios) | ✅ |
 | Migraciones | idempotencia y aviso de fallo parcial (`test_migraciones_mysql.py`) | ✅ |
+| Contratos y codeudores (RF-10…RF-15) | `test_contratos.py` (propietarios del inmueble o explícitos, papeles automáticos, 422 parametrizados, 404/409, matriz de solapamiento de fechas, filtros, listado sin texto, actualizar reemplaza partes, dependencias en PUT y DELETE, asesor 403), `test_contratos_mysql.py` (partes con sus códigos, `/codeudores?contrato_id=`, filtros por fechas y estado sobre MySQL, bloqueo por `financial_record`, búsqueda global), `ContratoForm.test.tsx`, `ContratosPage.test.tsx`, `ContratoDetallePage.test.tsx` (impresión y asociar codeudor), `BusquedaGlobal.test.tsx`, E2E `contratos.spec.ts` | ✅ |
 
-Totales: 58 (web) + 149 (API) + 31 (documentos) unitarias; 42 (API ↔ MySQL) + 5 (documentos)
-de integración; 15 E2E (con inicio de sesión real contra el Worker local).
+Totales: 66 (web) + 178 (API) + 31 (documentos) unitarias; 46 (API ↔ MySQL) + 5 (documentos)
+de integración; 17 E2E (con inicio de sesión real contra el Worker local).
 
 ## CI
 

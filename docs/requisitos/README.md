@@ -15,9 +15,9 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | --- | --- | --- |
 | Clientes | `person`, `person_document`, `person_phone`, `person_email`, `person_party_role` | Implementado (fase 2): CRUD, filtros por nombre/identificación y tipo de cliente, detalle con relaciones |
 | Propietarios | `person`, `bank_account`, `property_owner` | Implementado (fase 2): CRUD con cuenta bancaria, filtros por nombre/identificación/correo, bloqueo de eliminación con inmuebles |
-| Codeudores | `person`, `agreement_party` (`CO_DEBTOR`) | Implementado (fase 2): CRUD y consulta por identificación o contrato |
+| Codeudores | `person`, `agreement_party` (`CO_DEBTOR`) | Implementado (fases 2 y 4): CRUD, consulta por identificación o contrato, varios codeudores por contrato y asociación desde el detalle del contrato |
 | Inmuebles | `property`, `property_owner`, `property_utility`, `city`, `service_provider` | Implementado (fase 3): CRUD con propietarios (papel automático), canon COP, estado y servicios públicos; filtros por estado, ciudad, propietario y texto; bloqueo de eliminación con contratos |
-| Contratos | `property_agreement`, `agreement_party` | Pendiente |
+| Contratos | `property_agreement`, `agreement_party`, `agreement_category` | Implementado (fase 4): CRUD con propietarios, arrendatario y codeudores; filtros por fechas (solapamiento), inmueble, propietario, inquilino, tipo y estado; detalle con vista de impresión (PDF del navegador); bloqueo con dependencias |
 | Finanzas | `financial_record`, `bank_account` | Pendiente (submodelo de pagos por definir) |
 | Documentos | `file_record` y vínculos | Servicio de almacenamiento listo; integración con la API pendiente |
 | Usuarios, permisos y trazabilidad | `user_account`, `app_role`, `user_role` | Implementado (fase 1): login con contraseña, bloqueo tras 3 intentos, CRUD de usuarios y roles. Auditoría pendiente |

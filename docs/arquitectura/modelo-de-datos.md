@@ -174,6 +174,22 @@ desde Clientes y queda bloqueado mientras posea algo. Los servicios públicos (`
 `utility_type` por código, `service_provider` *buscar o crear*, número de contrato) se reemplazan
 completos en cada edición. Eliminar un inmueble con contratos responde 409 `inmueble_con_contratos`.
 
+### Contratos (fase 4)
+
+`property_agreement` guarda tipo (`agreement_category` por código), inmueble, fechas (`end_date`
+NULL = indefinido), canon pactado (`agreed_rental_value` con `currency_code = 'COP'` solo si hay
+canon), `conditions` y el texto completo para impresión (`agreement_content`, LONGTEXT; el listado
+no lo devuelve). Las partes van en `agreement_party` con el código de `party_role` que tienen **en
+ese contrato**: `OWNER` (uno o más; por defecto los `property_owner` del inmueble al crearlo),
+`TENANT` (a lo sumo uno, opcional) y `CO_DEBTOR` (hasta 10, distintos del arrendatario). Cada parte
+recibe además el papel correspondiente en `person_party_role` (automático, nunca se quita solo).
+El estado del contrato (`programado`, `vigente`, `finalizado`) y los días restantes se calculan con
+la fecha UTC del servidor; «por vencer» es un filtro (termina en los próximos 60 días). Los filtros
+de fechas buscan **solapamiento** de vigencias: `fecha_desde` → `end_date IS NULL OR end_date >=
+desde`; `fecha_hasta` → `start_date <= hasta`. Un contrato con `financial_record` o
+`file_agreement` no se modifica ni elimina (409 `contrato_con_dependencias`). La ocupación del
+inmueble no cambia al crear o terminar un contrato: la UI recuerda actualizarla.
+
 ## Datos de catálogos
 
 Las migraciones `0002`–`0007` crean los catálogos **vacíos**; `0008` carga los códigos de los

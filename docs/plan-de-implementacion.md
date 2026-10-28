@@ -12,7 +12,7 @@
 | 1 | Usuarios y login real | «Implementa usuarios, inicio de sesión y bloqueo temporal (fase 1)» | hecha | 2026-10-28 |
 | 2 | Clientes, propietarios y codeudores sobre `person` | «Implementa clientes, propietarios y codeudores sobre el modelo de personas (fase 2)» | hecha | 2026-10-28 |
 | 3 | Inmuebles | «Implementa inmuebles y elimina la tabla de demostración (fase 3)» | hecha | 2026-10-28 |
-| 4 | Contratos | — | pendiente | — |
+| 4 | Contratos | «Implementa contratos con partes, filtros e impresión (fase 4)» | hecha | 2026-10-28 |
 | 5 | Ayuda, responsive, respaldo local y documentación | — | pendiente | — |
 
 ## Contexto
@@ -1206,3 +1206,6 @@ Comprobaciones manuales mínimas:
 | 2026-10-28 | 3 | `Inmueble` expone `total_contratos` y los servicios con su `id`; el formulario web normaliza el canon escrito «a la colombiana» (`1.500.000,50` → `1500000.50`). Sin hook `useInmuebles`: la página usa `usePagedList` directamente, como Usuarios. |
 | 2026-10-28 | 3 | La acción «Ver contratos» de la tabla de inmuebles y el enlace del propietario al inmueble llegan con la fase 4 (`/contratos?inmueble_id=`); por ahora el detalle del propietario enlaza a `/inmuebles/:id/editar`. El botón «Buscar» del selector de personas lleva `aria-label` «Buscar <papel>» para no confundirse con el buscador de la lista. |
 | 2026-10-28 | 3 | El filtro `q` de inmuebles compara dirección y matrícula sin distinguir mayúsculas ni acentos (`COLLATE utf8mb4_0900_ai_ci` en ambas columnas). |
+| 2026-10-28 | 4 | `ContratoUpdate = ContratoCreate`: en PUT, `propietarios_ids` ausente también significa «los dueños actuales del inmueble» (la web siempre envía la lista). El listado expone `estado` (`programado`/`vigente`/`finalizado`) y `dias_restantes`; «por vencer» (≤ 60 días) es un filtro y una insignia derivada en la web, no un estado. |
+| 2026-10-28 | 4 | Un 409 `contrato_con_dependencias` al editar se muestra como alerta sobre el formulario (no se deshabilita el formulario). La lista «Contratos que vencen pronto» del tablero queda para la versión final del tablero (fase 5); por ahora los KPI de contratos enlazan a `/contratos?estado=…`. |
+| 2026-10-28 | 4 | La búsqueda global (`GET /api/v1/buscar`, `components/BusquedaGlobal.tsx`) vive en la barra superior solo en escritorio y tableta; en móvil se oculta (cada módulo conserva su buscador). Los contratos exponen `PERSONA_JOINS` compartido desde `modules/inmuebles/repository.py` para el resumen de persona. |
