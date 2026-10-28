@@ -48,5 +48,5 @@ que reproduce el runtime de producción.
 | Conexión a MySQL | Hyperdrive con cadena local: conexión directa, **sin pool ni caché** | Hyperdrive con pool, vía Workers VPC y túnel |
 | TLS a MySQL | No | Sí (obligatorio) |
 | Variables | `wrangler.jsonc` (`vars` raíz) + `.env` | `env.staging` / `env.production` + secretos |
-| Autenticación | Usuario ficticio | Cerrada hasta implementar la real |
+| Autenticación | Login real con los usuarios de `pnpm db:seed` (`AUTH_SECRET` en `.dev.vars`) | Login real (`AUTH_SECRET` como secreto del Worker) |
 | Servicio de documentos | `127.0.0.1:4000` (Docker) | Red interna del VPS, solo vía túnel |

@@ -3,11 +3,13 @@
 Aplicación web interna para **APHIA S.A.S.**, inmobiliaria ubicada en Colombia. Administrará
 clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y trazabilidad.
 
-> **Estado actual (v0.1.0):** fundamentos técnicos. La base de datos ya tiene el
-> [modelo 3FN completo](docs/arquitectura/modelo-de-datos.md) (32 tablas). Existe un flujo
-> mínimo de *clientes de prueba* que valida la arquitectura de extremo a extremo
-> (navegador → API → MySQL) y un servicio privado de documentos. Los módulos de negocio
-> (API y pantallas) están pendientes.
+> **Estado actual (v0.1.0):** las seis fases del [plan de implementación](docs/plan-de-implementacion.md) están hechas:
+> inicio de sesión real (usuario y contraseña, bloqueo tras 3 intentos), usuarios y roles,
+> clientes, propietarios y codeudores sobre el [modelo 3FN](docs/arquitectura/modelo-de-datos.md)
+> (una persona puede tener varios papeles), inmuebles con propietarios y servicios públicos,
+> contratos con partes, filtros e impresión, búsqueda global, tablero, identidad visual, ayuda en
+> línea (`/ayuda`), [manual de usuario](docs/manual-usuario.md), respaldo local cifrado y
+> [guía de instalación y mantenimiento](docs/despliegue/instalacion-y-mantenimiento.md).
 
 ## Arquitectura en una línea
 
@@ -48,14 +50,21 @@ Las versiones exactas quedan fijadas en `pnpm-lock.yaml`, `apps/api/uv.lock`,
 git clone https://github.com/andrespick/ProyectoDeGradoAphia.git
 cd ProyectoDeGradoAphia
 pnpm install          # dependencias JS (incluye wrangler y Playwright)
-pnpm env:init         # crea .env con contraseñas locales aleatorias
+pnpm env:init         # crea .env y apps/api/.dev.vars con secretos locales aleatorios
 pnpm infra:up         # MySQL 8.4 y servicio de documentos en Docker
 pnpm db:migrate       # aplica migraciones
-pnpm db:seed          # carga clientes ficticios
+pnpm db:seed          # carga catálogos y datos ficticios
 pnpm dev              # frontend + API (Python Workers local)
 ```
 
-Las dependencias de Python se instalan solas con `uv run` la primera vez.
+Las dependencias de Python se instalan solas con `uv run` la primera vez. Usuarios de
+desarrollo (los crea `pnpm db:seed`; contraseña `Aphia.2026`, solo para development/test):
+
+| Usuario | Rol |
+| --- | --- |
+| `admin` | Administrador de Sistemas (gestiona usuarios) |
+| `administrativo` | Administrativo (crea, edita y elimina) |
+| `asesor` | Asesor (crea y edita, no elimina) |
 
 | Servicio | URL local |
 | --- | --- |
@@ -69,7 +78,7 @@ Las dependencias de Python se instalan solas con `uv run` la primera vez.
 
 | Comando | Qué hace |
 | --- | --- |
-| `pnpm dev` | Crea `.env` si falta, levanta Docker y ejecuta web + API en Python Workers local con recarga |
+| `pnpm dev` | Crea `.env` y `apps/api/.dev.vars` si faltan, levanta Docker y ejecuta web + API en Python Workers local con recarga |
 | `pnpm dev:asgi` | Igual, pero la API corre con Uvicorn (ruta de ejecución Linux tradicional) |
 | `pnpm infra:up` / `pnpm infra:down` | Inicia / detiene MySQL y documentos (los datos se conservan) |
 | `pnpm infra:logs` · `pnpm infra:ps` | Registros y estado de los contenedores |
@@ -86,9 +95,9 @@ Las dependencias de Python se instalan solas con `uv run` la primera vez.
 ## Pruebas
 
 ```bash
-pnpm test               # 108 pruebas unitarias (17 web + 60 API + 31 documentos)
-pnpm test:integration   # 21 API↔MySQL (clientes, modelo 3FN, migraciones) + 5 documentos en Docker
-pnpm test:e2e           # 5 escenarios en Chromium contra el stack completo
+pnpm test               # 217 pruebas unitarias (50 web + 136 API + 31 documentos)
+pnpm test:integration   # 37 API↔MySQL (personas, login, usuarios, catálogos, modelo 3FN, migraciones) + 5 documentos en Docker
+pnpm test:e2e           # 21 escenarios en Chromium (+ smoke en Firefox y WebKit) contra el stack completo
 ```
 
 Estrategia y cobertura: [docs/pruebas](docs/pruebas/README.md).
@@ -105,7 +114,8 @@ alimenta Docker Compose, los scripts y la API local. **Nunca se versiona.**
 | `TEST_DB_*` | MySQL de pruebas de integración |
 | `FILES_SERVICE_TOKEN` | Token entre servicios para el servicio de documentos (generado) |
 | `FILES_MAX_BYTES`, `FILES_ALLOWED_TYPES` | Límites de archivos |
-| `CORS_ORIGINS`, `AUTH_MODE`, `LOG_LEVEL`, `APP_ENV` | API con Uvicorn (`pnpm dev:asgi`) |
+| `AUTH_SECRET` | Clave de firma de los tokens de sesión (generada; `pnpm env:init` la copia también a `apps/api/.dev.vars` para el Worker local) |
+| `CORS_ORIGINS`, `AUTH_MODE`, `LOG_LEVEL`, `APP_ENV` | API con Uvicorn (`pnpm dev:asgi`). `AUTH_MODE=database` es el modo real |
 
 Con Python Workers, las variables no secretas de cada entorno están en
 [apps/api/wrangler.jsonc](apps/api/wrangler.jsonc) y los secretos se cargan con
@@ -136,14 +146,17 @@ Responsabilidades de cada carpeta y reglas de trabajo: [docs/desarrollo](docs/de
 | La primera solicitud a la API tarda ~10 s | Normal en `pywrangler dev`: carga Pyodide la primera vez. Las siguientes tardan milisegundos. |
 | `UnicodeDecodeError: 'charmap'` al ejecutar pywrangler en Windows | Use los scripts de pnpm (definen `PYTHONUTF8=1`) o defina esa variable en su terminal. |
 | `/api/ready` responde `not_ready` | MySQL no está arriba o faltan migraciones: `pnpm infra:up && pnpm db:migrate`. |
-| `Table 'aphia.clientes' doesn't exist` | Ejecute `pnpm db:migrate`. |
+| El login responde «Usuario o contraseña incorrectos» con `admin` | Falta cargar los usuarios de desarrollo: `pnpm db:seed`. |
+| La API responde 500 `configuracion_invalida` al arrancar | Falta `AUTH_SECRET` (≥ 32 caracteres): `pnpm env:init` lo genera en `.env` y `apps/api/.dev.vars`. |
 | `pnpm install` avisa de *build scripts* ignorados | Ya están aprobados en `pnpm-workspace.yaml` (`allowBuilds`); si agrega otro, use `pnpm approve-builds`. |
-| `test:e2e` falla con «Executable doesn't exist» | Instale el navegador: `pnpm test:e2e:install`. |
+| `test:e2e` falla con «Executable doesn't exist» | Instale los navegadores: `pnpm test:e2e:install` (Chromium, Firefox y WebKit). |
 | Cambié la contraseña en `.env` y MySQL rechaza la conexión | MySQL solo usa las variables al crear el volumen. `pnpm infra:reset -- --yes` (borra datos locales) y repita la instalación. |
 
 ## Documentación
 
+- [Plan de implementación](docs/plan-de-implementacion.md) (fases, criterios de aceptación y estado)
 - [Requisitos y alcance](docs/requisitos/README.md)
+- [Identidad visual](docs/diseno/README.md)
 - [Arquitectura](docs/arquitectura/README.md) y [modelo de datos](docs/arquitectura/modelo-de-datos.md)
 - [Desarrollo](docs/desarrollo/README.md)
 - [Pruebas](docs/pruebas/README.md)

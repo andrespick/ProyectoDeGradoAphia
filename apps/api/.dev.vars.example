@@ -1,7 +1,12 @@
 # Secretos del Worker para `pywrangler dev` (copiar como apps/api/.dev.vars; no versionar).
+# `pnpm env:init` crea este archivo con un AUTH_SECRET aleatorio (el mismo que en ../../.env).
 # Los valores no secretos están en wrangler.jsonc ("vars").
 # La conexión a MySQL local NO va aquí: scripts/run.mjs la toma de ../../.env y define
 # CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE.
+
+# Clave con la que la API firma los tokens de sesión (AUTH_MODE=database).
+# Mínimo 32 caracteres aleatorios. Rotarla cierra todas las sesiones.
+AUTH_SECRET=
 
 # Reservado para la integración con el servicio de documentos (próxima fase).
 # FILES_SERVICE_TOKEN=

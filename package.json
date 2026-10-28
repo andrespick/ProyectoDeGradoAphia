@@ -23,8 +23,8 @@
     "typecheck": "pnpm --filter @aphia/web typecheck",
     "test": "pnpm -r --if-present test",
     "test:integration": "node scripts/test-integration.mjs",
-    "test:e2e": "node scripts/infra.mjs up && pnpm db:migrate && playwright test",
-    "test:e2e:install": "playwright install chromium",
+    "test:e2e": "node scripts/env-init.mjs --if-missing && node scripts/infra.mjs up && pnpm db:migrate && pnpm db:seed && playwright test",
+    "test:e2e:install": "playwright install chromium firefox webkit",
     "build": "pnpm --filter @aphia/web build",
     "check:worker": "pnpm --filter @aphia/api check:worker"
   },

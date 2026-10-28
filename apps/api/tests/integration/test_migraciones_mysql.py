@@ -32,3 +32,9 @@ def test_fallo_parcial_informa_las_sentencias_ya_aplicadas(
         finally:
             with conn.cursor() as cursor:
                 cursor.execute("DROP TABLE IF EXISTS prueba_fallo_parcial")
+
+
+def test_tabla_clientes_de_demostracion_eliminada(db_params: ConnectionParams) -> None:
+    with db_params.connect() as conn, conn.cursor() as cursor:
+        cursor.execute("SHOW TABLES LIKE 'clientes'")
+        assert cursor.fetchone() is None

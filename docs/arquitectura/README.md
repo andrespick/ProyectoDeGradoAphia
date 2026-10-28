@@ -34,7 +34,7 @@ La línea punteada entre el Worker y el servicio de documentos indica una integr
 | Origen → destino | Protocolo | Autenticación | Estado |
 | --- | --- | --- | --- |
 | Navegador → Pages | HTTPS | — | Configurado (`_redirects`, `_headers`) |
-| Navegador → API | HTTPS, JSON, CORS con orígenes explícitos | Pendiente (ver Seguridad) | Funcional |
+| Navegador → API | HTTPS, JSON, CORS con orígenes explícitos | Token de sesión `Authorization: Bearer` (HMAC, 8 h) tras login con contraseña | Funcional |
 | API → MySQL (Workers) | aiomysql → binding Hyperdrive → Workers VPC → túnel | Usuario `aphia_app` (solo DML), TLS | Local verificado; producción preparada |
 | API → MySQL (Uvicorn) | aiomysql directo | Igual | Verificado localmente |
 | API → documentos | HTTP vía binding Workers VPC (`env.FILES_SERVICE`) | `Authorization: Bearer <token de servicio>` | Preparado; adaptador pendiente |
@@ -60,6 +60,19 @@ Flujo de una solicitud:
 4. El repositorio obtiene `Database` de `get_database`: en Workers usa los parámetros del
    binding Hyperdrive; en Uvicorn, `DB_*`.
 
+## Flujo de autenticación
+
+1. `POST /api/v1/auth/login` recibe usuario y contraseña; el repositorio lee `user_account`
+   (con `GROUP_CONCAT` de roles) y el servicio verifica el hash PBKDF2-HMAC-SHA256 en tiempo
+   constante (hash ficticio si el usuario no existe).
+2. Tres fallos seguidos fijan `locked_until = ahora + 15 min` (423 `cuenta_bloqueada`); un
+   inicio correcto reinicia el contador.
+3. La API emite un token firmado con HMAC-SHA256 (`AUTH_SECRET`), válido 8 h, con sujeto,
+   nombre y roles; la web lo guarda en `sessionStorage` (o `localStorage` con «Recordarme») y
+   lo envía como `Authorization: Bearer`.
+4. `get_current_principal` verifica firma y vigencia en cada solicitud; `require_roles`
+   aplica los grupos de roles por router. Un 401 en la web limpia la sesión y vuelve a `/login`.
+
 ## Justificación de tecnologías
 
 | Decisión | Motivo |
@@ -82,7 +95,7 @@ Flujo de una solicitud:
 | API | `pywrangler dev` o Uvicorn | ASGI en pytest / Worker local en E2E | Worker `aphia-api-staging` | Worker `aphia-api` |
 | MySQL | Docker `127.0.0.1:3307`, base `aphia` | Contenedor aparte `:3308`, base `aphia_test`, en memoria | Base y Hyperdrive propios (por definir) | VPS, Hyperdrive de producción |
 | Conexión a MySQL | Hyperdrive local (`localConnectionString` por variable) — sin pool ni caché | Directa | Hyperdrive + Workers VPC | Hyperdrive + Workers VPC |
-| Autenticación | Usuario ficticio (`AUTH_MODE=development`) | Igual | Cerrada (401) hasta implementar | Cerrada (401) hasta implementar |
+| Autenticación | Login real (`AUTH_MODE=database`, usuarios de `pnpm db:seed`) | Ficticia en unitarias; real en E2E | Login real (`AUTH_SECRET` por `wrangler secret`) | Igual |
 | CORS | `localhost:5173` | `localhost:5173` | URL de Pages de staging | URL de Pages de producción |
 | Secretos | `.env` generado | Valores efímeros de CI | `wrangler secret`, GitHub Environment | Igual, con aprobación obligatoria |
 | HSTS / docs OpenAPI | Sin HSTS / `/api/docs` visible | Igual | HSTS / docs ocultas | HSTS / docs ocultas |

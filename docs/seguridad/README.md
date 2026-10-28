@@ -13,26 +13,33 @@
 | Errores centralizados sin trazas, SQL ni eco de valores enviados; `request_id` para soporte | `core/errors.py` | ✅ |
 | Logs JSON sin cuerpos, query strings, tokens ni credenciales | `core/logging.py` | ✅ |
 | Documentación OpenAPI solo en development/test | `core/docs.py` | ✅ |
-| Roles en endpoints (`require_roles`) y respuesta 401 cuando no hay autenticación real | `modules/auth` | ✅ |
+| Autenticación propia: usuario y contraseña, PBKDF2-SHA256 con sal por usuario (100 000 iteraciones), token HMAC-SHA256 de 8 h, bloqueo 3 intentos → 15 min | `modules/auth` | ✅ |
+| Roles `admin_sistemas` / `administrativo` / `asesor` en todos los routers (`require_roles` con grupos); solo `admin_sistemas` gestiona usuarios; el último administrador activo no se puede eliminar ni degradar | `modules/auth`, `modules/usuarios` | ✅ |
 | Servicio de documentos: token de servicio (comparación en tiempo constante), tipo por firma, tamaño máximo, ids UUID, sin *path traversal*, sin sobrescritura, contenedor sin privilegios y de solo lectura | `apps/files` | ✅ |
 | MySQL y documentos sin puertos públicos; red interna sin salida a Internet; TLS obligatorio a MySQL | `infra/production/compose.yaml`, `aphia.cnf` | ✅ (en réplica local) |
 | Bases separadas por entorno (desarrollo, pruebas, staging, producción) | Compose, Hyperdrive por entorno | Parcial (staging/prod por crear) |
 | Despliegue a producción solo con aprobación y desde `main` | `.github/workflows/deploy.yml` | Configurado, no ejecutado |
-| Respaldos cifrados con `age` fuera del VPS | `infra/production/backup` | Comandos de volcado verificados; ciclo completo no ejecutado |
+| Respaldos cifrados con `age`: copia local diaria (directorio 700, archivos 600, retención) y copia externa opcional | `infra/production/backup` | Comandos de volcado verificados; ciclo completo no ejecutado en un VPS real |
+| Código de soporte (`request_id`) en cada error mostrado al usuario, sin exponer trazas | `apiClient.errorMessage` | ✅ |
 
-## Autenticación: estado y límites
+## Autenticación
 
-**No existe autenticación de producción.** `AUTH_MODE=development` entrega un usuario
-ficticio con rol `admin` únicamente si `APP_ENV` es `development` o `test`; la configuración
-falla si se intenta activar en staging o producción, y la dependencia vuelve a comprobarlo.
-En staging/producción todos los endpoints de negocio responden **401** hasta implementar:
+`AUTH_MODE=database` (local, staging y producción): los usuarios viven en `user_account` /
+`user_role` y entran con usuario y contraseña en `POST /api/v1/auth/login`.
 
-1. Proveedor de identidad (opciones a evaluar: Cloudflare Access para personal interno,
-   o un IdP OIDC). Para una empresa pequeña con usuarios internos, **Cloudflare Access**
-   delante de Pages y la API es la opción de menor costo y mantenimiento: la API validaría
-   el JWT `Cf-Access-Jwt-Assertion` y mapearía el correo a roles en MySQL.
-2. Tabla de usuarios/roles y auditoría (trazabilidad) en MySQL.
-3. Reemplazar `get_current_principal` sin cambiar los routers (ya dependen de `require_roles`).
+| Aspecto | Implementación |
+| --- | --- |
+| Contraseñas | PBKDF2-HMAC-SHA256, sal aleatoria de 16 bytes por usuario, 100 000 iteraciones; formato `pbkdf2_sha256$iter$sal$hash` (`modules/auth/passwords.py`). En Pyodide (Workers) no existe `hashlib.pbkdf2_hmac`, así que se usa una implementación pura equivalente (probada contra `hashlib`). Medido en el Worker local: ~260 ms por inicio de sesión; cabe en el plan de pago de Workers (30 s de CPU) pero no en el gratuito (10 ms): en ese caso la API debe servirse con Uvicorn. |
+| Sesión | Token `base64url(JSON{sub, nombre, roles, exp}).firma` con HMAC-SHA256 y `AUTH_SECRET` (≥ 32 caracteres, nunca versionado); vigencia 8 h; se envía como `Authorization: Bearer`. Sin estado en el servidor: desactivar un usuario o cambiar su rol aplica en el siguiente inicio de sesión o al vencer el token; rotar `AUTH_SECRET` cierra todas las sesiones. La web lo guarda en `sessionStorage` (o `localStorage` con «Recordarme»). |
+| Bloqueo | 3 intentos fallidos consecutivos → `locked_until = ahora + 15 min` (`register_failed_attempt` con `SELECT … FOR UPDATE`); el login correcto reinicia el contador; una cuenta bloqueada responde 423 aunque la clave sea correcta. El evento `cuenta_bloqueada` queda en los logs y la pantalla de Usuarios muestra la cuenta con «Desbloquear» (`POST /api/v1/usuarios/{id}/desbloquear`). |
+| Enumeración de usuarios | Usuario inexistente, inactivo o clave incorrecta responden el mismo 401 `credenciales_invalidas`; los inexistentes verifican contra un hash ficticio para igualar el tiempo. |
+| Logs | Nunca incluyen usuario, clave ni token; solo `account_id` e intentos. |
+| Desarrollo | `AUTH_MODE=development` (usuario ficticio) queda **solo** para pruebas unitarias; `pnpm env:init` genera `AUTH_SECRET` en `.env` y `apps/api/.dev.vars`, y `pnpm db:seed` crea `admin`, `administrativo` y `asesor` con la contraseña `Aphia.2026` (nunca en staging/producción). |
+
+Primer administrador en producción: ver `docs/despliegue/instalacion-y-mantenimiento.md`
+(se escribe en la fase 5; mientras tanto, genere el hash con `hash_password` y ejecute los
+`INSERT` de `person`, `person_document`, `user_account` y `user_role` como en
+`database/seeds/0003_usuarios_desarrollo.sql`).
 
 ## Manejo de secretos
 
@@ -41,6 +48,7 @@ En staging/producción todos los endpoints de negocio responden **401** hasta im
 | Contraseñas MySQL | `.env` (generado) | `infra/production/secrets/` en el VPS (generate-secrets.sh) |
 | Contraseña `aphia_app` para Hyperdrive | — | Configuración de Hyperdrive (Cloudflare) |
 | Token del servicio de documentos | `.env` | `secrets/files_service_token` + `wrangler secret put FILES_SERVICE_TOKEN` |
+| `AUTH_SECRET` (firma de tokens de sesión) | `.env` y `apps/api/.dev.vars` (generados) | `wrangler secret put AUTH_SECRET --env …`; con Uvicorn, variable de entorno |
 | Token del túnel | — | `infra/production/.env.production` (chmod 600) |
 | Token de API de Cloudflare | — | GitHub Environment secrets |
 | Clave privada `age` de respaldos | — | **Fuera del VPS** (gestor de contraseñas) |
@@ -56,7 +64,8 @@ servicio afectado y verifique `/api/ready`. Rote inmediatamente ante cualquier s
 
 ## Pendientes de seguridad
 
-- Autenticación real y autorización por rol con usuarios en MySQL; auditoría de acciones.
+- Auditoría de acciones e intentos de acceso (bitácora con actor y fecha); hoy los intentos
+  fallidos y bloqueos solo quedan en los logs JSON.
 - Límite de tasa (Cloudflare WAF / Rate Limiting) en la API.
 - Endurecimiento del VPS (ver `docs/despliegue/vps.md`) y monitoreo de logs.
 - Integración API ↔ documentos con autorización por entidad (quién puede ver qué contrato).

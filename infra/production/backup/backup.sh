@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Respaldo cifrado de APHIA: base de datos MySQL + volumen de documentos.
 #
-# Requisitos en el VPS: docker, age (cifrado), rclone (destino externo configurado).
+# Requisitos en el VPS: docker, age (cifrado); rclone solo si se configura un destino externo.
 # Configuración: infra/production/backup/backup.env (ver backup.env.example).
 # Programación sugerida (cron, diario 03:15 UTC):
 #   15 3 * * * /opt/aphia/infra/production/backup/backup.sh >> /var/log/aphia-backup.log 2>&1
@@ -13,7 +13,9 @@ PRODUCTION_DIR="$(dirname "$BACKUP_DIR")"
 source "${BACKUP_DIR}/backup.env"
 
 : "${BACKUP_AGE_RECIPIENT:?Defina BACKUP_AGE_RECIPIENT (clave pública age)}"
-: "${BACKUP_RCLONE_REMOTE:?Defina BACKUP_RCLONE_REMOTE (p. ej. remoto:aphia-backups)}"
+LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/backups/aphia}"
+LOCAL_RETENTION_DAYS="${BACKUP_LOCAL_RETENTION_DAYS:-14}"
+REMOTE="${BACKUP_RCLONE_REMOTE:-}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 
 compose() {
@@ -44,8 +46,19 @@ compose exec -T files tar -C /data -cf - . | gzip -6 > "${work}/documentos.tar.g
 archive="${work}/aphia-${stamp}.tar.age"
 tar -C "$work" -cf - mysql.sql.gz documentos.tar.gz SHA256SUMS | age -r "$BACKUP_AGE_RECIPIENT" -o "$archive"
 
-# 5. Copiar fuera del VPS y aplicar retención.
-rclone copy "$archive" "$BACKUP_RCLONE_REMOTE/"
-rclone delete --min-age "${RETENTION_DAYS}d" "$BACKUP_RCLONE_REMOTE/"
+# 5. Copia local diaria en un directorio restringido (solo root) con retención propia.
+install -d -m 700 "$LOCAL_DIR"
+install -m 600 "$archive" "$LOCAL_DIR/"
+find "$LOCAL_DIR" -maxdepth 1 -name 'aphia-*.tar.age' -mtime +"$LOCAL_RETENTION_DAYS" -delete
+echo "[$(date -u +%FT%TZ)] Copia local: ${LOCAL_DIR}/aphia-${stamp}.tar.age (retención ${LOCAL_RETENTION_DAYS} días)"
+
+# 6. Copia fuera del VPS (opcional) y su retención. La copia local no sobrevive a la pérdida del VPS.
+if [ -n "$REMOTE" ]; then
+	rclone copy "$archive" "$REMOTE/"
+	rclone delete --min-age "${RETENTION_DAYS}d" "$REMOTE/"
+	echo "[$(date -u +%FT%TZ)] Copia externa: ${REMOTE}/ (retención ${RETENTION_DAYS} días)"
+else
+	echo "[$(date -u +%FT%TZ)] AVISO: sin BACKUP_RCLONE_REMOTE; solo existe la copia local"
+fi
 
 echo "[$(date -u +%FT%TZ)] Respaldo completado: aphia-${stamp}.tar.age ($(du -h "$archive" | cut -f1))"

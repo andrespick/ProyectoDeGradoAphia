@@ -14,6 +14,14 @@ export interface ApiErrorBody {
   };
 }
 
+/** Respuesta paginada de todos los listados de la API. */
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface HealthResponse {
   status: "ok";
   service: string;

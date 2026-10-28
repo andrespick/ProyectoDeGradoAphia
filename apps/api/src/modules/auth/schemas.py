@@ -1,15 +1,33 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Role(StrEnum):
-    ADMIN = "admin"
+    """Roles de acceso. El valor es el que viaja en la API; ``code`` es el de ``app_role``."""
+
+    ADMIN_SISTEMAS = "admin_sistemas"
+    ADMINISTRATIVO = "administrativo"
     ASESOR = "asesor"
-    CONSULTA = "consulta"
+
+    @classmethod
+    def from_code(cls, code: str) -> Role:
+        return cls(code.lower())
+
+    @property
+    def code(self) -> str:
+        return self.value.upper()
+
+
+# Grupos de permisos (decisión con el responsable: el asesor crea y edita, pero no elimina).
+LECTURA = (Role.ADMIN_SISTEMAS, Role.ADMINISTRATIVO, Role.ASESOR)
+ESCRITURA = LECTURA
+ELIMINACION = (Role.ADMIN_SISTEMAS, Role.ADMINISTRATIVO)
+GESTION_USUARIOS = (Role.ADMIN_SISTEMAS,)
 
 
 class Principal(BaseModel):
@@ -18,4 +36,23 @@ class Principal(BaseModel):
     sujeto: str
     nombre: str
     roles: list[Role]
-    modo: Literal["development"]
+    modo: Literal["development", "database"]
+
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    usuario: str = Field(min_length=1, max_length=255)
+    # La clave no se recorta: los espacios pueden ser parte de ella.
+    clave: str = Field(min_length=1, max_length=128)
+
+    @field_validator("usuario")
+    @classmethod
+    def recortar_usuario(cls, value: str) -> str:
+        return value.strip()
+
+
+class LoginResponse(BaseModel):
+    token: str
+    expira_en: datetime
+    principal: Principal

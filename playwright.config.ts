@@ -15,7 +15,12 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Compatibilidad (RNF): solo las pruebas etiquetadas @smoke en los otros motores.
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grep: /@smoke/ },
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, grep: /@smoke/ },
+  ],
   webServer: [
     {
       command: "pnpm --filter @aphia/api dev",

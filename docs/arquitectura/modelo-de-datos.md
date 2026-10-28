@@ -71,16 +71,39 @@ erDiagram
 Las 36 relaciones usan `ON DELETE RESTRICT ON UPDATE RESTRICT`: no se borra ni se cambia el
 identificador de un registro referenciado.
 
+## Migraciones 0008–0011 (plan de implementación)
+
+| Migración | Contenido | Motivo |
+| --- | --- | --- |
+| `0008_catalogos_base` | `INSERT` de los códigos que la API usa: `app_role` (ADMIN_SISTEMAS, ADMINISTRATIVO, ASESOR), `party_role` (OWNER, TENANT, CO_DEBTOR), `occupancy_state` (DISPONIBLE, OCUPADO), `currency` (COP), `document_type` (CO: CC, CE, NIT, PAS, TI), `agreement_category` (ARRENDAMIENTO, ADMINISTRACION), `bank_account_category` (AHORROS, CORRIENTE), `utility_type` (AGUA, ENERGIA, GAS, INTERNET, ASEO) | Producción los necesita; los nombres libres (ciudades, bancos, proveedores) los crea la aplicación por nombre exacto |
+| `0009_person_party_role` | Tabla `person_party_role (person_id, party_role_id)` con FK `RESTRICT` | Papeles declarados de una persona independientes de un contrato o inmueble |
+| `0010_user_account_bloqueo` | `user_account.failed_login_attempts INT NOT NULL DEFAULT 0`, `locked_until DATETIME(6) NULL` | Bloqueo temporal tras 3 intentos fallidos |
+| `0011_eliminar_tabla_clientes` | `DROP TABLE IF EXISTS clientes` | Segundo paso del cambio destructivo: la tabla de demostración no se usa desde la fase 2 |
+
+### Personas con varios papeles (decisión con el responsable, 2026-10-28)
+
+Una fila en `person` por identificación. La misma persona puede ser a la vez propietaria,
+arrendataria y codeudora: cada papel es una fila en `person_party_role` (lo que la persona
+«es» frente a la inmobiliaria) y, cuando participa en un contrato, una fila en
+`agreement_party` con su papel en ese contrato. Al asociar a una persona como propietaria de
+un inmueble o como arrendataria/codeudora de un contrato, la aplicación agrega el papel
+declarado automáticamente (`INSERT IGNORE`). El «tipo de cliente» de los requisitos son esos
+papeles. `person_category` queda sin uso (NULL).
+
+Códigos de `party_role`: `OWNER` (propietario), `TENANT` (arrendatario) y `CO_DEBTOR`
+(codeudor). No se crea `ASSOCIATED`: el «cliente asociado» del modelo original equivale a
+`TENANT`; una carga de datos históricos lo mapearía así.
+
 ## Correspondencia con los módulos de la aplicación
 
 | Módulo de APHIA | Tablas |
 | --- | --- |
-| Clientes y propietarios | `person` (+ `person_category`, `person_document`, `person_phone`, `person_email`). Ser propietario es un vínculo (`property_owner`), no un tipo de persona |
+| Clientes, propietarios y codeudores | `person` (+ `person_document`, `person_phone`, `person_email`) y sus papeles en `person_party_role`; la titularidad real es el vínculo `property_owner` |
 | Inmuebles | `property`, `property_owner`, `property_utility`, `city`, `occupancy_state` |
 | Contratos | `property_agreement`, `agreement_party` (roles `ASSOCIATED`, `CO_DEBTOR`, …), `agreement_category` |
 | Finanzas | `financial_record`, `financial_category`, `payment_state`, `currency`, `bank_account` |
 | Documentos | `file_record` + `file_person`, `file_property`, `file_agreement` |
-| Usuarios y permisos | `user_account`, `app_role`, `user_role` |
+| Usuarios y permisos | `user_account` (+ columnas de bloqueo de 0010), `app_role`, `user_role` |
 
 ### Documentos y el servicio de archivos
 
@@ -95,8 +118,8 @@ Propuesta para los archivos nuevos (por confirmar al implementar el módulo):
 ### Autenticación
 
 `user_account.hashed_password` es obligatorio y el análisis pide conservar los hashes
-originales. Si se adopta un proveedor de identidad externo (por ejemplo Cloudflare Access),
-habrá que decidir cómo convive con esa columna y hacerlo con una migración nueva.
+originales. Las cuentas nuevas guardan `pbkdf2_sha256$iteraciones$sal$hash` (fase 1); los
+hashes heredados se migrarán cuando se defina su formato (decisión 10).
 
 ## Reglas físicas
 
@@ -113,29 +136,68 @@ habrá que decidir cómo convive con esa columna y hacerlo con una migración nu
 `apps/api/tests/integration/test_modelo_3fn.py` (se ejecuta con `pnpm test:integration` sobre
 una base vacía, aplicando todas las migraciones) comprueba:
 
-- Que existen las 32 tablas con colación binaria y las 36 claves foráneas con `RESTRICT`.
+- Que existen las 32 tablas (más `person_party_role`) con colación binaria, las 36 claves
+  foráneas con `RESTRICT` (más las dos de `person_party_role`) y los códigos de `0008`.
 - Escenarios aceptados: copropiedad, varios codeudores, una persona en varios acuerdos y
   roles, un archivo con tres tipos de vínculo, documento con ceros iniciales y movimiento negativo.
 - Rechazos: FK huérfana (1452), participante duplicado (1062), documento duplicado entre
-  personas (1062), fechas invertidas, canon negativo, canon sin moneda y tamaño negativo
-  (3819), borrado con referencias (1451), usuario duplicado (1062).
+  personas (1062), papel declarado duplicado (1062), fechas invertidas, canon negativo, canon
+  sin moneda y tamaño negativo (3819), borrado con referencias y de un papel en uso (1451),
+  usuario duplicado (1062).
 
 ## Tabla `clientes` de demostración
 
-`clientes` (migración `0001`) sostiene el flujo mínimo que valida la arquitectura (API,
-frontend y E2E). **No forma parte del modelo.** Al implementar el módulo de clientes sobre
-`person`:
+`clientes` (migración `0001`) sostuvo el flujo mínimo inicial. **No formaba parte del modelo**:
+desde la fase 2 los módulos `clientes`, `propietarios` y `codeudores` trabajan sobre `person`
+(`modules/personas`) y la migración `0011` la eliminó (fase 3). Una base nueva la crea con
+`0001` y la borra con `0011`; el historial de migraciones se conserva íntegro.
 
-1. Cambiar el repositorio de `modules/clientes` para usar `person` + `person_email`.
-2. Ajustar las pruebas y el frontend.
-3. En una versión posterior, eliminar la tabla con una migración nueva (`DROP TABLE clientes`).
+### Personas: una fila hija por campo del formulario
+
+El formulario guarda un documento, un teléfono, un correo y una cuenta bancaria por persona.
+Las lecturas toman la fila de menor id de cada tabla hija (`MIN(id)`), de modo que datos
+migrados con varias filas no duplican resultados. Las escrituras reemplazan teléfono, correo y
+cuenta (`DELETE` + `INSERT`) y actualizan el documento principal; los papeles se agregan con
+`INSERT IGNORE` y solo se quitan los que el formulario deja de marcar, siempre que no tengan
+vínculos (`papel_en_uso`). Los bancos se crean por nombre exacto (`financial_institution`).
+
+### Inmuebles (fase 3)
+
+`property` guarda la dirección, la ciudad (`city`, *buscar o crear* por nombre exacto y
+`country_code = 'CO'`: «Bogotá» y «bogota» son dos filas distintas hasta que se decida la
+unicidad de ciudades), la matrícula (`registration_identifier`, sin unicidad), el canon
+(`rental_value` con `currency_code = 'COP'` solo cuando hay canon, por `ck_property_rental_currency`)
+y el estado (`occupancy_state`, que no se deriva de los contratos). Los propietarios van en
+`property_owner` (mínimo uno; la API exige la lista) y al asociarlos reciben el papel `OWNER` en
+`person_party_role`; **quitar a alguien del inmueble no le quita el papel**, que se retira a mano
+desde Clientes y queda bloqueado mientras posea algo. Los servicios públicos (`property_utility`:
+`utility_type` por código, `service_provider` *buscar o crear*, número de contrato) se reemplazan
+completos en cada edición. Eliminar un inmueble con contratos responde 409 `inmueble_con_contratos`.
+
+### Contratos (fase 4)
+
+`property_agreement` guarda tipo (`agreement_category` por código), inmueble, fechas (`end_date`
+NULL = indefinido), canon pactado (`agreed_rental_value` con `currency_code = 'COP'` solo si hay
+canon), `conditions` y el texto completo para impresión (`agreement_content`, LONGTEXT; el listado
+no lo devuelve). Las partes van en `agreement_party` con el código de `party_role` que tienen **en
+ese contrato**: `OWNER` (uno o más; por defecto los `property_owner` del inmueble al crearlo),
+`TENANT` (a lo sumo uno, opcional) y `CO_DEBTOR` (hasta 10, distintos del arrendatario). Cada parte
+recibe además el papel correspondiente en `person_party_role` (automático, nunca se quita solo).
+El estado del contrato (`programado`, `vigente`, `finalizado`) y los días restantes se calculan con
+la fecha UTC del servidor; «por vencer» es un filtro (termina en los próximos 60 días). Los filtros
+de fechas buscan **solapamiento** de vigencias: `fecha_desde` → `end_date IS NULL OR end_date >=
+desde`; `fecha_hasta` → `start_date <= hasta`. Un contrato con `financial_record` o
+`file_agreement` no se modifica ni elimina (409 `contrato_con_dependencias`). La ocupación del
+inmueble no cambia al crear o terminar un contrato: la UI recuerda actualizarla.
 
 ## Datos de catálogos
 
-Las migraciones crean los catálogos **vacíos**. Según el plan de migración, sus valores deben
-cargarse a partir de los valores reales distintos de la fuente original, sin traducir ni
-fusionar automáticamente. Los datos ficticios para desarrollo se agregarán en `database/seeds/`
-cuando se implementen los módulos.
+Las migraciones `0002`–`0007` crean los catálogos **vacíos**; `0008` carga los códigos de los
+que depende la aplicación. Los catálogos de nombre libre (`city`, `financial_institution`,
+`service_provider`) los alimenta la aplicación al registrar inmuebles y cuentas bancarias
+(*buscar o crear* por nombre exacto) y, en desarrollo, `database/seeds/0002_catalogos_desarrollo.sql`.
+Una carga de datos históricos debe conciliar sus valores con estos códigos sin fusionar
+automáticamente.
 
 ## Decisiones de negocio pendientes antes de producción
 
@@ -143,8 +205,10 @@ Resumen del análisis original (el detalle está en `analisis-y-trazabilidad.md`
 
 1. **Identidad:** ámbito emisor de cada tipo documental y conciliación de personas y usuarios
    sin fusionar por nombre, correo o número.
-2. **Personas y roles:** significado de `person_category`, personas jurídicas, qué rol
-   corresponde a `ASSOCIATED` e incompatibilidades entre roles.
+2. **Personas y roles:** ~~significado de `person_category`, qué rol corresponde a
+   `ASSOCIATED`~~ → resuelto el 2026-10-28 (ver «Personas con varios papeles»): papeles
+   múltiples en `person_party_role`, `ASSOCIATED` = `TENANT`, `person_category` sin uso.
+   Pendiente: personas jurídicas e incompatibilidades entre papeles.
 3. **Inmuebles:** ámbito de la matrícula (`registration_identifier` no es único) y unicidad de ciudades.
 4. **Histórico:** períodos de titularidad, versiones, adendas y bloqueo de acuerdos firmados.
 5. **Contratos simultáneos:** qué tipos de acuerdo se excluyen. Exige una transacción que
@@ -154,8 +218,11 @@ Resumen del análisis original (el detalle está en `analisis-y-trazabilidad.md`
 7. **Importes:** moneda, precisión y escala (`DECIMAL(12,2)`); no suponer COP en datos históricos.
 8. **Banca:** unicidad por institución y tipo, cuentas conjuntas y cifrado.
 9. **Archivos:** permisos de descarga, límites y tipos (ver la propuesta de integración arriba).
-10. **Operación y acceso:** permisos reales por rol, auditoría con actor y fecha, formato de
-    los hashes de contraseña heredados.
+10. **Operación y acceso:** ~~permisos reales por rol~~ → resuelto el 2026-10-28: roles
+    `ADMIN_SISTEMAS` (todo), `ADMINISTRATIVO` (crear, editar, eliminar), `ASESOR` (crear y
+    editar, no eliminar); solo `ADMIN_SISTEMAS` gestiona usuarios. Formato de hash para cuentas
+    nuevas: PBKDF2-SHA256 (fase 1). Pendientes: auditoría con actor y fecha y formato de los
+    hashes heredados.
 
 Mientras estas decisiones estén abiertas, cualquier cambio al esquema se hace con migraciones
 nuevas (nunca editando `0002`–`0007`).

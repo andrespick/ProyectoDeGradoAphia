@@ -29,11 +29,13 @@ Resultado actual: 9,8 MB sin comprimir, 2,45 MB gzip.
 ```bash
 cd apps/api
 uv run pywrangler login
+uv run pywrangler secret put AUTH_SECRET --env production          # ≥ 32 caracteres aleatorios
 uv run pywrangler secret put FILES_SERVICE_TOKEN --env production
 ```
 
 Las variables no secretas (`APP_ENV`, `CORS_ORIGINS`, `AUTH_MODE`, `LOG_LEVEL`) van en `vars`
-de cada entorno. `AUTH_MODE` debe ser `disabled` fuera de local.
+de cada entorno. `AUTH_MODE=database` en todos los entornos (exige el secreto `AUTH_SECRET`;
+sin él el Worker responde 500 `configuracion_invalida`). Rotar el secreto cierra todas las sesiones.
 
 ## Despliegue
 

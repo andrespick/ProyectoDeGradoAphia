@@ -4,7 +4,7 @@
 
 | Elemento | Cómo | Dónde |
 | --- | --- | --- |
-| Base de datos `aphia` | `mysqldump --single-transaction` (sin bloquear InnoDB) | Archivo cifrado fuera del VPS |
+| Base de datos `aphia` | `mysqldump --single-transaction` (sin bloquear InnoDB) | Archivo cifrado: copia local en `BACKUP_LOCAL_DIR` (700/600, retención `BACKUP_LOCAL_RETENTION_DAYS`) y, si hay `BACKUP_RCLONE_REMOTE`, copia fuera del VPS |
 | Documentos | `tar` del volumen `/data` (contenido + metadatos) | Mismo archivo |
 | Sumas SHA-256 | `SHA256SUMS` dentro del archivo | Mismo archivo |
 | Secretos del VPS | **Manual**, una vez y en cada rotación | Gestor de contraseñas (no en el respaldo) |
@@ -35,6 +35,15 @@ Cron diario (UTC):
 
 Con respaldos diarios, la pérdida máxima de datos (RPO) es de 24 h. Si la empresa necesita
 menos, aumente la frecuencia o active binlogs con copia externa.
+
+## Copia local cifrada
+
+`backup.sh` deja cada archivo `aphia-<fecha>.tar.age` en `BACKUP_LOCAL_DIR` (por defecto
+`/var/backups/aphia`, directorio 700 y archivos 600, solo root) y borra los que superan
+`BACKUP_LOCAL_RETENTION_DAYS` (14). Cumple el requisito de respaldo diario local, pero **no
+sobrevive a la pérdida del VPS**: configure también `BACKUP_RCLONE_REMOTE`. La clave privada
+`age` sigue fuera del VPS; sin ella la copia local no se puede leer. Restaurar desde la copia
+local: `./restore.sh /var/backups/aphia/aphia-<fecha>.tar.age /ruta/identidad.txt --confirm`.
 
 ## Restaurar
 
