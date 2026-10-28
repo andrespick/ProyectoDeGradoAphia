@@ -1,0 +1,7 @@
+# Secretos del Worker para `pywrangler dev` (copiar como apps/api/.dev.vars; no versionar).
+# Los valores no secretos están en wrangler.jsonc ("vars").
+# La conexión a MySQL local NO va aquí: scripts/run.mjs la toma de ../../.env y define
+# CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE.
+
+# Reservado para la integración con el servicio de documentos (próxima fase).
+# FILES_SERVICE_TOKEN=

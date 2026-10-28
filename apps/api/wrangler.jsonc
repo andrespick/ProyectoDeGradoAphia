@@ -1,0 +1,68 @@
+// Configuración de Cloudflare Python Workers para la API de APHIA.
+// Referencias: developers.cloudflare.com/workers/languages/python/
+//              developers.cloudflare.com/hyperdrive/examples/python-workers/
+//
+// Los identificadores "REEMPLAZAR_*" y el id de ceros son marcadores: no son recursos
+// reales. Ver docs/despliegue/cloudflare-workers.md antes de desplegar.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Nombre exclusivo del entorno local. Desplegar siempre con --env staging|production;
+  // un `deploy` sin --env falla porque el id de Hyperdrive local es un marcador.
+  "name": "aphia-api-local",
+  "main": "src/entry.py",
+  // Hyperdrive con Python Workers requiere compatibility_date >= 2026-09-08.
+  "compatibility_date": "2026-10-27",
+  "compatibility_flags": ["python_workers"],
+  "observability": { "enabled": true },
+
+  // ── Desarrollo local (pnpm dev) ────────────────────────────────────────────────
+  // Variables no secretas. Los secretos van en .dev.vars (local) o `wrangler secret put`.
+  "vars": {
+    "APP_ENV": "development",
+    "CORS_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    "AUTH_MODE": "development",
+    "LOG_LEVEL": "INFO"
+  },
+  // En local la conexión real llega por la variable de entorno
+  // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE, que scripts/run.mjs
+  // construye a partir de .env. El id de ceros es un marcador sin significado.
+  "hyperdrive": [
+    { "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }
+  ],
+
+  "env": {
+    // ── Staging ──────────────────────────────────────────────────────────────────
+    "staging": {
+      "name": "aphia-api-staging",
+      "vars": {
+        "APP_ENV": "staging",
+        "CORS_ORIGINS": "https://staging.REEMPLAZAR_PROYECTO_PAGES.pages.dev",
+        "AUTH_MODE": "disabled",
+        "LOG_LEVEL": "INFO"
+      },
+      "hyperdrive": [
+        { "binding": "HYPERDRIVE", "id": "REEMPLAZAR_HYPERDRIVE_ID_STAGING" }
+      ],
+      // Workers VPC (beta): servicio HTTP privado de documentos detrás de Cloudflare Tunnel.
+      "vpc_services": [
+        { "binding": "FILES_SERVICE", "service_id": "REEMPLAZAR_VPC_SERVICE_ID_STAGING" }
+      ]
+    },
+    // ── Producción ───────────────────────────────────────────────────────────────
+    "production": {
+      "name": "aphia-api",
+      "vars": {
+        "APP_ENV": "production",
+        "CORS_ORIGINS": "https://REEMPLAZAR_PROYECTO_PAGES.pages.dev",
+        "AUTH_MODE": "disabled",
+        "LOG_LEVEL": "INFO"
+      },
+      "hyperdrive": [
+        { "binding": "HYPERDRIVE", "id": "REEMPLAZAR_HYPERDRIVE_ID_PRODUCCION" }
+      ],
+      "vpc_services": [
+        { "binding": "FILES_SERVICE", "service_id": "REEMPLAZAR_VPC_SERVICE_ID_PRODUCCION" }
+      ]
+    }
+  }
+}

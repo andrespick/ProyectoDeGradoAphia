@@ -1,0 +1,97 @@
+# Despliegue MANUAL de la API (Cloudflare Python Workers) y del frontend (Cloudflare Pages).
+#
+# - Solo se ejecuta a mano (Actions → Deploy → Run workflow).
+# - Ejecuta antes toda la CI.
+# - Usa GitHub Environments "staging" y "production". En Settings → Environments configure
+#   "Required reviewers" para production: el job queda en espera hasta que alguien lo apruebe.
+# - Producción solo se despliega desde la rama main.
+# - NO ejecuta migraciones: se aplican en el VPS de forma controlada (docs/despliegue/mysql.md).
+#
+# Configuración requerida por entorno (docs/despliegue/github-actions.md):
+#   Secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#   Variables: CLOUDFLARE_PAGES_PROJECT, API_BASE_URL
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Entorno de destino
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  UV_VERSION: "0.13.6"
+  NODE_VERSION: "24"
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Desplegar en ${{ inputs.environment }}
+    needs: ci
+    if: inputs.environment == 'staging' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.API_BASE_URL }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Verificar configuración del entorno
+        run: |
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            [ -n "${!name}" ] || { echo "::error::Falta el secreto $name"; missing=1; }
+          done
+          [ -n "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" ] || { echo "::error::Falta la variable CLOUDFLARE_PAGES_PROJECT"; missing=1; }
+          [ -n "${{ vars.API_BASE_URL }}" ] || { echo "::error::Falta la variable API_BASE_URL"; missing=1; }
+          exit $missing
+
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verificar que wrangler.jsonc no tiene marcadores pendientes
+        run: |
+          if grep -n "REEMPLAZAR" apps/api/wrangler.jsonc; then
+            echo "::error::Reemplace los identificadores REEMPLAZAR_* en apps/api/wrangler.jsonc"
+            exit 1
+          fi
+
+      - name: Desplegar API (Python Worker)
+        working-directory: apps/api
+        run: |
+          uv sync --frozen
+          uv run pywrangler deploy --env ${{ inputs.environment }}
+
+      - name: Construir frontend
+        run: pnpm --filter @aphia/web build
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+
+      - name: Desplegar frontend (Cloudflare Pages)
+        working-directory: apps/api
+        run: >
+          pnpm exec wrangler pages deploy ../web/dist
+          --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}"
+          --branch "${{ inputs.environment == 'production' && 'main' || 'staging' }}"
+          --commit-dirty=true

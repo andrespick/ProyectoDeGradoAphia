@@ -1,0 +1,20 @@
+{
+  "name": "@aphia/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../scripts/run.mjs uv run pywrangler dev --ip 127.0.0.1 --port 8787",
+    "dev:asgi": "node ../../scripts/run.mjs uv run uvicorn main:app --app-dir src --reload --reload-dir src --host 127.0.0.1 --port 8787",
+    "sync": "uv run pywrangler sync",
+    "lint": "uv run ruff check . ../../database/scripts && uv run ruff format --check . ../../database/scripts",
+    "format": "uv run ruff format . ../../database/scripts && uv run ruff check --fix . ../../database/scripts",
+    "test": "uv run pytest",
+    "test:integration": "uv run pytest -m integration",
+    "check:worker": "uv run pywrangler deploy --dry-run --outdir dist",
+    "deploy:staging": "uv run pywrangler deploy --env staging",
+    "deploy:production": "uv run pywrangler deploy --env production"
+  },
+  "devDependencies": {
+    "wrangler": "^4.153.0"
+  }
+}

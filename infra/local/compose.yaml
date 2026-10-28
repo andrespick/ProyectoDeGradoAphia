@@ -1,0 +1,82 @@
+# Infraestructura de DESARROLLO LOCAL. Uso: pnpm infra:up / pnpm infra:down
+# Todos los puertos se publican solo en 127.0.0.1 (no accesibles desde la red).
+# Las variables provienen de ../../.env (pnpm env:init).
+name: aphia-local
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD en .env (pnpm env:init)}
+      MYSQL_DATABASE: ${DB_NAME:-aphia}
+      MYSQL_USER: ${DB_USER:-aphia_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en .env (pnpm env:init)}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --skip-name-resolve
+    ports:
+      - "127.0.0.1:${DB_PORT:-3307}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # El ping por TCP solo responde cuando terminó la inicialización.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  files:
+    build:
+      context: ../../apps/files
+    image: aphia-files:local
+    restart: unless-stopped
+    environment:
+      FILES_SERVICE_TOKEN: ${FILES_SERVICE_TOKEN:?Defina FILES_SERVICE_TOKEN en .env (pnpm env:init)}
+      FILES_STORAGE_DIR: /data
+      FILES_MAX_BYTES: ${FILES_MAX_BYTES:-10485760}
+      FILES_ALLOWED_TYPES: ${FILES_ALLOWED_TYPES:-application/pdf,image/png,image/jpeg}
+    ports:
+      - "127.0.0.1:${FILES_PORT:-4000}:4000"
+    volumes:
+      - files-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # MySQL aislado para pruebas de integración (pnpm test:integration). Datos en memoria.
+  mysql-test:
+    profiles: [test]
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD:?Defina TEST_DB_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: aphia_test
+      MYSQL_USER: aphia_test
+      MYSQL_PASSWORD: ${TEST_DB_PASSWORD:?Defina TEST_DB_PASSWORD en .env}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --skip-name-resolve
+    ports:
+      - "127.0.0.1:${TEST_DB_PORT:-3308}:3306"
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+volumes:
+  mysql-data:
+  files-data:

@@ -1,32 +1,60 @@
-# Variables de entorno y secretos
+# ── Secretos y variables de entorno ─────────────────────────────────────────────
 .env
 .env.*
 !.env.example
+!.env.*.example
+!apps/web/.env.development
+backup.env
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.pem
+*.key
+*.p12
+*.age
+infra/production/secrets/*
+!infra/production/secrets/README.md
+infra/production/.env.production
 
-# Dependencias
+# ── Dependencias ────────────────────────────────────────────────────────────────
 node_modules/
-vendor/
-__pycache__/
-*.py[cod]
+.pnpm-store/
 .venv/
 venv/
+__pycache__/
+*.py[cod]
 
-# Builds y caché
+# ── Cloudflare / Pywrangler ─────────────────────────────────────────────────────
+.wrangler/
+apps/api/src/vendor/
+apps/api/python_modules/
+apps/api/.venv-workers/
+
+# ── Builds, caché y reportes ────────────────────────────────────────────────────
 dist/
 build/
 .cache/
 coverage/
+.pytest_cache/
+.ruff_cache/
+playwright-report/
+test-results/
+blob-report/
 
-# Logs
+# ── Datos locales ───────────────────────────────────────────────────────────────
+*.sql.gz
+backups/
+
+# ── Logs ────────────────────────────────────────────────────────────────────────
 *.log
 logs/
 
-# Editores / IDE
+# ── Editores / IDE ──────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 
-# Sistema operativo
+# ── Sistema operativo ───────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 Desktop.ini
