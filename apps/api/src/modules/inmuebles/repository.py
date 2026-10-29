@@ -17,6 +17,8 @@ from modules.inmuebles.schemas import (
     ServicioPublico,
     ServicioPublicoCreate,
 )
+from modules.papelera.repository import guardar_en_papelera
+from modules.papelera.schemas import EntradaPapelera
 from modules.personas.repository import agregar_papeles
 from modules.personas.schemas import PersonaResumen
 from modules.personas.service import PersonaNoEncontradaError
@@ -94,7 +96,7 @@ class InmueblesRepository:
                 "currency_code, occupancy_state_id) VALUES (%s, %s, %s, %s, %s, %s)",
                 (
                     datos.direccion,
-                    await _ciudad_id(cursor, datos.ciudad),
+                    await ciudad_id(cursor, datos.ciudad),
                     datos.matricula,
                     datos.canon,
                     "COP" if datos.canon is not None else None,
@@ -124,7 +126,7 @@ class InmueblesRepository:
                 "WHERE property_id = %s",
                 (
                     datos.direccion,
-                    await _ciudad_id(cursor, datos.ciudad),
+                    await ciudad_id(cursor, datos.ciudad),
                     datos.matricula,
                     datos.canon,
                     "COP" if datos.canon is not None else None,
@@ -158,7 +160,7 @@ class InmueblesRepository:
             )
             return int((await cursor.fetchone())[0])
 
-    async def eliminar(self, property_id: int) -> bool:
+    async def eliminar(self, property_id: int, papelera: EntradaPapelera) -> bool:
         try:
             async with self._db.transaction() as conn, conn.cursor() as cursor:
                 await cursor.execute(
@@ -168,7 +170,10 @@ class InmueblesRepository:
                     "DELETE FROM property_owner WHERE property_id = %s", (property_id,)
                 )
                 await cursor.execute("DELETE FROM property WHERE property_id = %s", (property_id,))
-                return cursor.rowcount > 0
+                if cursor.rowcount == 0:
+                    return False
+                await guardar_en_papelera(cursor, papelera)
+                return True
         except pymysql.err.IntegrityError as exc:
             if mysql_error_code(exc) == ER_ROW_IS_REFERENCED:
                 raise RegistroReferenciadoError() from exc
@@ -244,8 +249,8 @@ async def _guardar_servicios(
         )
 
 
-async def _ciudad_id(cursor: aiomysql.DictCursor, nombre: str | None) -> int | None:
-    """Ciudad por nombre exacto; se crea si no existe (decisión: sin pantalla de catálogos)."""
+async def ciudad_id(cursor: aiomysql.DictCursor, nombre: str | None) -> int | None:
+    """Ciudad por nombre exacto; se crea si no existe. También la usa ``configuracion``."""
     if not nombre:
         return None
     await cursor.execute(

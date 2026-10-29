@@ -3,12 +3,14 @@
 Aplicación web interna para **APHIA S.A.S.**, inmobiliaria ubicada en Colombia. Administrará
 clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y trazabilidad.
 
-> **Estado actual (v0.1.0):** las seis fases del [plan de implementación](docs/plan-de-implementacion.md) están hechas:
-> inicio de sesión real (usuario y contraseña, bloqueo tras 3 intentos), usuarios y roles,
+> **Estado actual (v0.1.0):** las siete fases del [plan de implementación](docs/plan-de-implementacion.md) están hechas:
+> inicio de sesión real (usuario y contraseña, bloqueo configurable, sesiones revocables), usuarios y roles,
 > clientes, propietarios y codeudores sobre el [modelo 3FN](docs/arquitectura/modelo-de-datos.md)
 > (una persona puede tener varios papeles), inmuebles con propietarios y servicios públicos,
 > contratos con partes, filtros e impresión, búsqueda global, tablero, identidad visual, ayuda en
-> línea (`/ayuda`), [manual de usuario](docs/manual-usuario.md), respaldo local cifrado y
+> línea (`/ayuda`), [manual de usuario](docs/manual-usuario.md), respaldo local cifrado,
+> administración del sistema (estado y respaldos, auditoría, catálogos, política de seguridad,
+> datos de la empresa, clave temporal y papelera) y
 > [guía de instalación y mantenimiento](docs/despliegue/instalacion-y-mantenimiento.md).
 
 ## Arquitectura en una línea

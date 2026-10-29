@@ -13,8 +13,10 @@ test.describe("Acceso", () => {
     await page.getByLabel("Contraseña", { exact: true }).fill(CLAVE_DEV);
     await page.getByRole("button", { name: "Iniciar sesión" }).click();
 
-    await expect(page.getByRole("heading", { name: /Bienvenido de nuevo/ })).toBeVisible({ timeout: 30_000 });
+    // El administrador de sistemas aterriza en el estado del sistema y no ve los módulos de negocio.
+    await expect(page.getByRole("heading", { name: "Estado del sistema" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("banner", { name: "Barra superior" }).getByText("Administrador de Sistemas")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: "Contratos" })).toHaveCount(0);
 
     await page.getByRole("banner", { name: "Barra superior" }).getByRole("button", { name: "Cerrar sesión" }).click();
     await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();

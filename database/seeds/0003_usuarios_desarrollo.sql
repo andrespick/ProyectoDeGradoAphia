@@ -28,7 +28,7 @@ INSERT INTO user_account (account_id, person_id, user_name, login_email, hashed_
     (9003, 9003, 'asesor', 'asesor@example.test', 'pbkdf2_sha256$100000$BMEA7iSnVcXVgxLVaPvShA==$YavUqH5jCXl4qzQrpOEuU/gkoecM/tVRoOdKfvTWRfQ=')
 AS nuevos
 ON DUPLICATE KEY UPDATE hashed_password = nuevos.hashed_password, is_active = 1,
-    failed_login_attempts = 0, locked_until = NULL;
+    failed_login_attempts = 0, locked_until = NULL, must_change_password = 0;
 
 INSERT IGNORE INTO user_role (account_id, role_id)
 SELECT 9001, role_id FROM app_role WHERE code = 'ADMIN_SISTEMAS';

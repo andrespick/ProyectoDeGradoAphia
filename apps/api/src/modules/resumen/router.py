@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends
 from db.connection import Database
 from db.dependencies import get_database
 from modules.auth.dependencies import require_roles
-from modules.auth.schemas import LECTURA
+from modules.auth.schemas import TODOS
 from modules.resumen.repository import ResumenRepository, ResumenRepositoryPort
 from modules.resumen.schemas import Resumen
 
 router = APIRouter(
     prefix="/api/v1/resumen",
     tags=["resumen"],
-    dependencies=[Depends(require_roles(*LECTURA))],
+    dependencies=[Depends(require_roles(*TODOS))],
 )
 
 

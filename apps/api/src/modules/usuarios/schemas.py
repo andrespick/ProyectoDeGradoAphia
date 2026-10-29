@@ -6,15 +6,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.text import normalizar_correo, normalizar_nombre
-from modules.auth.schemas import Role
+from modules.auth.schemas import Role, validar_clave
 
 EstadoUsuario = Literal["activo", "inactivo", "bloqueado"]
-
-
-def validar_clave(value: str) -> str:
-    if not any(c.isalpha() for c in value) or not any(c.isdigit() for c in value):
-        raise ValueError("La clave debe tener al menos una letra y un dígito")
-    return value
 
 
 class UsuarioBase(BaseModel):
@@ -75,7 +69,14 @@ class Usuario(BaseModel):
     bloqueada: bool
     bloqueada_hasta: datetime | None
     intentos_fallidos: int
+    debe_cambiar_clave: bool = False
     creado_en: datetime
+
+
+class ClaveTemporal(BaseModel):
+    """Se muestra una sola vez al administrador; la persona debe cambiarla al entrar."""
+
+    clave_temporal: str
 
 
 class UsuariosPage(BaseModel):

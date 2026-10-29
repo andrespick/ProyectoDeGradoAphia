@@ -81,7 +81,7 @@ export function ContratosPage() {
   }
 
   async function eliminar(contrato: ContratoListado) {
-    if (!window.confirm(`¿Eliminar el contrato #${contrato.id}? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar el contrato #${contrato.id}? Irá a la papelera; solo el Administrador de Sistemas puede restaurarlo.`)) return;
     setMensaje(null);
     setErrorAccion(null);
     try {

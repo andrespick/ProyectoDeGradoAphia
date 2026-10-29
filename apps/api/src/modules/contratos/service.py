@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from core.errors import ConflictError, NotFoundError
+from modules.auth.schemas import Principal
 from modules.contratos.schemas import Contrato, ContratoCreate, ContratoFiltros, ContratosPage
 from modules.inmuebles.service import InmuebleNoEncontradoError
+from modules.papelera.schemas import EntradaPapelera, entrada
 
 
 class ContratoNoEncontradoError(NotFoundError):
@@ -51,7 +53,7 @@ class ContratosRepositoryPort(Protocol):
 
     async def contar_dependencias(self, agreement_id: int) -> tuple[int, int]: ...
 
-    async def eliminar(self, agreement_id: int) -> bool: ...
+    async def eliminar(self, agreement_id: int, papelera: EntradaPapelera) -> bool: ...
 
 
 class ContratosService:
@@ -80,9 +82,12 @@ class ContratosService:
             raise ContratoNoEncontradoError()
         return contrato
 
-    async def eliminar(self, agreement_id: int) -> None:
+    async def eliminar(self, agreement_id: int, actor: Principal) -> None:
+        contrato = await self.obtener(agreement_id)
         await self._sin_dependencias(agreement_id)
-        if not await self._repository.eliminar(agreement_id):
+        descripcion = f"Contrato {agreement_id} · {contrato.inmueble.direccion}"
+        papelera = entrada("contrato", agreement_id, descripcion, _instantanea(contrato), actor)
+        if not await self._repository.eliminar(agreement_id, papelera):
             raise ContratoNoEncontradoError()
 
     async def _propietarios(self, datos: ContratoCreate) -> list[int]:
@@ -98,3 +103,16 @@ class ContratosService:
         financieros, archivos = await self._repository.contar_dependencias(agreement_id)
         if financieros or archivos:
             raise ContratoConDependenciasError(financieros, archivos)
+
+
+def _instantanea(contrato: Contrato) -> dict[str, Any]:
+    """Datos con la forma de ``ContratoCreate`` para restaurarlo desde la papelera."""
+    datos = contrato.model_dump(
+        mode="json",
+        include={"tipo", "fecha_inicio", "fecha_fin", "canon_pactado", "condiciones", "texto"},
+    )
+    datos["inmueble_id"] = contrato.inmueble.id
+    datos["propietarios_ids"] = [p.id for p in contrato.propietarios]
+    datos["arrendatario_id"] = contrato.arrendatario.id if contrato.arrendatario else None
+    datos["codeudores_ids"] = [c.id for c in contrato.codeudores]
+    return datos

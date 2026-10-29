@@ -58,7 +58,9 @@ Solo existe tema claro (la identidad no define uno oscuro).
 | Gestión de contratos y codeudores | `/contratos`, `/codeudores` | 2 y 4 |
 | Gestión de usuarios y roles (1 y 2) | `/usuarios` | 1 |
 | Recuperación de contraseña y desbloqueo | — (se cubre con `/ayuda#inicio-de-sesion` y el desbloqueo desde Usuarios) | — |
-| Auditoría de intentos de acceso; exportar reporte forense (PDF, CSV/Excel); paquete ZIP cifrado | — (fase futura: requiere bitácora de accesos y generación de archivos) | — |
+| Auditoría de intentos de acceso | `/auditoria` (tabla con filtros; sin gráficos ni exportación) | 6 |
+| Exportar reporte forense (PDF, CSV/Excel); paquete ZIP cifrado | — (fase futura: requiere generación de archivos) | — |
+| Sin mockup: estado del sistema, catálogos, configuración, papelera, cambio de contraseña | `/sistema`, `/catalogos`, `/configuracion`, `/papelera`, `/cambiar-clave` (misma plantilla de página: migas, cabecera, KPI, filtros, tarjeta con tabla) | 6 |
 
 ## Adaptaciones respecto al mockup
 
@@ -68,3 +70,19 @@ Solo existe tema claro (la identidad no define uno oscuro).
   pólizas, recaudo, mora ni comisiones: no existen en el modelo 3FN ni en los requisitos.
 - Los mockups usan Tailwind; la web usa CSS plano con los mismos tokens, por lo que hay
   diferencias de detalle en sombras y espaciados.
+
+## Logotipo
+
+Tres versiones vectoriales (fondo transparente, letras como contornos, sin fuentes externas) en
+`apps/web/public/logo/`. Colores propios del logo: negro `#171714`, rojos `#FF2521` / `#BF2015`
+y gris `#BBBCBF`; se usan tal cual, sin recolorear.
+
+| Archivo | Contenido | Dónde se usa |
+| --- | --- | --- |
+| `aphia-simbolo.svg` | Solo el símbolo (edificios, árboles y franja roja) | Barra lateral, riel, cajón y barra superior (junto al texto «APHIA / Gestión inmobiliaria»); `public/favicon.svg` es el mismo símbolo recortado a su contenido |
+| `aphia-logo-con-nombre.svg` | Símbolo + nombre | Tarjeta de inicio de sesión |
+| `aphia-logo-completo.svg` | Símbolo + nombre + descripción de la empresa | Membrete de la vista de impresión del contrato |
+
+Regla: el símbolo nunca va dentro de una caja roja ni sobre fondos de color; siempre sobre
+blanco o `#F8FAFC`. Los PNG de Stitch muestran un icono genérico porque se hicieron antes de
+recibir el logotipo.

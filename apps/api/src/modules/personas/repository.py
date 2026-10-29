@@ -14,6 +14,8 @@ from core.errors import (
 from db.connection import Database
 from db.sql import ER_DUP_ENTRY, ER_ROW_IS_REFERENCED, like_pattern, mysql_error_code
 from modules.catalogos.schemas import PAPEL_POR_CODIGO
+from modules.papelera.repository import guardar_en_papelera
+from modules.papelera.schemas import EntradaPapelera
 from modules.personas.schemas import (
     ContratoResumen,
     CuentaBancaria,
@@ -204,7 +206,7 @@ class PersonasRepository:
             },
         )
 
-    async def eliminar(self, person_id: int) -> bool:
+    async def eliminar(self, person_id: int, papelera: EntradaPapelera) -> bool:
         try:
             async with self._db.transaction() as conn, conn.cursor() as cursor:
                 for tabla in (
@@ -216,7 +218,10 @@ class PersonasRepository:
                 ):
                     await cursor.execute(f"DELETE FROM {tabla} WHERE person_id = %s", (person_id,))
                 await cursor.execute("DELETE FROM person WHERE person_id = %s", (person_id,))
-                return cursor.rowcount > 0
+                if cursor.rowcount == 0:
+                    return False
+                await guardar_en_papelera(cursor, papelera)
+                return True
         except pymysql.err.IntegrityError as exc:
             if mysql_error_code(exc) == ER_ROW_IS_REFERENCED:
                 raise RegistroReferenciadoError() from exc

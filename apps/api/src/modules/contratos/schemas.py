@@ -8,15 +8,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from core.text import vacio_a_none
 from modules.personas.schemas import InmuebleResumen, PersonaResumen
 
 EstadoContrato = Literal["programado", "vigente", "finalizado"]
 DIAS_POR_VENCER = 60
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-
-
-def _vacio_a_none(value: object) -> object:
-    return None if isinstance(value, str) and not value.strip() else value
 
 
 class ContratoCreate(BaseModel):
@@ -36,8 +33,8 @@ class ContratoCreate(BaseModel):
 
     @field_validator("condiciones", "texto", mode="before")
     @classmethod
-    def vacio_a_none(cls, value: object) -> object:
-        return _vacio_a_none(value)
+    def blancos_a_none(cls, value: object) -> object:
+        return vacio_a_none(value)
 
     @field_validator("condiciones", "texto")
     @classmethod

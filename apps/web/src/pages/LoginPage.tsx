@@ -1,24 +1,33 @@
-import { Building2, Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
-import { type FormEvent, useState } from "react";
-import { Link, Navigate, useLocation } from "react-router";
+import { Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
+import { type FormEvent, useEffect, useState } from "react";
+import { Link, Navigate } from "react-router";
 
 import { Field } from "../components/Field";
 import { useAuth } from "../features/auth/AuthProvider";
+import { getPoliticaPublica } from "../services/administracionService";
 import { ApiError } from "../services/apiClient";
+import type { PoliticaPublica } from "../types/administracion";
 
 export function LoginPage() {
   const auth = useAuth();
-  const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from;
-  const destino = from && from !== "/login" ? from : "/";
   const [usuario, setUsuario] = useState("");
   const [clave, setClave] = useState("");
   const [recordar, setRecordar] = useState(false);
   const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [politica, setPolitica] = useState<PoliticaPublica | null>(null);
 
-  if (auth.status === "autenticado") return <Navigate to={destino} replace />;
+  useEffect(() => {
+    const controller = new AbortController();
+    getPoliticaPublica(controller.signal)
+      .then(setPolitica)
+      .catch(() => undefined); // sin la API el aviso usa un texto general
+    return () => controller.abort();
+  }, []);
+
+  // Siempre al inicio («/» lleva a cada rol a su pantalla): la ruta anterior pudo ser de otro usuario.
+  if (auth.status === "autenticado") return <Navigate to="/" replace />;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,14 +60,15 @@ export function LoginPage() {
         </p>
         <p className="login-note">
           <LockKeyhole size={16} aria-hidden="true" /> Acceso corporativo protegido: la cuenta se
-          bloquea 15 minutos tras 3 intentos fallidos.
+          bloquea{" "}
+          {politica
+            ? `${politica.minutos_bloqueo} minutos tras ${politica.max_intentos} intentos fallidos.`
+            : "temporalmente tras varios intentos fallidos."}
         </p>
       </section>
 
       <section className="card login-card" aria-labelledby="login-titulo">
-        <span className="brand-logo login-logo" aria-hidden="true">
-          <Building2 size={22} />
-        </span>
+        <img className="login-logo" src="/logo/aphia-logo-con-nombre.svg" alt="APHIA" />
         <h1 id="login-titulo">Iniciar sesión</h1>
         <p className="muted">Ingrese con sus credenciales institucionales</p>
         <form className="form" onSubmit={handleSubmit} noValidate aria-label="Iniciar sesión">

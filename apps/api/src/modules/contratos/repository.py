@@ -2,15 +2,21 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import UTC, datetime
 from typing import Any
 
 import aiomysql
 import pymysql
 
 from core.errors import CatalogoInvalidoError, RegistroReferenciadoError
+from core.fechas import hoy
 from db.connection import Database
-from db.sql import ER_NO_REFERENCED_ROW, ER_ROW_IS_REFERENCED, like_pattern, mysql_error_code
+from db.sql import (
+    ER_NO_REFERENCED_ROW,
+    ER_ROW_IS_REFERENCED,
+    HOY_SQL,
+    like_pattern,
+    mysql_error_code,
+)
 from modules.catalogos.schemas import PAPEL_POR_CODIGO
 from modules.contratos.schemas import (
     DIAS_POR_VENCER,
@@ -20,6 +26,8 @@ from modules.contratos.schemas import (
     estado_de,
 )
 from modules.inmuebles.repository import PERSONA_JOINS, persona_resumen
+from modules.papelera.repository import guardar_en_papelera
+from modules.papelera.schemas import EntradaPapelera
 from modules.personas.repository import agregar_papeles
 from modules.personas.schemas import InmuebleResumen, Papel, PersonaResumen
 from modules.personas.service import PersonaNoEncontradaError
@@ -43,12 +51,11 @@ _PARTES = (
     f"JOIN person pe ON pe.person_id = ap.person_id {PERSONA_JOINS} "
     "WHERE ap.agreement_id IN ({marcadores}) ORDER BY pe.full_name"
 )
-_VIGENTE = "a.start_date <= CURDATE() AND (a.end_date IS NULL OR a.end_date >= CURDATE())"
 _ESTADOS = {
-    "vigente": _VIGENTE,
-    "por_vencer": f"a.end_date BETWEEN CURDATE() AND CURDATE() + INTERVAL {DIAS_POR_VENCER} DAY",
-    "finalizado": "a.end_date < CURDATE()",
-    "programado": "a.start_date > CURDATE()",
+    "vigente": f"a.start_date <= {HOY_SQL} AND (a.end_date IS NULL OR a.end_date >= {HOY_SQL})",
+    "por_vencer": f"a.end_date BETWEEN {HOY_SQL} AND {HOY_SQL} + INTERVAL {DIAS_POR_VENCER} DAY",
+    "finalizado": f"a.end_date < {HOY_SQL}",
+    "programado": f"a.start_date > {HOY_SQL}",
 }
 
 
@@ -139,7 +146,7 @@ class ContratosRepository:
             financieros, archivos = await cursor.fetchone()
             return int(financieros), int(archivos)
 
-    async def eliminar(self, agreement_id: int) -> bool:
+    async def eliminar(self, agreement_id: int, papelera: EntradaPapelera) -> bool:
         try:
             async with self._db.transaction() as conn, conn.cursor() as cursor:
                 await cursor.execute(
@@ -148,7 +155,10 @@ class ContratosRepository:
                 await cursor.execute(
                     "DELETE FROM property_agreement WHERE agreement_id = %s", (agreement_id,)
                 )
-                return cursor.rowcount > 0
+                if cursor.rowcount == 0:
+                    return False
+                await guardar_en_papelera(cursor, papelera)
+                return True
         except pymysql.err.IntegrityError as exc:
             if mysql_error_code(exc) == ER_ROW_IS_REFERENCED:
                 raise RegistroReferenciadoError() from exc
@@ -254,10 +264,10 @@ async def _completar(cursor: aiomysql.DictCursor, rows: list[dict[str, Any]]) ->
         await cursor.execute(_PARTES.format(marcadores=",".join(["%s"] * len(ids))), ids)
         for parte in await cursor.fetchall():
             partes[(parte["agreement_id"], parte["rol"])].append(persona_resumen(parte))
-    hoy = datetime.now(UTC).date()
+    dia = hoy()
     contratos = []
     for row in rows:
-        estado, dias = estado_de(row["start_date"], row["end_date"], hoy)
+        estado, dias = estado_de(row["start_date"], row["end_date"], dia)
         arrendatarios = partes.get((row["agreement_id"], "TENANT"), [])
         contratos.append(
             Contrato(

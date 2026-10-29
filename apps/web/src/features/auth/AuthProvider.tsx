@@ -9,8 +9,8 @@ import {
 } from "react";
 
 import { getCurrentPrincipal, login as loginRequest } from "../../services/authService";
-import { clearToken, SESSION_EXPIRED_EVENT, setToken } from "../../services/session";
-import type { Principal, Role } from "../../types/auth";
+import { clearToken, replaceToken, SESSION_EXPIRED_EVENT, setToken } from "../../services/session";
+import type { LoginResponse, Principal, Role } from "../../types/auth";
 import { tieneRol } from "./roles";
 
 export interface AuthState {
@@ -21,6 +21,8 @@ export interface AuthState {
 export interface AuthContextValue extends AuthState {
   login: (usuario: string, clave: string, recordar: boolean) => Promise<void>;
   logout: () => void;
+  /** Sesión renovada por la API (p. ej. tras cambiar la contraseña). */
+  actualizarSesion: (response: LoginResponse) => void;
   /** ¿El usuario actual tiene alguno de los roles indicados? */
   tiene: (roles: readonly Role[]) => boolean;
 }
@@ -64,14 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(ANONIMO);
   }, []);
 
+  const actualizarSesion = useCallback((response: LoginResponse) => {
+    replaceToken(response.token);
+    setState({ status: "autenticado", principal: response.principal });
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
       login,
       logout,
+      actualizarSesion,
       tiene: (roles) => (state.principal ? tieneRol(state.principal.roles, roles) : false),
     }),
-    [state, login, logout],
+    [state, login, logout, actualizarSesion],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

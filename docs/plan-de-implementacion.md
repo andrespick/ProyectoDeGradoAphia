@@ -14,6 +14,7 @@
 | 3 | Inmuebles | «Implementa inmuebles y elimina la tabla de demostración (fase 3)» | hecha | 2026-10-28 |
 | 4 | Contratos | «Implementa contratos con partes, filtros e impresión (fase 4)» | hecha | 2026-10-28 |
 | 5 | Ayuda, responsive, respaldo local y documentación | «Agrega ayuda en línea, diseño adaptable, respaldo local y documentación final (fase 5)» | hecha | 2026-10-28 |
+| 6 | Administración del sistema: estado y respaldos, auditoría, catálogos, configuración, sesiones y clave temporal, papelera | «Agrega la administración del sistema: estado, respaldos, auditoría, catálogos, configuración, sesiones y papelera (fase 6)» | hecha | 2026-10-29 |
 
 ## Contexto
 
@@ -38,9 +39,9 @@ propio, en la rama `feat/entorno-desarrollo`.
    un contrato cada persona aparece solo con el papel que tiene ahí. Requiere una tabla nueva
    `person_party_role` (migración) que reutiliza el catálogo `party_role` con códigos
    `OWNER`, `TENANT`, `CO_DEBTOR`. `person_category` queda sin uso (NULL).
-2. **Permisos.** `admin_sistemas`: todo, incluido usuarios. `administrativo`: crear, editar y
-   eliminar en los módulos de negocio. `asesor`: crear y editar, **no** eliminar. Solo
-   `admin_sistemas` gestiona usuarios.
+2. **Permisos.** `admin_sistemas`: solo la gestión del sistema (usuarios, contraseñas,
+   desbloqueos); **no** accede a clientes, inmuebles ni contratos. `administrativo`: crear,
+   editar y eliminar en los módulos de negocio. `asesor`: crear y editar, **no** eliminar.
 3. **Bloqueo de cuenta.** Tras 3 intentos fallidos, bloqueo de 15 minutos. La pantalla de
    Usuarios muestra «Bloqueada» con botón «Desbloquear»; el evento queda en los logs JSON. Sin
    correo.
@@ -111,7 +112,7 @@ en escritorio, riel de 72 px en tableta y cajón lateral en móvil.
 | `aphia_gesti_n_de_propietarios` | `/propietarios` | 2 | Banner informativo «Un propietario con inmuebles vinculados no se puede eliminar»; KPI (Propietarios, Inmuebles vinculados, Cuentas bancarias registradas); buscador (nombre, identificación, correo); tabla: propietario (nombre, identificación, ciudad de la dirección), contacto (correo, teléfono), cuenta bancaria (banco, tipo, número enmascarado `•••• 4902`), chip «N inmuebles» / «Sin inmuebles», acciones. **Se excluyen** comisión, dispersión ACH, «Batch», tarjetas legales. |
 | `aphia_gesti_n_de_inmuebles` | `/inmuebles` (+ `/inmuebles/nuevo`, `/inmuebles/:id/editar` como panel lateral) | 3 | Cabecera con migas, título, chip de total, «Registrar inmueble» que abre un **panel deslizante** derecho con secciones numeradas: 1 Identificación y localización (dirección, ciudad, matrícula), 2 Canon y titularidad (propietarios, canon COP, estado como botones de radio), 3 Cuentas de servicios públicos (tipo, proveedor, número); KPI (Total, Ocupados, Disponibles); filtros Estado / Ciudad / Propietario / búsqueda con chips de filtros aplicados y «Restablecer»; tabla: matrícula, dirección + ciudad, propietarios, canon (tabular), estado (punto + insignia), servicios (chips), acciones. **Se excluyen** fotos, tipo de inmueble, área, estrato, barrio, cuota de administración, observaciones, «Sincronizar catastro», «Exportar», selección múltiple (no están en el modelo; agregarlos exige migración y decisión). |
 | `aphia_gesti_n_de_contratos_y_codeudores` | `/contratos` | 4 | Cabecera con migas, «Nuevo contrato»; banner rojo «Un contrato con dependencias no se puede modificar ni eliminar»; KPI (Contratos, Vigentes, Codeudores vinculados, Por vencer < 60 días); pestañas **Todos / Vigentes / Por vencer / Finalizados** (`?estado=`); buscador + rango de fechas + ciudad; tabla: nº y vigencia (id, fechas, «N días restantes»), inmueble, partes (Propietario(s), Arrendatario), codeudores (chips), canon, estado; acciones. «+ Asociar codeudor» vive en el detalle del contrato. **Se excluyen** pólizas/aseguradoras, minutas masivas, firma electrónica, reajuste IPC, recaudo. |
-| `aphia_gesti_n_de_usuarios_y_roles_de_acceso_1` y `_2` | `/usuarios` | 1 | Cabecera «Usuarios y roles», «Registrar usuario»; banner «Suspensión automática tras 3 intentos fallidos»; KPI (Total, Activos, Bloqueados); **alerta por cada cuenta bloqueada** con botón «Desbloquear» (así se «informa al administrador»); buscador + chips de rol (`?rol=`) + estado (`?estado=`); tabla: usuario (iniciales, nombre, `@usuario`), documento, correo, rol (insignia), estado (conmutador Activo/Inactivo → `PUT activo`, «Bloqueada»), seguridad («N fallos» / «Desbloquear»), acciones editar/eliminar; tarjeta estática «Roles y alcance» (matriz de permisos) y tarjeta «Seguridad» (PBKDF2-SHA256, bloqueo 3/15). **Se excluyen** 2FA, auditoría de accesos, política criptográfica, último respaldo. |
+| `aphia_gesti_n_de_usuarios_y_roles_de_acceso_1` y `_2` | `/usuarios` | 1 | Cabecera «Usuarios y roles», «Registrar usuario»; banner «Suspensión automática tras 3 intentos fallidos»; KPI (Total, Activos, Bloqueados); **alerta por cada cuenta bloqueada** con botón «Desbloquear» (así se «informa al administrador»); buscador + chips de rol (`?rol=`) + estado (`?estado=`); tabla: usuario (iniciales, nombre, `@usuario`), documento, correo, rol (insignia), estado (conmutador Activo/Inactivo → `PUT activo`, «Bloqueada»), seguridad («N fallos» / «Desbloquear»), acciones editar/eliminar. La matriz de roles y la política de seguridad viven en `docs/seguridad/README.md`, no en pantalla. **Se excluyen** 2FA y política criptográfica; la auditoría de accesos y el último respaldo llegan en la fase 6 como pantallas propias (`/auditoria`, `/sistema`). |
 | `aphia_recuperaci_n_de_contrase_a_y_desbloqueo` | — | — | **Excluida**: requiere correo/SMS (decisión 3). Su contenido útil pasa a `/ayuda#inicio-de-sesion` y al enlace del login. |
 | `aphia_auditor_a_de_intentos_de_acceso_y_seguridad`, `aphia_exportar_reporte_forense_en_pdf`, `aphia_exportar_reporte_forense_en_csv_excel`, `aphia_confirmaci_n_y_descarga_de_paquete_zip_cifrado` | — | — | **Excluidas** de este plan: necesitan una bitácora de intentos/acciones (tabla nueva, decisión de negocio 10 «auditoría con actor y fecha») y generación de archivos. Quedan registradas como fase futura «Auditoría de accesos y exportaciones». |
 
@@ -178,8 +179,9 @@ con esta identidad; la fase 5 solo verifica y pule, no la introduce.
 | `ADMINISTRATIVO = "administrativo"` | `ADMINISTRATIVO` | Administrativo |
 | `ASESOR = "asesor"` | `ASESOR` | Asesor |
 
-Grupos: `LECTURA` y `ESCRITURA` = los tres roles; `ELIMINACION` = admin_sistemas + administrativo;
-`GESTION_USUARIOS` = admin_sistemas. Cada router de negocio lleva
+Grupos: `LECTURA` y `ESCRITURA` = administrativo + asesor; `ELIMINACION` = administrativo;
+`GESTION_USUARIOS` = admin_sistemas; `TODOS` = los tres (catálogos y resumen, que usa la pantalla
+de Usuarios). Cada router de negocio lleva
 `dependencies=[Depends(require_roles(*LECTURA))]` y cada `DELETE` añade
 `require_roles(*ELIMINACION)`. `Role(code.lower())` ↔ `role.value.upper()`.
 
@@ -440,8 +442,8 @@ WHERE code=…`. Contraseña documentada como exclusiva de desarrollo.
   protocolo de bloqueo, KPI, una alerta por cuenta bloqueada con «Desbloquear», buscador +
   chips de rol + estado, tabla con avatar, `@usuario`, documento, correo, insignia de rol,
   conmutador Activo/Inactivo (`PUT` con `activo`), columna Seguridad («N fallos» /
-  «Bloqueada» + «Desbloquear»), editar/eliminar con confirmación; tarjetas «Roles y alcance» y
-  «Seguridad») y `UsuarioForm` en `SlideOver` (`/usuarios/nuevo`, `/usuarios/:id/editar`).
+  «Bloqueada» + «Desbloquear»), editar/eliminar con confirmación) y `UsuarioForm` en `SlideOver` (`/usuarios/nuevo`,
+  `/usuarios/:id/editar`).
   La API acepta `rol` y `estado` (`activo|inactivo|bloqueado`) como filtros del listado. Rutas
   bajo `ProtectedRoute roles={GESTION_USUARIOS}`.
 - `test/mockApi.ts`: `LOGIN_OK`, `DB_PRINCIPAL`, fixture `usuario()`.
@@ -998,7 +1000,7 @@ criterios se cumplen y la «Definición de hecho» de su fase está completa.
 
 | # | Criterio |
 | --- | --- |
-| A1 | Con usuario y contraseña correctos, `POST /api/v1/auth/login` responde 200 con token y principal; la UI redirige a la ruta de origen o a `/` y el menú muestra nombre y rol. |
+| A1 | Con usuario y contraseña correctos, `POST /api/v1/auth/login` responde 200 con token y principal; la UI lleva siempre a `/` (el inicio de su rol; ver bitácora fase 6) y el menú muestra nombre y rol. |
 | A2 | Con contraseña incorrecta responde 401 `credenciales_invalidas` y la UI muestra «Usuario o contraseña incorrectos.»; con usuario inexistente la respuesta es idéntica (sin revelar si existe). |
 | A3 | Al tercer intento fallido consecutivo la cuenta queda bloqueada 15 minutos: la API responde 423 `cuenta_bloqueada` incluso con la contraseña correcta; `failed_login_attempts = 3` y `locked_until` quedan persistidos; el evento `cuenta_bloqueada` aparece en los logs sin usuario ni clave. |
 | A4 | Un inicio de sesión correcto reinicia el contador a 0; vencidos los 15 minutos la cuenta vuelve a aceptar la contraseña correcta sin intervención. |
@@ -1023,7 +1025,7 @@ criterios se cumplen y la «Definición de hecho» de su fase está completa.
 | C5 | El detalle muestra datos, papeles, cuenta bancaria, usuario del sistema (si existe), inmuebles de los que es propietario y contratos separados por papel (propietario, arrendatario, codeudor). |
 | C6 | Editar actualiza datos de contacto, papeles y cuenta bancaria en una sola transacción; quitar un papel que tiene vínculos (inmuebles o contratos) responde 409 `papel_en_uso`. |
 | C7 | Eliminar una persona sin vínculos responde 204 y desaparece de la lista; con inmuebles, contratos o cuenta de usuario responde 409 `persona_con_dependencias` con un mensaje que dice cuáles. |
-| C8 | `asesor` y `administrativo` pueden crear y editar; solo `administrativo` y `admin_sistemas` ven y pueden usar «Eliminar» (la API responde 403 al asesor). |
+| C8 | `asesor` y `administrativo` pueden crear y editar; solo `administrativo` ve y puede usar «Eliminar» (la API responde 403 al asesor; `admin_sistemas` no accede a los módulos de negocio). |
 | C9 | Una misma persona puede tener a la vez los papeles propietario, arrendatario y codeudor y aparece en las tres listas. |
 
 ### Propietarios (fase 2)
@@ -1129,9 +1131,10 @@ criterios se cumplen y la «Definición de hecho» de su fase está completa.
 4. **Tabla `clientes`.** Sin uso tras la fase 2, se elimina en la fase 3 (0011).
 5. **`ASSOCIATED` → `TENANT`.** La app nunca crea `ASSOCIATED`; una carga histórica lo
    mapearía a `TENANT`. Queda en `modelo-de-datos.md`.
-6. **Tokens sin estado.** Cambios de rol o desactivación aplican en el siguiente inicio de
-   sesión o a las 8 h; rotar `AUTH_SECRET` cierra todas las sesiones; `sessionStorage` exige
-   iniciar sesión en cada pestaña nueva.
+6. **Tokens sin estado.** ~~Cambios de rol o desactivación aplican en el siguiente inicio de
+   sesión o a las 8 h~~ → resuelto en la fase 6: `session_version` en el token y una consulta por
+   solicitud los aplican al instante. Rotar `AUTH_SECRET` cierra todas las sesiones;
+   `sessionStorage` exige iniciar sesión en cada pestaña nueva.
 7. **Ocupación manual.** No se deriva de los contratos (nota del modelo); recordatorio en la UI.
 8. **Seeds.** Los textos no pueden tener líneas que terminen en `;` ni empiecen por `--`.
 9. **Navegadores extra en CI.** Firefox/WebKit solo con dos pruebas *smoke*.
@@ -1152,6 +1155,21 @@ criterios se cumplen y la «Definición de hecho» de su fase está completa.
 14. **Fidelidad visual.** Los mockups están hechos con Tailwind; la web usa CSS plano con los
     mismos tokens. Habrá diferencias de detalle (sombras, espaciados); lo que se preserva es la
     estructura, la jerarquía, los colores, la tipografía y los componentes.
+15. **Solicitudes destruidas en el Worker local (observado en la fase 6, `pywrangler dev`).**
+    Con varias solicitudes concurrentes que esperan E/S de MySQL (la carga de una pantalla pide
+    catálogos, resumen, lista y datos de la empresa a la vez), el runtime registra a veces
+    «Task was destroyed but it is pending!» y esas solicitudes terminan en 500 o sin respuesta.
+    En la suite E2E causa 1–2 fallos por ejecución (las afectadas pasaron al repetirlas solas).
+    Ocurre también con la verificación de sesión por solicitud desactivada, pero esa verificación
+    (una conexión más por solicitud) aumenta la exposición: «el asesor entra…» falló en 4 de 5
+    ejecuciones completas con ella y pasó sin ella. Evitar los abortos del navegador no lo elimina,
+    así que no se dejó ninguna mitigación en el código.
+    **Diagnóstico (2026-10-29):** la misma suite con la API en Uvicorn (`AUTH_MODE=database pnpm
+    --filter @aphia/api dev:asgi`) pasó 25 de 26 en 3 ejecuciones seguidas, con 0 respuestas 500;
+    la única falla es la prueba que comprueba la etiqueta «Cloudflare Workers». El problema está en
+    el runtime local de Python Workers, no en el código de la aplicación. Pendiente: reproducirlo
+    en el Worker de staging; si aparece allí, reportarlo a Cloudflare con el registro o servir la
+    API con Uvicorn (ruta alternativa ya probada).
 
 ## Verificación
 
@@ -1190,6 +1208,59 @@ Comprobaciones manuales mínimas:
   por 0008 antes de que `pnpm test:integration` vuelva a pasar.
 - `database/migrations/0008–0011`, `database/seeds/0002–0006`.
 
+## Fase 6 — Administración del sistema (ampliación pedida por el responsable el 2026-10-28)
+
+El responsable consideró que el Administrador de Sistemas tenía un módulo muy pequeño (solo
+usuarios) y pidió implementar: catálogos administrables, auditoría, panel de estado, respaldos
+visibles, política de seguridad configurable, control de sesiones y contraseñas, datos de la
+empresa **sin cambio de logotipo** y papelera. Esto resuelve la decisión de negocio 10
+(«auditoría con actor y fecha») y retoma lo que la fase 1 había excluido (auditoría de accesos,
+último respaldo).
+
+### Migraciones 0012–0018
+
+`audit_event`, `deleted_record`, `security_policy` (fila única con `CHECK` de límites),
+`organization_profile` (fila única, `city_id` FK), `user_account.session_version` y
+`must_change_password`, `backup_run`, y los valores iniciales (3 intentos, 15 min, 8 h, clave
+de 8; empresa «APHIA S.A.S.»). Detalle en `docs/arquitectura/modelo-de-datos.md`.
+
+### API
+
+| Módulo | Endpoints (todos `GESTION_SISTEMA` salvo donde se indica) |
+| --- | --- |
+| `auditoria` | `GET /api/v1/auditoria?accion&entidad&entidad_id&q&desde&hasta`; `Auditar` (en `auth/dependencies.py`) registra cada escritura de todos los routers |
+| `configuracion` | `GET/PUT /configuracion/seguridad`; `GET /configuracion/empresa` (`TODOS`), `PUT` (admin); `GET /auth/politica` (público) |
+| `sistema` | `GET /sistema/estado` (API, MySQL, migraciones, conteos, respaldos; responde aunque MySQL no esté); `GET/POST /sistema/respaldos` (202; 409 `respaldo_en_curso`) |
+| `catalogos` | `GET/POST /catalogos/{catalogo}`, `PUT/DELETE /catalogos/{catalogo}/{id}` para tipos de identificación, contrato, cuenta y servicio (con código) y ciudades, bancos y proveedores (nombre único); 409 `catalogo_en_uso`, `catalogo_duplicado`; 422 `codigo_requerido` |
+| `papelera` | `GET /papelera?tipo`, `POST /papelera/{id}/restaurar` (409 `restauracion_imposible`), `DELETE /papelera/{id}` |
+| `usuarios` | `POST /usuarios/{id}/restablecer-clave` (clave temporal), `POST /usuarios/{id}/cerrar-sesiones`; cambiar rol/clave o desactivar cierra sesiones |
+| `auth` | `POST /auth/cambiar-clave` (token nuevo); `require_roles` responde 403 `cambio_de_clave_requerido` con clave temporal |
+
+### Web
+
+Pantallas `/sistema` (inicio del administrador), `/auditoria`, `/catalogos`, `/configuracion`,
+`/papelera` y `/cambiar-clave` (todas las cuentas; obligatoria con clave temporal); acciones
+«Clave» y «Sesiones» en `/usuarios`; aviso de bloqueo del login con la política vigente; pie de
+página y encabezado de impresión del contrato con los datos de la empresa.
+
+### Criterios de aceptación
+
+| # | Criterio |
+| --- | --- |
+| S1 | Toda escritura de la API y todo inicio de sesión (exitoso, fallido o bloqueado) deja un evento con actor, acción, registro y fecha; el usuario tecleado contra una cuenta inexistente no se guarda. |
+| S2 | `/sistema` muestra API, MySQL (latencia y versión), migraciones, conteos y último respaldo; avisa si no hay respaldo exitoso en 26 h; sin MySQL responde 200 con `disponible: false`. |
+| S3 | «Solicitar respaldo ahora» crea una fila `SOLICITADO`; una segunda solicitud responde 409; `backup.sh --solicitudes` la atiende y registra el resultado. |
+| S4 | Los catálogos se crean, renombran y eliminan; un valor en uso no se elimina (409 con el número de registros) y un nombre repetido responde 409. |
+| S5 | La política (3–10 intentos, 5–1440 min, 1–24 h, clave de 8–64) se guarda y rige el siguiente inicio de sesión y la creación de claves; fuera de rango responde 422. |
+| S6 | Los datos de la empresa aparecen en el pie de página y en la impresión del contrato; no hay forma de cambiar el logotipo. |
+| S7 | «Clave» genera una clave temporal mostrada una sola vez; con ella solo se puede cambiar la contraseña; al cambiarla se emite un token nuevo y los anteriores dejan de valer. |
+| S8 | «Sesiones», cambiar el rol o desactivar la cuenta invalidan los tokens abiertos de inmediato (401 «Su sesión se cerró»). |
+| S9 | Eliminar una persona, un inmueble o un contrato guarda su instantánea en la misma transacción; restaurarlo lo crea de nuevo con otro número; si no es posible responde 409 y el registro sigue en la papelera. |
+| S10 | Ninguna de estas pantallas o endpoints es accesible para `administrativo` ni `asesor` (403), salvo leer los datos de la empresa y cambiar la propia contraseña. |
+
+Pruebas: `test_sesiones.py`, `test_administracion.py`, `test_papelera.py`,
+`test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts`.
+
 ## Bitácora de decisiones
 
 | Fecha | Fase | Decisión o desviación respecto al plan |
@@ -1211,4 +1282,13 @@ Comprobaciones manuales mínimas:
 | 2026-10-28 | 4 | La búsqueda global (`GET /api/v1/buscar`, `components/BusquedaGlobal.tsx`) vive en la barra superior solo en escritorio y tableta; en móvil se oculta (cada módulo conserva su buscador). Los contratos exponen `PERSONA_JOINS` compartido desde `modules/inmuebles/repository.py` para el resumen de persona. |
 | 2026-10-28 | 5 | Sin componente `ErrorAlert`: `errorMessage()` añade «Código de soporte: <request_id>» y los formularios lo usan; las alertas existentes no cambian de marcado. `AyudaLink` va en la zona de acciones de cada cabecera (visible también para quien no puede escribir). |
 | 2026-10-28 | 5 | El pie de página no muestra la versión de la API (la barra lateral ya muestra runtime y entorno); se evita una segunda consulta a `/api/health`. La búsqueda global se oculta en móvil. |
+| 2026-10-28 | — | `admin_sistemas` deja de acceder a los módulos de negocio: la API le responde 403 en personas, inmuebles, contratos y búsqueda; en la web su inicio redirige a `/usuarios` y solo ve Usuarios y Ayuda. `TODOS` (catálogos, resumen) es el único grupo compartido. El usuario ficticio de `AUTH_MODE=development` tiene `admin_sistemas` + `administrativo` para ver todo en local. La pantalla de logs/auditoría sigue en la fase futura «Auditoría de accesos y exportaciones». |
 | 2026-10-28 | 5 | `backup.sh` deja la copia local siempre y la copia externa solo si `BACKUP_RCLONE_REMOTE` está definido; el ciclo completo se probó solo con revisión de comandos (no hay VPS). Firefox y WebKit ejecutan únicamente las dos pruebas `@smoke` (login y CRUD de clientes). |
+| 2026-10-28 | 6 | Papelera por **instantáneas** (`deleted_record` con el JSON del esquema de creación) y no por borrado lógico: no cambia ninguna consulta existente ni la unicidad de `person_document`. Restaurar crea el registro de nuevo con otro id usando el servicio de su módulo (mismas validaciones). Primero se crea y luego se quita de la papelera, para no perder datos si algo falla. |
+| 2026-10-28 | 6 | Sesiones revocables con `session_version` en el token y una consulta por solicitud en `get_current_principal`; los roles siguen viajando en el token, pero cambiar el rol incrementa la versión. Cambia el riesgo 6. |
+| 2026-10-28 | 6 | La auditoría es de mejor esfuerzo y fuera de la transacción del cambio (`Auditor` registra un aviso `auditoria_no_registrada` si MySQL falla) para no revertir una operación ya confirmada. `audit_event`, `deleted_record` y `backup_run` no tienen FK a `user_account` para sobrevivir a la eliminación de cuentas. |
+| 2026-10-28 | 6 | Respaldos: la API no ejecuta comandos en el VPS; inserta una solicitud en `backup_run` y `backup.sh --solicitudes` (cron cada 5 min, `flock`) la atiende. El estado del servicio de documentos no se muestra: la API aún no tiene cliente hacia ese servicio. |
+| 2026-10-28 | 6 | Catálogos: sin columna «activo» (habría exigido una migración por tabla); un valor se elimina solo si no está en uso y, si lo está, se renombra. Papeles, roles, estados de ocupación y monedas quedan fuera porque la aplicación depende de sus códigos. |
+| 2026-10-28 | 6 | `GESTION_USUARIOS` pasa a llamarse `GESTION_SISTEMA` (API y web). El inicio del administrador es `/sistema`. Renombrar en la web usa `window.prompt`, como las confirmaciones de borrado usan `window.confirm`. |
+| 2026-10-29 | 6 | Correcciones de la auditoría del repositorio: «hoy» es el día de Colombia (`core/fechas.py`, `db.sql.HOY_SQL`) en estados de contrato, resumen y filtro de fechas de la auditoría; Papelera y Catálogos ejecutan una acción a la vez (un doble clic no restaura ni agrega dos veces); la clave propia no se cambia desde «Editar» (409; se usa «Cambiar contraseña»); los intentos de inicio de sesión que el bloqueo no acota (cuenta inexistente o inactiva, cuenta ya bloqueada) van solo a los logs; los avisos de borrado dicen que el registro va a la papelera; `vacio_a_none` vive una sola vez en `core/text.py`. |
+| 2026-10-29 | 6 | Al iniciar sesión cada persona va siempre a `/` (su inicio según el rol) y no a la ruta anterior: si otra persona cerró sesión en una pantalla de administración, quien entra después no debe aterrizar ahí. `ProtectedRoute` ya no guarda la ruta de origen. Cambia el criterio A1. |

@@ -12,13 +12,17 @@ import { useAuth } from "../features/auth/AuthProvider";
 import { useResumen } from "../features/resumen/useResumen";
 import { UsuariosTable } from "../features/usuarios/UsuariosTable";
 import { usePagedList } from "../hooks/usePagedList";
+import { getPoliticaPublica } from "../services/administracionService";
 import { errorMessage } from "../services/apiClient";
 import {
+  cerrarSesiones,
   deleteUsuario,
   desbloquearUsuario,
   listUsuarios,
+  restablecerClave,
   updateUsuario,
 } from "../services/usuariosService";
+import type { PoliticaPublica } from "../types/administracion";
 import type { Role } from "../types/auth";
 import type { Usuario } from "../types/usuario";
 
@@ -48,6 +52,14 @@ export function UsuariosPage() {
   const [q, setQ] = useState(lista.filtros.q ?? "");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [claveTemporal, setClaveTemporal] = useState<{ usuario: string; clave: string } | null>(null);
+  const [politica, setPolitica] = useState<PoliticaPublica | null>(null);
+
+  useEffect(() => {
+    getPoliticaPublica()
+      .then(setPolitica)
+      .catch(() => setPolitica(null));
+  }, []);
 
   const cargarBloqueados = useCallback(() => {
     listUsuarios({ limit: 10, offset: 0, filtros: { estado: "bloqueado" } })
@@ -68,6 +80,7 @@ export function UsuariosPage() {
   async function ejecutar(accion: () => Promise<unknown>, exito: string) {
     setErrorAccion(null);
     setMensaje(null);
+    setClaveTemporal(null);
     try {
       await accion();
       setMensaje(exito);
@@ -82,6 +95,20 @@ export function UsuariosPage() {
       () => desbloquearUsuario(usuario.id),
       `La cuenta de ${usuario.usuario} quedó desbloqueada.`,
     );
+  }
+
+  function restablecer(usuario: Usuario) {
+    if (!window.confirm(`¿Generar una clave temporal para ${usuario.usuario}? Sus sesiones abiertas se cerrarán.`)) {
+      return;
+    }
+    void ejecutar(async () => {
+      const { clave_temporal } = await restablecerClave(usuario.id);
+      setClaveTemporal({ usuario: usuario.usuario, clave: clave_temporal });
+    }, `Se restableció la clave de ${usuario.usuario}.`);
+  }
+
+  function cerrar(usuario: Usuario) {
+    void ejecutar(() => cerrarSesiones(usuario.id), `Se cerraron las sesiones abiertas de ${usuario.usuario}.`);
   }
 
   function eliminar(usuario: Usuario) {
@@ -146,10 +173,13 @@ export function UsuariosPage() {
         </div>
       </header>
 
-      <p className="alert alert-info">
-        <ShieldCheck size={16} aria-hidden="true" /> Protocolo activo: la cuenta se suspende 15 minutos
-        tras 3 intentos fallidos de inicio de sesión. Puede desbloquearla aquí.
-      </p>
+      {politica && (
+        <p className="alert alert-info">
+          <ShieldCheck size={16} aria-hidden="true" /> Protocolo activo: la cuenta se suspende{" "}
+          {politica.minutos_bloqueo} minutos tras {politica.max_intentos} intentos fallidos de inicio de
+          sesión. Puede desbloquearla aquí o cambiar la política en Configuración.
+        </p>
+      )}
 
       {resumen.resumen && (
         <section className="kpi-grid" aria-label="Indicadores de usuarios">
@@ -179,9 +209,15 @@ export function UsuariosPage() {
       ))}
 
       {mensaje && (
-        <p className="alert alert-success" role="status">
-          {mensaje}
-        </p>
+        <div className="alert alert-success" role="status">
+          <p>{mensaje}</p>
+          {claveTemporal && (
+            <p>
+              Clave temporal de @{claveTemporal.usuario}: <code className="clave-temporal">{claveTemporal.clave}</code>.
+              Entréguela por un canal seguro; no se volverá a mostrar y se pedirá cambiarla al entrar.
+            </p>
+          )}
+        </div>
       )}
       {errorAccion && (
         <p className="alert alert-error" role="alert">
@@ -228,6 +264,8 @@ export function UsuariosPage() {
           onToggleActivo={toggleActivo}
           onDesbloquear={desbloquear}
           onEliminar={eliminar}
+          onRestablecerClave={restablecer}
+          onCerrarSesiones={cerrar}
         />
         <Pagination
           total={lista.total}
@@ -238,43 +276,6 @@ export function UsuariosPage() {
           etiqueta="usuarios"
         />
       </section>
-
-      <div className="grid">
-        <section className="card" aria-labelledby="roles-titulo">
-          <h2 id="roles-titulo">Roles y alcance</h2>
-          <dl className="meta meta-stack">
-            <div>
-              <dt>Administrador de Sistemas</dt>
-              <dd>Control total, incluida la gestión de usuarios y roles.</dd>
-            </div>
-            <div>
-              <dt>Administrativo</dt>
-              <dd>Crea, edita y elimina clientes, propietarios, inmuebles, codeudores y contratos.</dd>
-            </div>
-            <div>
-              <dt>Asesor</dt>
-              <dd>Crea y edita los mismos registros; no puede eliminarlos.</dd>
-            </div>
-          </dl>
-        </section>
-        <section className="card" aria-labelledby="seguridad-titulo">
-          <h2 id="seguridad-titulo">Seguridad</h2>
-          <dl className="meta meta-stack">
-            <div>
-              <dt>Contraseñas</dt>
-              <dd>Hash PBKDF2-SHA256 con sal por usuario; nunca se almacenan en claro.</dd>
-            </div>
-            <div>
-              <dt>Bloqueo</dt>
-              <dd>3 intentos fallidos → 15 minutos de suspensión, con aviso en esta pantalla.</dd>
-            </div>
-            <div>
-              <dt>Sesión</dt>
-              <dd>Token firmado con vigencia de 8 horas.</dd>
-            </div>
-          </dl>
-        </section>
-      </div>
 
       <Outlet context={context} />
     </>

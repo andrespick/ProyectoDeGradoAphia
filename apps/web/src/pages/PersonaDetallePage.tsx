@@ -37,7 +37,7 @@ export function PersonaDetallePage({ modulo }: { modulo: Modulo }) {
   }, [config.api, id]);
 
   async function eliminar() {
-    if (!persona || !window.confirm(`¿Eliminar a ${persona.nombre}? Esta acción no se puede deshacer.`)) return;
+    if (!persona || !window.confirm(`¿Eliminar a ${persona.nombre}? Irá a la papelera; solo el Administrador de Sistemas puede restaurarlo.`)) return;
     try {
       await deletePersona(config.api, persona.id);
       navigate(config.ruta);

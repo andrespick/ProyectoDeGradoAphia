@@ -1,3 +1,4 @@
+# ruff: noqa: S608 - el SQL se arma solo con fragmentos fijos (HOY_SQL es una constante)
 from __future__ import annotations
 
 from typing import Any, Protocol
@@ -5,6 +6,7 @@ from typing import Any, Protocol
 import aiomysql
 
 from db.connection import Database
+from db.sql import HOY_SQL
 from modules.resumen.schemas import (
     Resumen,
     ResumenContratos,
@@ -28,13 +30,13 @@ _INMUEBLES = (
 )
 _CONTRATOS = (
     "SELECT COUNT(*) AS total, "
-    "COALESCE(SUM(start_date <= CURDATE() AND (end_date IS NULL OR end_date >= CURDATE())), 0) "
+    f"COALESCE(SUM(start_date <= {HOY_SQL} AND (end_date IS NULL OR end_date >= {HOY_SQL})), 0) "
     " AS vigentes, "
-    "COALESCE(SUM(end_date BETWEEN CURDATE() AND CURDATE() + INTERVAL 30 DAY), 0) "
+    f"COALESCE(SUM(end_date BETWEEN {HOY_SQL} AND {HOY_SQL} + INTERVAL 30 DAY), 0) "
     " AS por_vencer_30, "
-    "COALESCE(SUM(end_date BETWEEN CURDATE() AND CURDATE() + INTERVAL 60 DAY), 0) "
+    f"COALESCE(SUM(end_date BETWEEN {HOY_SQL} AND {HOY_SQL} + INTERVAL 60 DAY), 0) "
     " AS por_vencer_60, "
-    "COALESCE(SUM(end_date < CURDATE()), 0) AS finalizados "
+    f"COALESCE(SUM(end_date < {HOY_SQL}), 0) AS finalizados "
     "FROM property_agreement"
 )
 _CODEUDORES = (

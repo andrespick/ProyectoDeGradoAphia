@@ -7,7 +7,7 @@ Las migraciones son archivos SQL en `database/migrations/` aplicados en orden po
 ## Agregar una migración
 
 1. Cree `database/migrations/NNNN_descripcion.sql` con el siguiente número libre
-   (la última es `0010`, así que la próxima es `0011_...`). Solo minúsculas, números y `_`.
+   (la última es `0018`, así que la próxima es `0019_...`). Solo minúsculas, números y `_`.
 2. Escriba una sentencia DDL por archivo cuando sea posible. Termine cada sentencia con `;`
    al final de la línea. Comentarios con `--`. No use `DELIMITER` ni procedimientos.
 3. Siga las reglas físicas del [modelo de datos](../arquitectura/modelo-de-datos.md):

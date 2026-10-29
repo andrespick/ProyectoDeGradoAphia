@@ -6,7 +6,7 @@ const unique = `${Date.now()}`;
 
 test.describe("Inmuebles", () => {
   test.beforeEach(async ({ page }) => {
-    await iniciarSesion(page, "admin");
+    await iniciarSesion(page, "administrativo");
   });
 
   test("registra un inmueble con propietario nuevo, lo filtra, lo edita y lo elimina", async ({ page }) => {

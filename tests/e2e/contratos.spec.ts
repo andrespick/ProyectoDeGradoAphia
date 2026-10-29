@@ -19,7 +19,7 @@ async function elegirPersona(page: Page, grupo: string, identificacion: string) 
 
 test.describe("Contratos", () => {
   test.beforeEach(async ({ page }) => {
-    await iniciarSesion(page, "admin");
+    await iniciarSesion(page, "administrativo");
   });
 
   test("registra un contrato con arrendatario existente y codeudor nuevo, lo imprime, filtra, edita y elimina", async ({

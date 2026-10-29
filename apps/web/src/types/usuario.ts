@@ -15,6 +15,7 @@ export interface Usuario {
   bloqueada: boolean;
   bloqueada_hasta: string | null;
   intentos_fallidos: number;
+  debe_cambiar_clave: boolean;
   creado_en: string;
 }
 

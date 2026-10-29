@@ -34,7 +34,7 @@ La línea punteada entre el Worker y el servicio de documentos indica una integr
 | Origen → destino | Protocolo | Autenticación | Estado |
 | --- | --- | --- | --- |
 | Navegador → Pages | HTTPS | — | Configurado (`_redirects`, `_headers`) |
-| Navegador → API | HTTPS, JSON, CORS con orígenes explícitos | Token de sesión `Authorization: Bearer` (HMAC, 8 h) tras login con contraseña | Funcional |
+| Navegador → API | HTTPS, JSON, CORS con orígenes explícitos | Token de sesión `Authorization: Bearer` (HMAC, 8 h por defecto, revocable) tras login con contraseña | Funcional |
 | API → MySQL (Workers) | aiomysql → binding Hyperdrive → Workers VPC → túnel | Usuario `aphia_app` (solo DML), TLS | Local verificado; producción preparada |
 | API → MySQL (Uvicorn) | aiomysql directo | Igual | Verificado localmente |
 | API → documentos | HTTP vía binding Workers VPC (`env.FILES_SERVICE`) | `Authorization: Bearer <token de servicio>` | Preparado; adaptador pendiente |
@@ -65,13 +65,19 @@ Flujo de una solicitud:
 1. `POST /api/v1/auth/login` recibe usuario y contraseña; el repositorio lee `user_account`
    (con `GROUP_CONCAT` de roles) y el servicio verifica el hash PBKDF2-HMAC-SHA256 en tiempo
    constante (hash ficticio si el usuario no existe).
-2. Tres fallos seguidos fijan `locked_until = ahora + 15 min` (423 `cuenta_bloqueada`); un
-   inicio correcto reinicia el contador.
-3. La API emite un token firmado con HMAC-SHA256 (`AUTH_SECRET`), válido 8 h, con sujeto,
-   nombre y roles; la web lo guarda en `sessionStorage` (o `localStorage` con «Recordarme») y
-   lo envía como `Authorization: Bearer`.
-4. `get_current_principal` verifica firma y vigencia en cada solicitud; `require_roles`
-   aplica los grupos de roles por router. Un 401 en la web limpia la sesión y vuelve a `/login`.
+2. Los fallos seguidos que fija la política (`security_policy`, 3 por defecto) bloquean la
+   cuenta los minutos configurados (15 por defecto; 423 `cuenta_bloqueada`); un inicio
+   correcto reinicia el contador.
+3. La API emite un token firmado con HMAC-SHA256 (`AUTH_SECRET`) con sujeto, nombre, roles,
+   vencimiento (8 h por defecto) y `ver` (`session_version` de la cuenta); la web lo guarda en
+   `sessionStorage` (o `localStorage` con «Recordarme») y lo envía como `Authorization: Bearer`.
+4. `get_current_principal` verifica firma y vigencia y compara `ver` con MySQL en cada
+   solicitud (una consulta por clave primaria): cerrar sesiones, restablecer o cambiar la clave,
+   cambiar el rol o desactivar la cuenta invalidan el token al instante. Con una clave temporal
+   solo se permiten `/auth/me` y `/auth/cambiar-clave`. `require_roles` aplica los grupos de
+   roles por router. Un 401 en la web limpia la sesión y vuelve a `/login`.
+5. Cada escritura queda en `audit_event` (actor, acción, registro, `request_id`) y cada
+   eliminación de personas, inmuebles o contratos deja una instantánea en `deleted_record`.
 
 ## Justificación de tecnologías
 

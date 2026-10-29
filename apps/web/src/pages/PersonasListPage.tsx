@@ -56,7 +56,7 @@ export function PersonasListPage({ modulo }: { modulo: Modulo }) {
   }
 
   async function eliminar(persona: Persona) {
-    if (!window.confirm(`¿Eliminar a ${persona.nombre}? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar a ${persona.nombre}? Irá a la papelera; solo el Administrador de Sistemas puede restaurarlo.`)) return;
     setMensaje(null);
     setErrorAccion(null);
     try {

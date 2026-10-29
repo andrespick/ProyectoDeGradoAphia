@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from db.connection import Database
 from db.dependencies import get_database
-from modules.auth.dependencies import require_roles
-from modules.auth.schemas import ELIMINACION, LECTURA
+from modules.auth.dependencies import Auditar, get_current_principal, require_roles
+from modules.auth.schemas import ELIMINACION, LECTURA, Principal
 from modules.personas.repository import PersonasRepository
 from modules.personas.schemas import (
     Papel,
@@ -64,20 +64,32 @@ def build_personas_router(prefix: str, tag: str, papel_fijo: Papel | None) -> AP
         return await service.obtener(id)
 
     @router.post("", response_model=Persona, status_code=status.HTTP_201_CREATED)
-    async def crear(datos: PersonaCreate, service: Service) -> Persona:
-        return await service.crear(datos, papel_fijo)
+    async def crear(datos: PersonaCreate, service: Service, auditar: Auditar) -> Persona:
+        persona = await service.crear(datos, papel_fijo)
+        await auditar.registrar("crear", "persona", persona.id, f"desde {tag}")
+        return persona
 
     @router.put("/{id}", response_model=Persona)
-    async def actualizar(id: int, datos: PersonaUpdate, service: Service) -> Persona:
-        return await service.actualizar(id, datos, papel_fijo)
+    async def actualizar(
+        id: int, datos: PersonaUpdate, service: Service, auditar: Auditar
+    ) -> Persona:
+        persona = await service.actualizar(id, datos, papel_fijo)
+        await auditar.registrar("actualizar", "persona", id, f"desde {tag}")
+        return persona
 
     @router.delete(
         "/{id}",
         status_code=status.HTTP_204_NO_CONTENT,
         dependencies=[Depends(require_roles(*ELIMINACION))],
     )
-    async def eliminar(id: int, service: Service) -> Response:
-        await service.eliminar(id)
+    async def eliminar(
+        id: int,
+        service: Service,
+        principal: Annotated[Principal, Depends(get_current_principal)],
+        auditar: Auditar,
+    ) -> Response:
+        await service.eliminar(id, principal)
+        await auditar.registrar("eliminar", "persona", id, f"desde {tag}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router

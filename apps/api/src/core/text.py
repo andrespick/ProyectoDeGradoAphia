@@ -13,6 +13,11 @@ EMAIL_RE = re.compile(
 )
 
 
+def vacio_a_none(value: object) -> object:
+    """Un texto en blanco de un campo opcional cuenta como «sin valor»."""
+    return None if isinstance(value, str) and not value.strip() else value
+
+
 def normalizar_nombre(value: str) -> str:
     """Rechaza caracteres de control y colapsa espacios repetidos."""
     if any(unicodedata.category(char).startswith("C") for char in value):

@@ -1,8 +1,10 @@
 """Tokens de sesión firmados con HMAC-SHA256 (biblioteca estándar).
 
-Formato: ``base64url(JSON{sub, nombre, roles, exp}).base64url(firma)``. Sin estado en el
-servidor: desactivar un usuario o cambiar su rol surte efecto en el siguiente inicio de sesión
-o al vencer el token (8 horas). Rotar ``AUTH_SECRET`` invalida todos los tokens.
+Formato: ``base64url(JSON{sub, nombre, roles, exp, ver}).base64url(firma)``. ``ver`` es la
+``session_version`` de la cuenta al emitirlo: cada solicitud la compara con la de MySQL
+(``dependencies.py``), así que cerrar sesiones, restablecer la clave, cambiar el rol o desactivar
+la cuenta invalidan los tokens de inmediato. Rotar ``AUTH_SECRET`` invalida todos los tokens.
+La vigencia la fija la política de seguridad (8 horas por defecto).
 """
 
 from __future__ import annotations
@@ -14,8 +16,6 @@ import json
 import time
 from dataclasses import asdict, dataclass
 
-TOKEN_TTL_SECONDS = 8 * 3600
-
 
 @dataclass(frozen=True)
 class TokenPayload:
@@ -23,6 +23,7 @@ class TokenPayload:
     nombre: str
     roles: list[str]
     exp: int
+    ver: int = 0
 
 
 def issue_token(secret: str, payload: TokenPayload) -> str:
@@ -44,6 +45,7 @@ def verify_token(secret: str, token: str, now: float | None = None) -> TokenPayl
             nombre=str(data["nombre"]),
             roles=[str(role) for role in data["roles"]],
             exp=int(data["exp"]),
+            ver=int(data.get("ver", 0)),
         )
     except (ValueError, KeyError, TypeError, AttributeError):
         return None

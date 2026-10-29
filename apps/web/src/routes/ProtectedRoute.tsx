@@ -16,7 +16,11 @@ export function ProtectedRoute({ roles }: { roles?: readonly Role[] }) {
     );
   }
   if (!principal) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace />;
+  }
+  // Clave temporal: nada más está disponible hasta cambiarla (la API también lo exige).
+  if (principal.debe_cambiar_clave && location.pathname !== "/cambiar-clave") {
+    return <Navigate to="/cambiar-clave" replace />;
   }
   if (roles && !tieneRol(principal.roles, roles)) {
     return (

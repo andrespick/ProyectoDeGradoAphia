@@ -32,3 +32,12 @@ export function deleteUsuario(id: number): Promise<void> {
 export function desbloquearUsuario(id: number): Promise<Usuario> {
   return apiRequest<Usuario>(`${BASE}/${id}/desbloquear`, { method: "POST" });
 }
+
+/** Clave temporal (se muestra una sola vez); obliga a cambiarla y cierra sus sesiones. */
+export function restablecerClave(id: number): Promise<{ clave_temporal: string }> {
+  return apiRequest<{ clave_temporal: string }>(`${BASE}/${id}/restablecer-clave`, { method: "POST" });
+}
+
+export function cerrarSesiones(id: number): Promise<void> {
+  return apiRequest<void>(`${BASE}/${id}/cerrar-sesiones`, { method: "POST" });
+}

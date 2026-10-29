@@ -25,7 +25,6 @@ describe("ProtectedRoute", () => {
 
     expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/login");
-    expect(router.state.location.state).toEqual({ from: "/usuarios" });
   });
 
   it("muestra la ruta protegida al administrador de sistemas", async () => {

@@ -80,6 +80,24 @@ identificador de un registro referenciado.
 | `0010_user_account_bloqueo` | `user_account.failed_login_attempts INT NOT NULL DEFAULT 0`, `locked_until DATETIME(6) NULL` | Bloqueo temporal tras 3 intentos fallidos |
 | `0011_eliminar_tabla_clientes` | `DROP TABLE IF EXISTS clientes` | Segundo paso del cambio destructivo: la tabla de demostración no se usa desde la fase 2 |
 
+## Migraciones 0012–0018 (fase 6: administración del sistema)
+
+| Migración | Contenido | Motivo |
+| --- | --- | --- |
+| `0012_audit_event` | Tabla `audit_event` (fecha, actor `account_id` + nombre, acción, tipo y id del registro, detalle, `request_id`) con índices por fecha, registro y actor | Auditoría con actor y fecha (decisión 10) |
+| `0013_deleted_record` | Tabla `deleted_record` (tipo, id original, descripción, `payload JSON`, fecha y actor) con `CHECK` del tipo | Papelera: instantánea de personas, inmuebles y contratos eliminados |
+| `0014_security_policy` | Tabla de una sola fila (`CHECK id = 1`) con intentos, minutos de bloqueo, horas de sesión y largo mínimo de la clave, cada uno con su `CHECK` de límites | Política de seguridad configurable |
+| `0015_organization_profile` | Tabla de una sola fila con razón social, NIT, dirección, `city_id` (FK `RESTRICT`), teléfono y correo | Datos de la empresa para la impresión de contratos |
+| `0016_user_account_sesion` | `user_account.session_version INT NOT NULL DEFAULT 0`, `must_change_password BOOLEAN NOT NULL DEFAULT FALSE` | Sesiones revocables y clave temporal |
+| `0017_backup_run` | Tabla `backup_run` (origen, estado, fechas, archivo, tamaño, copia externa, error) con `CHECK` de valores | Historial y solicitudes de respaldo que escribe `backup.sh` |
+| `0018_configuracion_inicial` | `INSERT` de la política (3, 15, 8, 8) y de la empresa (`APHIA S.A.S.`) | Producción necesita las filas únicas |
+
+`audit_event`, `deleted_record` y `backup_run` no tienen FK hacia `user_account`: el historial
+debe sobrevivir a la eliminación de la cuenta, por eso guardan también el nombre del actor en el
+momento del evento (desviación deliberada de la regla «FK con `RESTRICT`»; no son datos del
+negocio sino registro histórico). La papelera no cambia el resto del modelo: el registro se
+borra como antes y restaurarlo lo crea de nuevo con otro identificador.
+
 ### Personas con varios papeles (decisión con el responsable, 2026-10-28)
 
 Una fila en `person` por identificación. La misma persona puede ser a la vez propietaria,
@@ -219,10 +237,11 @@ Resumen del análisis original (el detalle está en `analisis-y-trazabilidad.md`
 8. **Banca:** unicidad por institución y tipo, cuentas conjuntas y cifrado.
 9. **Archivos:** permisos de descarga, límites y tipos (ver la propuesta de integración arriba).
 10. **Operación y acceso:** ~~permisos reales por rol~~ → resuelto el 2026-10-28: roles
-    `ADMIN_SISTEMAS` (todo), `ADMINISTRATIVO` (crear, editar, eliminar), `ASESOR` (crear y
-    editar, no eliminar); solo `ADMIN_SISTEMAS` gestiona usuarios. Formato de hash para cuentas
-    nuevas: PBKDF2-SHA256 (fase 1). Pendientes: auditoría con actor y fecha y formato de los
-    hashes heredados.
+    `ADMIN_SISTEMAS` (gestión del sistema, sin módulos de negocio), `ADMINISTRATIVO` (crear,
+    editar, eliminar), `ASESOR` (crear y editar, no eliminar). Formato de hash para cuentas
+    nuevas: PBKDF2-SHA256 (fase 1). ~~Auditoría con actor y fecha~~ → resuelta en la fase 6
+    (`audit_event`, decisión del responsable del 2026-10-28). Pendiente: formato de los hashes
+    heredados y retención de la auditoría y la papelera.
 
 Mientras estas decisiones estén abiertas, cualquier cambio al esquema se hace con migraciones
 nuevas (nunca editando `0002`–`0007`).

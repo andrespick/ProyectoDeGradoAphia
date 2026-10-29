@@ -1,4 +1,4 @@
-import { LockOpen, Pencil, Trash2 } from "lucide-react";
+import { KeyRound, LockOpen, LogOut, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 
 import { Avatar } from "../../components/Avatar";
@@ -15,6 +15,8 @@ interface UsuariosTableProps {
   onToggleActivo: (usuario: Usuario) => void;
   onDesbloquear: (usuario: Usuario) => void;
   onEliminar: (usuario: Usuario) => void;
+  onRestablecerClave: (usuario: Usuario) => void;
+  onCerrarSesiones: (usuario: Usuario) => void;
 }
 
 const ROL_BADGE = {
@@ -32,6 +34,8 @@ export function UsuariosTable({
   onToggleActivo,
   onDesbloquear,
   onEliminar,
+  onRestablecerClave,
+  onCerrarSesiones,
 }: UsuariosTableProps) {
   if (error) {
     return (
@@ -121,12 +125,33 @@ export function UsuariosTable({
                       {usuario.intentos_fallidos} fallo{usuario.intentos_fallidos === 1 ? "" : "s"}
                     </span>
                   )}
+                  {usuario.debe_cambiar_clave && <span className="badge badge-info">Clave temporal</span>}
                 </td>
                 <td>
                   <span className="row-actions">
                     <Link to={`/usuarios/${usuario.id}/editar`} aria-label={`Editar ${usuario.usuario}`}>
                       <Pencil size={16} aria-hidden="true" /> Editar
                     </Link>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={esActor}
+                      aria-label={`Restablecer la clave de ${usuario.usuario}`}
+                      title="Genera una clave temporal"
+                      onClick={() => onRestablecerClave(usuario)}
+                    >
+                      <KeyRound size={16} aria-hidden="true" /> Clave
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={esActor}
+                      aria-label={`Cerrar las sesiones de ${usuario.usuario}`}
+                      title="Cierra sus sesiones abiertas"
+                      onClick={() => onCerrarSesiones(usuario)}
+                    >
+                      <LogOut size={16} aria-hidden="true" /> Sesiones
+                    </button>
                     <button
                       type="button"
                       className="danger"

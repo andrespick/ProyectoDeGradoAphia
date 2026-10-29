@@ -161,11 +161,10 @@ a {
 }
 
 .brand-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius);
-  background: var(--primary);
-  color: #fff;
+  width: 34px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1573,8 +1572,9 @@ th.num {
 }
 
 .login-logo {
-  width: 48px;
-  height: 48px;
+  display: block;
+  width: auto;
+  height: 132px;
   margin: 0 auto 0.75rem;
 }
 
@@ -1947,10 +1947,17 @@ legend {
   padding-bottom: 0.75rem;
 }
 
-.contrato-marca {
-  font-weight: 700;
-  color: var(--primary);
-  margin: 0 0 0.25rem;
+.contrato-logo {
+  display: block;
+  width: auto;
+  height: 120px;
+  margin: 0 0 0.75rem;
+}
+
+.contrato-empresa {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 @media (max-width: 767px) {
@@ -2027,4 +2034,17 @@ legend {
   .ayuda-indice ol {
     columns: 1;
   }
+}
+
+/* ── Administración del sistema ────────────────────────────────────────────── */
+
+/* Clave temporal: monoespaciada y seleccionable de un clic para copiarla sin errores. */
+.clave-temporal {
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  user-select: all;
 }

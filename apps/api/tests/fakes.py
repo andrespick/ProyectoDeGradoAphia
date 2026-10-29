@@ -4,13 +4,28 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from core.errors import CatalogoInvalidoError, IdentificacionDuplicadaError
+from modules.auditoria.schemas import AuditoriaFiltros, EventoAuditoria, NuevoEvento
 from modules.auth.passwords import hash_password
-from modules.auth.repository import CuentaLogin
+from modules.auth.repository import CuentaLogin, EstadoSesion
 from modules.auth.schemas import Role
 from modules.buscar.schemas import ResultadosBusqueda
-from modules.catalogos.schemas import Catalogos, Ciudad, Opcion
+from modules.catalogos.repository import (
+    CatalogoDuplicadoError,
+    CatalogoEnUsoError,
+    ItemCatalogoNoEncontradoError,
+)
+from modules.catalogos.schemas import (
+    CatalogoAdministrable,
+    Catalogos,
+    Ciudad,
+    ItemCatalogo,
+    ItemCatalogoCreate,
+    Opcion,
+)
+from modules.configuracion.schemas import POLITICA_INICIAL, Empresa, PoliticaSeguridad
 from modules.contratos.schemas import (
     DIAS_POR_VENCER,
     Contrato,
@@ -19,6 +34,7 @@ from modules.contratos.schemas import (
     estado_de,
 )
 from modules.inmuebles.schemas import Inmueble, InmuebleCreate, InmuebleFiltros, ServicioPublico
+from modules.papelera.schemas import EntradaPapelera, RegistroEliminado, TipoRegistro
 from modules.personas.schemas import (
     ContratoResumen,
     CuentaBancaria,
@@ -39,6 +55,13 @@ from modules.resumen.schemas import (
     ResumenPersonas,
     ResumenUsuarios,
 )
+from modules.sistema.schemas import (
+    ConteoRegistros,
+    Diagnostico,
+    EstadoBaseDatos,
+    EstadoMigraciones,
+    Respaldo,
+)
 from modules.usuarios.repository import UsuarioDuplicadoError
 from modules.usuarios.schemas import EstadoUsuario, Usuario, UsuarioCreate, UsuarioUpdate
 
@@ -46,8 +69,42 @@ from modules.usuarios.schemas import EstadoUsuario, Usuario, UsuarioCreate, Usua
 ITERACIONES_PRUEBA = 1_000
 
 
-class InMemoryPersonasRepository:
+class InMemoryPapeleraRepository:
+    """Compartida por los fakes de personas, inmuebles y contratos (como la tabla real)."""
+
     def __init__(self) -> None:
+        self.items: dict[int, tuple[RegistroEliminado, dict[str, Any]]] = {}
+
+    def agregar(self, entrada: EntradaPapelera) -> None:
+        record_id = max(self.items, default=0) + 1
+        registro = RegistroEliminado(
+            id=record_id,
+            tipo=entrada.tipo,
+            entidad_id=entrada.entidad_id,
+            descripcion=entrada.descripcion,
+            eliminado_en=datetime.now(UTC),
+            eliminado_por=entrada.eliminado_por,
+        )
+        self.items[record_id] = (registro, entrada.datos)
+
+    async def listar(
+        self, tipo: TipoRegistro | None, *, limit: int, offset: int
+    ) -> tuple[list[RegistroEliminado], int]:
+        items = [r for r, _ in sorted(self.items.values(), key=lambda x: -x[0].id)]
+        if tipo:
+            items = [r for r in items if r.tipo == tipo]
+        return items[offset : offset + limit], len(items)
+
+    async def obtener(self, record_id: int) -> tuple[RegistroEliminado, dict[str, Any]] | None:
+        return self.items.get(record_id)
+
+    async def eliminar(self, record_id: int) -> bool:
+        return self.items.pop(record_id, None) is not None
+
+
+class InMemoryPersonasRepository:
+    def __init__(self, papelera: InMemoryPapeleraRepository | None = None) -> None:
+        self.papelera = papelera or InMemoryPapeleraRepository()
         self.items: dict[int, Persona] = {}
         self.dependencias: dict[int, Dependencias] = {}
         self.inmuebles: dict[int, list[InmuebleResumen]] = {}
@@ -115,7 +172,7 @@ class InMemoryPersonasRepository:
 
     async def crear(self, datos: PersonaCreate, papeles: list[Papel]) -> Persona:
         self._exigir_identificacion_libre(datos, excepto=None)
-        person_id = len(self.items) + 1
+        person_id = max(self.items, default=0) + 1
         persona = self._desde(person_id, datos, papeles)
         self.items[person_id] = persona
         return persona
@@ -133,8 +190,11 @@ class InMemoryPersonasRepository:
     async def contar_dependencias(self, person_id: int) -> Dependencias:
         return self.dependencias.get(person_id, Dependencias())
 
-    async def eliminar(self, person_id: int) -> bool:
-        return self.items.pop(person_id, None) is not None
+    async def eliminar(self, person_id: int, papelera: EntradaPapelera) -> bool:
+        if self.items.pop(person_id, None) is None:
+            return False
+        self.papelera.agregar(papelera)
+        return True
 
     async def detalle(self, person_id: int) -> PersonaDetalle | None:
         persona = self.items.get(person_id)
@@ -234,6 +294,7 @@ class InMemoryAuthRepository:
         is_active: bool = True,
         locked_until: datetime | None = None,
         attempts: int = 0,
+        debe_cambiar_clave: bool = False,
     ) -> CuentaLogin:
         cuenta = CuentaLogin(
             account_id=len(self.cuentas) + 1,
@@ -243,12 +304,41 @@ class InMemoryAuthRepository:
             failed_login_attempts=attempts,
             locked_until=locked_until,
             roles=list(roles),
+            debe_cambiar_clave=debe_cambiar_clave,
         )
         self.cuentas[user_name] = cuenta
         return cuenta
 
     def por_id(self, account_id: int) -> CuentaLogin:
         return next(c for c in self.cuentas.values() if c.account_id == account_id)
+
+    async def find_by_id(self, account_id: int) -> CuentaLogin | None:
+        return next((c for c in self.cuentas.values() if c.account_id == account_id), None)
+
+    async def estado_sesion(self, account_id: int) -> EstadoSesion | None:
+        cuenta = await self.find_by_id(account_id)
+        if cuenta is None:
+            # Los tokens de ``bearer()`` no tienen cuenta en el fake: se tratan como sesiones
+            # vigentes (v0) para que cada prueba no tenga que registrar su usuario.
+            return EstadoSesion(activa=True, version=0, debe_cambiar_clave=False)
+        return EstadoSesion(
+            activa=cuenta.is_active,
+            version=cuenta.session_version,
+            debe_cambiar_clave=cuenta.debe_cambiar_clave,
+        )
+
+    async def cambiar_clave(self, account_id: int, hashed_password: str) -> int:
+        cuenta = self.por_id(account_id)
+        version = cuenta.session_version + 1
+        self._set(
+            replace(
+                cuenta,
+                hashed_password=hashed_password,
+                debe_cambiar_clave=False,
+                session_version=version,
+            )
+        )
+        return version
 
     def _set(self, cuenta: CuentaLogin) -> None:
         name = next(n for n, c in self.cuentas.items() if c.account_id == cuenta.account_id)
@@ -275,6 +365,7 @@ class InMemoryUsuariosRepository:
     def __init__(self) -> None:
         self.items: dict[int, Usuario] = {}
         self.hashes: dict[int, str] = {}
+        self.sesiones_cerradas: list[int] = []
 
     def agregar(
         self, usuario: str, rol: Role, *, activo: bool = True, bloqueada: bool = False
@@ -387,6 +478,21 @@ class InMemoryUsuariosRepository:
         self.items[account_id] = item
         return item
 
+    async def restablecer_clave(self, account_id: int, hashed_password: str) -> Usuario | None:
+        if await self.unlock(account_id) is None:
+            return None
+        self.hashes[account_id] = hashed_password
+        self.sesiones_cerradas.append(account_id)
+        item = self.items[account_id].model_copy(update={"debe_cambiar_clave": True})
+        self.items[account_id] = item
+        return item
+
+    async def cerrar_sesiones(self, account_id: int) -> bool:
+        if account_id not in self.items:
+            return False
+        self.sesiones_cerradas.append(account_id)
+        return True
+
 
 RESUMEN_DE_PRUEBA = Resumen(
     personas=ResumenPersonas(total=6, propietarios=2, arrendatarios=2, codeudores=3),
@@ -409,7 +515,8 @@ class InMemoryResumenRepository:
 
 
 class InMemoryInmueblesRepository:
-    def __init__(self) -> None:
+    def __init__(self, papelera: InMemoryPapeleraRepository | None = None) -> None:
+        self.papelera = papelera or InMemoryPapeleraRepository()
         self.items: dict[int, Inmueble] = {}
         self.personas: dict[int, PersonaResumen] = {}
         self.contratos: dict[int, int] = {}
@@ -450,7 +557,7 @@ class InMemoryInmueblesRepository:
         return self.items.get(property_id)
 
     async def crear(self, datos: InmuebleCreate) -> Inmueble:
-        property_id = len(self.items) + 1
+        property_id = max(self.items, default=0) + 1
         self.items[property_id] = self._desde(property_id, datos)
         return self.items[property_id]
 
@@ -463,8 +570,11 @@ class InMemoryInmueblesRepository:
     async def contar_contratos(self, property_id: int) -> int:
         return self.contratos.get(property_id, 0)
 
-    async def eliminar(self, property_id: int) -> bool:
-        return self.items.pop(property_id, None) is not None
+    async def eliminar(self, property_id: int, papelera: EntradaPapelera) -> bool:
+        if self.items.pop(property_id, None) is None:
+            return False
+        self.papelera.agregar(papelera)
+        return True
 
     def _desde(self, property_id: int, datos: InmuebleCreate) -> Inmueble:
         if datos.estado and datos.estado not in {"DISPONIBLE", "OCUPADO"}:
@@ -494,7 +604,8 @@ class InMemoryInmueblesRepository:
 class InMemoryContratosRepository:
     """Contratos en memoria; `hoy` fijo para que estado y días restantes sean deterministas."""
 
-    def __init__(self) -> None:
+    def __init__(self, papelera: InMemoryPapeleraRepository | None = None) -> None:
+        self.papelera = papelera or InMemoryPapeleraRepository()
         self.items: dict[int, Contrato] = {}
         self.personas: dict[int, PersonaResumen] = {}
         self.inmuebles: dict[int, tuple[InmuebleResumen, list[int]]] = {}
@@ -564,7 +675,7 @@ class InMemoryContratosRepository:
         return None if property_id not in self.inmuebles else list(self.inmuebles[property_id][1])
 
     async def crear(self, datos: ContratoCreate, propietarios_ids: list[int]) -> Contrato:
-        agreement_id = len(self.items) + 1
+        agreement_id = max(self.items, default=0) + 1
         self.items[agreement_id] = self._desde(agreement_id, datos, propietarios_ids)
         return self.items[agreement_id]
 
@@ -579,8 +690,11 @@ class InMemoryContratosRepository:
     async def contar_dependencias(self, agreement_id: int) -> tuple[int, int]:
         return self.dependencias.get(agreement_id, (0, 0))
 
-    async def eliminar(self, agreement_id: int) -> bool:
-        return self.items.pop(agreement_id, None) is not None
+    async def eliminar(self, agreement_id: int, papelera: EntradaPapelera) -> bool:
+        if self.items.pop(agreement_id, None) is None:
+            return False
+        self.papelera.agregar(papelera)
+        return True
 
     @staticmethod
     def _partes(contrato: Contrato) -> list[PersonaResumen]:
@@ -630,3 +744,164 @@ class InMemoryBuscarRepository:
     async def buscar(self, q: str) -> ResultadosBusqueda:
         self.consultas.append(q)
         return self.resultado
+
+
+class InMemoryAuditoriaRepository:
+    def __init__(self) -> None:
+        self.eventos: list[NuevoEvento] = []
+
+    def acciones(self) -> list[tuple[str, str | None, int | None]]:
+        return [(e.accion, e.entidad, e.entidad_id) for e in self.eventos]
+
+    async def registrar(self, evento: NuevoEvento) -> None:
+        self.eventos.append(evento)
+
+    async def listar(
+        self, filtros: AuditoriaFiltros, *, limit: int, offset: int
+    ) -> tuple[list[EventoAuditoria], int]:
+        items = [
+            EventoAuditoria(
+                id=n,
+                fecha=datetime(2026, 10, 28, 12, tzinfo=UTC),
+                actor_id=e.actor_id,
+                actor_nombre=e.actor_nombre,
+                actor_usuario=None,
+                accion=e.accion,
+                entidad=e.entidad,
+                entidad_id=e.entidad_id,
+                detalle=e.detalle,
+                request_id=e.request_id,
+            )
+            for n, e in enumerate(self.eventos, 1)
+        ][::-1]
+        if filtros.accion:
+            items = [e for e in items if e.accion == filtros.accion]
+        if filtros.entidad:
+            items = [e for e in items if e.entidad == filtros.entidad]
+        if filtros.q:
+            items = [e for e in items if filtros.q.lower() in (e.actor_nombre or "").lower()]
+        return items[offset : offset + limit], len(items)
+
+
+class InMemoryConfiguracionRepository:
+    def __init__(self) -> None:
+        self.politica = POLITICA_INICIAL
+        self.empresa = Empresa(nombre="APHIA S.A.S.")
+
+    async def obtener_politica(self) -> PoliticaSeguridad:
+        return self.politica
+
+    async def guardar_politica(self, politica: PoliticaSeguridad) -> PoliticaSeguridad:
+        self.politica = politica
+        return politica
+
+    async def obtener_empresa(self) -> Empresa:
+        return self.empresa
+
+    async def guardar_empresa(self, empresa: Empresa) -> Empresa:
+        self.empresa = empresa
+        return empresa
+
+
+class InMemorySistemaRepository:
+    def __init__(self) -> None:
+        self.respaldos: list[Respaldo] = []
+        self.disponible = True
+
+    def respaldo(self, estado: str, terminado_en: datetime | None = None) -> Respaldo:
+        item = Respaldo(
+            id=len(self.respaldos) + 1,
+            origen="programado",
+            estado=estado,  # type: ignore[arg-type]
+            solicitado_en=terminado_en or datetime.now(UTC),
+            iniciado_en=terminado_en,
+            terminado_en=terminado_en,
+            archivo="aphia-20261028T031500Z.tar.age" if estado == "ok" else None,
+            tamano_bytes=1024 if estado == "ok" else None,
+            copia_externa=False if estado == "ok" else None,
+            error=None,
+        )
+        self.respaldos.append(item)
+        return item
+
+    async def diagnostico(self) -> Diagnostico:
+        if not self.disponible:
+            from core.errors import DatabaseUnavailableError
+
+            raise DatabaseUnavailableError()
+        ok = [r for r in self.respaldos if r.estado == "ok"]
+        pendientes = [r for r in self.respaldos if r.estado in {"solicitado", "en_curso"}]
+        return Diagnostico(
+            base_de_datos=EstadoBaseDatos(
+                disponible=True, latencia_ms=1.5, version="8.4.0", tamano_bytes=2_097_152
+            ),
+            migraciones=EstadoMigraciones(
+                aplicadas=18, ultima="0018", aplicada_en=datetime(2026, 10, 28, tzinfo=UTC)
+            ),
+            registros=ConteoRegistros(
+                personas=6,
+                inmuebles=3,
+                contratos=2,
+                usuarios=3,
+                eventos_auditoria=10,
+                en_papelera=1,
+            ),
+            ultimo_exitoso=ok[-1] if ok else None,
+            pendiente=pendientes[0] if pendientes else None,
+        )
+
+    async def listar_respaldos(self, *, limit: int, offset: int) -> tuple[list[Respaldo], int]:
+        items = self.respaldos[::-1]
+        return items[offset : offset + limit], len(items)
+
+    async def solicitar_respaldo(self) -> Respaldo | None:
+        if any(r.estado in {"solicitado", "en_curso"} for r in self.respaldos):
+            return None
+        item = self.respaldo("solicitado").model_copy(update={"origen": "manual"})
+        self.respaldos[-1] = item
+        return item
+
+
+class InMemoryCatalogosAdminRepository:
+    def __init__(self) -> None:
+        self.items: dict[str, dict[int, ItemCatalogo]] = {
+            "tipos-identificacion": {
+                1: ItemCatalogo(id=1, codigo="CC", nombre="Cédula de ciudadanía", en_uso=4)
+            },
+            "ciudades": {9001: ItemCatalogo(id=9001, codigo=None, nombre="Bogotá", en_uso=0)},
+        }
+
+    async def listar(self, catalogo: CatalogoAdministrable) -> list[ItemCatalogo]:
+        return sorted(self.items.get(catalogo, {}).values(), key=lambda i: i.nombre)
+
+    async def crear(
+        self, catalogo: CatalogoAdministrable, datos: ItemCatalogoCreate
+    ) -> ItemCatalogo:
+        items = self.items.setdefault(catalogo, {})
+        if any(
+            i.nombre == datos.nombre or (datos.codigo and i.codigo == datos.codigo)
+            for i in items.values()
+        ):
+            raise CatalogoDuplicadoError()
+        item = ItemCatalogo(
+            id=max(items, default=0) + 1, codigo=datos.codigo, nombre=datos.nombre, en_uso=0
+        )
+        items[item.id] = item
+        return item
+
+    async def renombrar(
+        self, catalogo: CatalogoAdministrable, item_id: int, nombre: str
+    ) -> ItemCatalogo:
+        items = self.items.get(catalogo, {})
+        if item_id not in items:
+            raise ItemCatalogoNoEncontradoError()
+        items[item_id] = items[item_id].model_copy(update={"nombre": nombre})
+        return items[item_id]
+
+    async def eliminar(self, catalogo: CatalogoAdministrable, item_id: int) -> None:
+        items = self.items.get(catalogo, {})
+        if item_id not in items:
+            raise ItemCatalogoNoEncontradoError()
+        if items[item_id].en_uso:
+            raise CatalogoEnUsoError(items[item_id].en_uso)
+        del items[item_id]

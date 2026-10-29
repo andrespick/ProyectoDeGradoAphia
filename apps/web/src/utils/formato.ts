@@ -27,3 +27,27 @@ export function normalizarDecimal(texto: string): string | null {
     : limpio.replace(",", ".");
   return /^\d{1,10}(\.\d{1,2})?$/.test(sinMiles) ? sinMiles : "NaN";
 }
+
+const fechaHora = new Intl.DateTimeFormat("es-CO", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "America/Bogota",
+});
+
+/** Instantes de la API (ISO en UTC) → "28 oct 2026, 3:15 p. m." en hora de Colombia. */
+export function formatearFechaHora(valor: string | null | undefined): string {
+  return valor ? fechaHora.format(new Date(valor)) : "—";
+}
+
+/** 2097152 → "2,0 MB". */
+export function formatearBytes(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined) return "—";
+  const unidades = ["B", "KB", "MB", "GB"];
+  let n = valor;
+  let i = 0;
+  while (n >= 1024 && i < unidades.length - 1) {
+    n /= 1024;
+    i += 1;
+  }
+  return `${n.toLocaleString("es-CO", { maximumFractionDigits: i === 0 ? 0 : 1, minimumFractionDigits: i === 0 ? 0 : 1 })} ${unidades[i]}`;
+}

@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from db.connection import Database
 from db.dependencies import get_database
-from modules.auth.dependencies import require_roles
-from modules.auth.schemas import ELIMINACION, LECTURA
+from modules.auth.dependencies import Auditar, get_current_principal, require_roles
+from modules.auth.schemas import ELIMINACION, LECTURA, Principal
 from modules.contratos.repository import ContratosRepository
 from modules.contratos.schemas import (
     Contrato,
@@ -82,13 +82,19 @@ async def obtener_contrato(id: int, service: Service) -> Contrato:
 
 
 @router.post("", response_model=Contrato, status_code=status.HTTP_201_CREATED)
-async def crear_contrato(datos: ContratoCreate, service: Service) -> Contrato:
-    return await service.crear(datos)
+async def crear_contrato(datos: ContratoCreate, service: Service, auditar: Auditar) -> Contrato:
+    contrato = await service.crear(datos)
+    await auditar.registrar("crear", "contrato", contrato.id)
+    return contrato
 
 
 @router.put("/{id}", response_model=Contrato)
-async def actualizar_contrato(id: int, datos: ContratoUpdate, service: Service) -> Contrato:
-    return await service.actualizar(id, datos)
+async def actualizar_contrato(
+    id: int, datos: ContratoUpdate, service: Service, auditar: Auditar
+) -> Contrato:
+    contrato = await service.actualizar(id, datos)
+    await auditar.registrar("actualizar", "contrato", id)
+    return contrato
 
 
 @router.delete(
@@ -96,6 +102,12 @@ async def actualizar_contrato(id: int, datos: ContratoUpdate, service: Service) 
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(*ELIMINACION))],
 )
-async def eliminar_contrato(id: int, service: Service) -> Response:
-    await service.eliminar(id)
+async def eliminar_contrato(
+    id: int,
+    service: Service,
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    auditar: Auditar,
+) -> Response:
+    await service.eliminar(id, principal)
+    await auditar.registrar("eliminar", "contrato", id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

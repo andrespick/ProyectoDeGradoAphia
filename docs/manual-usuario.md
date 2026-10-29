@@ -9,7 +9,7 @@ página de ayuda.
 
 | Rol | Qué puede hacer |
 | --- | --- |
-| Administrador de Sistemas | Todo, incluida la gestión de usuarios y el desbloqueo de cuentas |
+| Administrador de Sistemas | Solo la gestión del sistema: estado del sistema y respaldos, usuarios y contraseñas, auditoría, catálogos, configuración (política de seguridad y datos de la empresa) y papelera. No ve clientes, inmuebles ni contratos; al entrar llega a Sistema |
 | Administrativo | Consultar, registrar, modificar y eliminar clientes, propietarios, codeudores, inmuebles y contratos |
 | Asesor | Consultar, registrar y modificar; **no** elimina |
 
@@ -17,19 +17,27 @@ página de ayuda.
 
 1. Abra la aplicación e ingrese el usuario y la contraseña que le asignó el Administrador de
    Sistemas. «Recordarme en este equipo» mantiene la sesión al cerrar la pestaña; no lo use en
-   equipos compartidos. La sesión dura 8 horas.
-2. Tras **3 intentos fallidos** la cuenta queda bloqueada **15 minutos**. Espere o pida al
-   Administrador de Sistemas que la desbloquee desde Usuarios. El mensaje indica los minutos
-   que faltan.
+   equipos compartidos. La sesión dura 8 horas (valor por defecto; lo fija la política de
+   seguridad).
+2. Tras **3 intentos fallidos** la cuenta queda bloqueada **15 minutos** (valores por defecto;
+   la pantalla de inicio de sesión muestra los vigentes). Espere o pida al Administrador de
+   Sistemas que la desbloquee desde Usuarios. El mensaje indica los minutos que faltan.
 3. No hay recuperación de contraseña por correo: el enlace «¿Olvidó su contraseña?» explica que
-   el Administrador de Sistemas le asigna una nueva desde Usuarios.
-4. Si la sesión expira, la aplicación vuelve al inicio de sesión y, al entrar, lo lleva a la
-   pantalla donde estaba.
+   el Administrador de Sistemas le genera una **clave temporal** desde Usuarios. Al entrar con
+   ella, la aplicación le pide cambiarla antes de mostrar cualquier otra pantalla.
+4. **Cambiar contraseña:** icono de llave junto a su nombre, en la barra superior. Pide la
+   contraseña actual y la nueva dos veces; al guardarla se cierran sus sesiones en otros equipos.
+5. Al entrar, cada persona llega siempre a su pantalla de inicio: el Administrador de Sistemas a
+   Sistema y los demás roles al tablero de Inicio, sin importar qué pantalla estaba abierta antes
+   (podía ser de otra persona). Si la sesión expira, vuelve al inicio de sesión. Si el
+   Administrador de Sistemas cierra sus sesiones, cambia su rol o desactiva su cuenta, la sesión
+   termina de inmediato.
 
 ## Navegación
 
-- Barra lateral: Inicio, Clientes, Propietarios, Codeudores, Inmuebles, Contratos, Usuarios
-  (solo Administrador de Sistemas) y Ayuda; abajo, el estado del sistema y «Salir».
+- Barra lateral: Inicio, Clientes, Propietarios, Codeudores, Inmuebles, Contratos y Ayuda; el
+  Administrador de Sistemas ve Sistema, Usuarios, Auditoría, Catálogos, Configuración, Papelera
+  y Ayuda. Abajo, el estado del sistema y «Salir».
 - En tabletas la barra se reduce a iconos; en el celular se abre con «Abrir menú» y se cierra
   con Escape, al tocar fuera o al navegar.
 - La caja **Buscar inmueble, cliente, contrato…** de la barra superior (computador y tableta)
@@ -52,7 +60,7 @@ editarlo o, automáticamente, al asociarlo a un inmueble o a un contrato.
 | Buscar | Por nombre o identificación (sin importar mayúsculas ni tildes) y por papel con los segmentos Todos / Arrendatarios / Propietarios / Codeudores. |
 | Ver | Datos, papeles, cuenta bancaria, usuario del sistema, inmuebles de los que es propietario y contratos separados por papel (propietario, arrendatario, codeudor), con enlaces. |
 | Modificar | «Editar»: datos de contacto, papeles y cuenta bancaria. No se puede quitar un papel con inmuebles o contratos vinculados. |
-| Eliminar | Solo si no tiene inmuebles, contratos ni cuenta de usuario; el mensaje indica qué lo impide. |
+| Eliminar | Solo si no tiene inmuebles, contratos ni cuenta de usuario; el mensaje indica qué lo impide. Lo eliminado va a la papelera: el Administrador de Sistemas puede restaurarlo. |
 
 ## Propietarios
 
@@ -74,8 +82,8 @@ editarlo o, automáticamente, al asociarlo a un inmueble o a un contrato.
 
 ## Inmuebles
 
-Menú **Inmuebles** (todos los roles consultan; Asesor y Administrativo registran y editan;
-solo Administrativo y Administrador de Sistemas eliminan).
+Menú **Inmuebles** (Asesor y Administrativo consultan, registran y editan;
+solo Administrativo elimina).
 
 ### Consultar
 
@@ -108,8 +116,8 @@ indica cuántos tiene.
 
 ## Contratos
 
-Menú **Contratos** (todos los roles consultan; Asesor y Administrativo registran y editan; solo
-Administrativo y Administrador de Sistemas eliminan).
+Menú **Contratos** (Asesor y Administrativo consultan, registran y editan; solo
+Administrativo elimina).
 
 ### Consultar
 
@@ -148,19 +156,73 @@ Administrativo y Administrador de Sistemas eliminan).
 
 «Editar» permite cambiar cualquier dato y reemplaza las partes. Un contrato con registros
 financieros o archivos asociados no se puede modificar ni eliminar: el mensaje indica cuántos
-tiene.
+tiene. Los contratos, inmuebles y personas eliminados van a la papelera (ver «Papelera»).
 
 ## Usuarios (Administrador de Sistemas)
 
 - «Registrar usuario»: nombre de usuario (minúsculas, único), nombre, identificación, correo,
-  contraseña (mínimo 8 caracteres con letra y dígito) y rol. Si la identificación ya pertenece
-  a un cliente, la cuenta se vincula a esa persona.
+  contraseña (con letra y dígito y el largo mínimo de la política; 8 por defecto) y rol. Si la
+  identificación ya pertenece a un cliente, la cuenta se vincula a esa persona.
 - Cada cuenta bloqueada aparece con una alerta y el botón «Desbloquear». El conmutador
   Activo/Inactivo impide iniciar sesión sin borrar la cuenta.
 - «Editar» cambia nombre, identificación, correo, rol, estado y, si se indica, la contraseña.
-  Los cambios de rol aplican en el siguiente inicio de sesión del usuario.
-- No se puede eliminar, desactivar ni degradar al último administrador activo, ni eliminar o
-  desactivar la cuenta propia.
+  Cambiar el rol o la contraseña, o desactivar la cuenta, cierra de inmediato las sesiones
+  abiertas de esa persona. La contraseña propia no se cambia aquí, sino con «Cambiar
+  contraseña» (icono de llave).
+- **Clave** genera una clave temporal: aparece una sola vez en el aviso verde; entréguela por un
+  canal seguro. La cuenta se desbloquea, sus sesiones se cierran y, al entrar, se le pide
+  cambiarla. La insignia «Clave temporal» indica que aún no la cambia.
+- **Sesiones** cierra las sesiones abiertas de esa persona (por ejemplo, si perdió el equipo).
+- No se puede eliminar, desactivar ni degradar al último administrador activo, ni eliminar,
+  desactivar, restablecer la clave o cerrar las sesiones de la cuenta propia.
+
+## Estado del sistema y respaldos (Administrador de Sistemas)
+
+- **Sistema** es la pantalla de inicio del Administrador de Sistemas: versión y entorno de la
+  API, si la base de datos responde (y en cuántos milisegundos), migraciones aplicadas, conteo
+  de registros, tamaño de la base y último respaldo exitoso. «Actualizar» vuelve a consultar.
+- Si no hay un respaldo exitoso en las últimas 26 horas aparece un aviso: revise la tarea
+  programada del servidor.
+- **Solicitar respaldo ahora** pide una copia adicional; el servidor la ejecuta en los minutos
+  siguientes y el historial muestra su estado (Solicitado, En curso, Completado o Fallido),
+  archivo, tamaño y si hubo copia externa. Los respaldos se restauran en el servidor, no desde
+  la web.
+
+## Auditoría (Administrador de Sistemas)
+
+- Lista quién inició sesión (y los intentos fallidos y bloqueos) y quién creó, modificó,
+  eliminó o restauró cada registro, con fecha y hora de Colombia.
+- Filtros por usuario, acción, tipo de registro y rango de fechas (días de Colombia).
+- Los intentos con un usuario inexistente o una cuenta inactiva, y los que llegan mientras la
+  cuenta está bloqueada, no se guardan aquí (solo en los registros del servidor): así nadie
+  puede llenar la auditoría probando usuarios. El bloqueo sí queda registrado.
+- No guarda contraseñas ni los datos de los formularios; para ver el registro use su número.
+
+## Catálogos (Administrador de Sistemas)
+
+- Mantiene los valores de las listas: tipos de identificación, de contrato, de cuenta bancaria y
+  de servicio público (con código), y ciudades, bancos y proveedores (solo nombre).
+- «Agregar» crea un valor; «Renombrar» corrige el nombre (el código no cambia); «Eliminar» solo
+  está disponible si ningún registro lo usa (columna «En uso»).
+- Papeles, roles, estados de ocupación y monedas no se editan: la aplicación depende de ellos.
+
+## Configuración (Administrador de Sistemas)
+
+- **Política de seguridad:** intentos antes del bloqueo (3–10), duración del bloqueo (5–1440
+  minutos), vigencia de la sesión (1–24 horas) y largo mínimo de la contraseña (8–64). Los
+  cambios rigen desde el siguiente inicio de sesión.
+- **Datos de la empresa:** razón social, NIT, dirección, ciudad, teléfono y correo. Aparecen en
+  la impresión de los contratos y en el pie de página. El logotipo no se puede cambiar desde
+  la aplicación.
+
+## Papelera (Administrador de Sistemas)
+
+- Guarda las personas, inmuebles y contratos que se eliminan, con quién y cuándo los eliminó.
+- **Restaurar** los registra de nuevo con otro número. No es posible si, por ejemplo, la
+  identificación ya se registró otra vez o el inmueble del contrato ya no existe; el mensaje lo
+  indica y el registro sigue en la papelera.
+- **Eliminar** los borra definitivamente. Contienen datos personales: vacíe la papelera de lo que
+  ya no se necesite.
 
 ## Mensajes de error frecuentes
 
@@ -168,7 +230,13 @@ tiene.
 | --- | --- |
 | «Usuario o contraseña incorrectos.» | Revise los datos; tras tres fallos la cuenta se bloquea 15 minutos. |
 | «La cuenta está bloqueada. Intente de nuevo en N minutos.» | Espere o pida el desbloqueo al Administrador de Sistemas. |
-| «Inicie sesión para continuar.» | La sesión expiró (8 horas) o se cerró en otra pestaña. |
+| «Inicie sesión para continuar.» | La sesión expiró (8 horas por defecto) o se cerró en otra pestaña. |
+| «Su sesión se cerró. Inicie sesión de nuevo.» | El Administrador de Sistemas cerró sus sesiones, cambió su rol o su contraseña, o usted la cambió en otro equipo. |
+| «Debe cambiar su contraseña antes de continuar.» | Tiene una clave temporal: cámbiela en la pantalla que se abre. |
+| «La clave debe tener al menos N caracteres.» | La política de seguridad exige ese largo mínimo. |
+| «No se puede restaurar: …» | El motivo indica qué falta (p. ej. el inmueble del contrato); el registro sigue en la papelera. |
+| «No se puede eliminar: lo usan N registro(s).» (catálogos) | Renombre el valor en lugar de eliminarlo. |
+| «Ya hay un respaldo solicitado o en curso.» | Espere a que termine el anterior. |
 | «Ya existe una persona con esa identificación.» | Búsquela en Clientes y edítela o agréguele el papel que falta. |
 | «No se puede eliminar…» (persona, inmueble, contrato) | El registro tiene vínculos; elimine o reasigne primero lo que indica el mensaje. |
 | «No se puede quitar el papel…» | La persona tiene inmuebles o contratos con ese papel. |

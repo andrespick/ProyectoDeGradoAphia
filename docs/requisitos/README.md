@@ -20,7 +20,8 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | Contratos | `property_agreement`, `agreement_party`, `agreement_category` | Implementado (fase 4): CRUD con propietarios, arrendatario y codeudores; filtros por fechas (solapamiento), inmueble, propietario, inquilino, tipo y estado; detalle con vista de impresión (PDF del navegador); bloqueo con dependencias |
 | Finanzas | `financial_record`, `bank_account` | Pendiente (submodelo de pagos por definir) |
 | Documentos | `file_record` y vínculos | Servicio de almacenamiento listo; integración con la API pendiente |
-| Usuarios, permisos y trazabilidad | `user_account`, `app_role`, `user_role` | Implementado (fase 1): login con contraseña, bloqueo tras 3 intentos, CRUD de usuarios y roles. Auditoría pendiente |
+| Usuarios, permisos y trazabilidad | `user_account`, `app_role`, `user_role`, `audit_event` | Implementado (fases 1 y 6): login con contraseña, bloqueo configurable, CRUD de usuarios y roles, clave temporal, cierre de sesiones y auditoría |
+| Administración del sistema | `security_policy`, `organization_profile`, `deleted_record`, `backup_run` | Implementado (fase 6): estado del sistema y respaldos, catálogos, política de seguridad, datos de la empresa y papelera |
 
 ## Requisitos funcionales del cliente
 
@@ -43,7 +44,13 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | RF-15 | Imprimir / guardar el contrato en PDF | Hecho (fase 4) |
 | RF-16 | Gestionar usuarios y roles (solo Administrador de Sistemas) | Hecho (fase 1) |
 | RF-17 | Inicio de sesión con usuario y contraseña | Hecho (fase 1) |
-| RF-18 | Bloqueo de la cuenta tras 3 intentos fallidos (15 min) e información al administrador | Hecho (fase 1) |
+| RF-18 | Bloqueo de la cuenta tras 3 intentos fallidos (15 min) e información al administrador | Hecho (fase 1); valores configurables (fase 6) |
+| RF-19 | Auditoría de inicios de sesión y cambios (quién, qué, cuándo) | Hecho (fase 6, ampliación pedida por el responsable) |
+| RF-20 | Estado del sistema y respaldos visibles para el administrador; solicitud de respaldo manual | Hecho (fase 6) |
+| RF-21 | Administración de catálogos (tipos, ciudades, bancos, proveedores) | Hecho (fase 6) |
+| RF-22 | Política de seguridad configurable y datos de la empresa (sin cambio de logotipo) | Hecho (fase 6) |
+| RF-23 | Clave temporal con cambio obligatorio y cierre de sesiones | Hecho (fase 6) |
+| RF-24 | Papelera: restaurar personas, inmuebles y contratos eliminados | Hecho (fase 6) |
 
 ## Requisitos no funcionales del cliente
 
@@ -52,7 +59,7 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | RNF-01 | Respuesta a consultas en menos de 3 s | Índices del modelo 3FN, paginación; medición en `test_rendimiento_mysql.py` con 500 personas |
 | RNF-02 | Actualización de pantalla en menos de 2 s tras guardar | Recarga de la lista tras cada escritura; E2E con `toBeVisible({ timeout: 2000 })` |
 | RNF-03 | Contraseñas con hash (SHA-256) | PBKDF2-HMAC-SHA256 con sal y 100 000 iteraciones (más fuerte que SHA-256 simple) |
-| RNF-04 | Control de acceso por roles | Grupos `LECTURA`/`ESCRITURA`/`ELIMINACION`/`GESTION_USUARIOS` en la API y en la web |
+| RNF-04 | Control de acceso por roles | Grupos `LECTURA`/`ESCRITURA`/`ELIMINACION`/`GESTION_SISTEMA` en la API y en la web |
 | RNF-05 | Respaldo diario local en un directorio restringido | `backup.sh`: copia cifrada en `BACKUP_LOCAL_DIR` (700/600) con retención, cron diario |
 | RNF-06 | Manual de usuario y ayuda en línea | `docs/manual-usuario.md` y `/ayuda` con enlace desde cada pantalla |
 | RNF-07 | Interfaz adaptable a computador, tableta y celular | Barra lateral / riel / cajón; tablas desplazables; E2E a 375 px |
@@ -85,8 +92,10 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 - Las 10 decisiones de negocio del modelo de datos (identidad, roles, histórico, contratos
   simultáneos, finanzas, monedas, banca, archivos, permisos): ver
   [modelo de datos](../arquitectura/modelo-de-datos.md#decisiones-de-negocio-pendientes-antes-de-producción).
-- ~~Roles reales y matriz de permisos~~ → definidos el 2026-10-28: `admin_sistemas` (todo),
+- ~~Roles reales y matriz de permisos~~ → definidos el 2026-10-28: `admin_sistemas` (solo gestión
+  del sistema: usuarios, auditoría, catálogos, configuración, papelera, estado y respaldos),
   `administrativo` (crear, editar, eliminar), `asesor` (crear y editar, sin eliminar).
+- Retención de la auditoría y de la papelera (hoy se vacían a mano).
 - Tipos y tamaños de documentos esperados; tiempo de retención.
 - Requisitos legales aplicables al tratamiento de datos personales en Colombia
   (Ley 1581 de 2012 y normas reglamentarias) — validar con el asesor del proyecto.
@@ -103,7 +112,13 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 | RF-12, RF-13, RF-14 | `/api/v1/contratos` | `/contratos`, `/contratos/nuevo`, `/contratos/:id`, `/contratos/:id/editar` | `test_contratos.py` (matriz de fechas), `test_contratos_mysql.py`, `ContratoForm.test.tsx`, `ContratosPage.test.tsx`, `contratos.spec.ts` |
 | RF-15 | `GET /api/v1/contratos/{id}` (texto completo) | `/contratos/:id` «Imprimir / guardar PDF» (`@media print`) | `ContratoDetallePage.test.tsx` (`window.print`), `contratos.spec.ts` |
 | RF-16 | `/api/v1/usuarios`, `POST /usuarios/{id}/desbloquear` | `/usuarios`, panel de usuario | `test_usuarios.py`, `test_usuarios_mysql.py`, `UsuariosPage.test.tsx`, `usuarios.spec.ts` |
-| RF-17, RF-18 | `POST /api/v1/auth/login`, `GET /auth/me` | `/login`, alertas de bloqueo en `/usuarios` | `test_auth.py`, `test_passwords.py`, `test_tokens.py`, `test_auth_mysql.py`, `LoginPage.test.tsx`, `auth.spec.ts` |
+| RF-17, RF-18 | `POST /api/v1/auth/login`, `GET /auth/me`, `GET /auth/politica` | `/login`, alertas de bloqueo en `/usuarios` | `test_auth.py`, `test_sesiones.py`, `test_passwords.py`, `test_tokens.py`, `test_auth_mysql.py`, `LoginPage.test.tsx`, `auth.spec.ts` |
+| RF-19 | `GET /api/v1/auditoria` (y `Auditar` en cada escritura) | `/auditoria` | `test_administracion.py::TestAuditoria`, `test_sesiones.py`, `test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts` |
+| RF-20 | `GET /api/v1/sistema/estado`, `GET/POST /sistema/respaldos`; `backup.sh` registra en `backup_run` | `/sistema` | `test_administracion.py::TestSistema`, `test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts` |
+| RF-21 | `GET/POST /api/v1/catalogos/{catalogo}`, `PUT/DELETE /catalogos/{catalogo}/{id}` | `/catalogos` | `test_administracion.py::TestCatalogos`, `test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts` |
+| RF-22 | `GET/PUT /api/v1/configuracion/seguridad`, `GET/PUT /configuracion/empresa` | `/configuracion`, encabezado de impresión del contrato, pie de página | `test_administracion.py::TestConfiguracion`, `test_sesiones.py::TestPoliticaEnElLogin`, `test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts` |
+| RF-23 | `POST /api/v1/usuarios/{id}/restablecer-clave`, `POST /usuarios/{id}/cerrar-sesiones`, `POST /auth/cambiar-clave` | `/usuarios` (Clave, Sesiones), `/cambiar-clave` | `test_sesiones.py`, `test_administracion.py::TestUsuarios`, `test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts` |
+| RF-24 | `GET /api/v1/papelera`, `POST /papelera/{id}/restaurar`, `DELETE /papelera/{id}` | `/papelera` | `test_papelera.py`, `test_administracion_mysql.py`, `Administracion.test.tsx`, `administracion.spec.ts` |
 | RNF-01 | Listados paginados con `COUNT` separado | — | `test_rendimiento_mysql.py` (< 3 s con 500 personas) |
 | RNF-02 | — | `reload()` tras cada escritura | E2E `toBeVisible({ timeout: 2_000 })` en clientes, inmuebles y contratos |
 | RNF-03, RNF-04 | `passwords.py`, `require_roles` | enlaces y botones según `tiene(roles)` | `test_passwords.py`, `test_*` «asesor 403», `ProtectedRoute.test.tsx` |
