@@ -140,9 +140,7 @@ export function MainLayout() {
 function Brand() {
   return (
     <Link to="/" className="brand">
-      <span className="brand-logo" aria-hidden="true">
-        <Building2 size={20} />
-      </span>
+      <img className="brand-logo" src="/logo/aphia-simbolo.svg" alt="" width="34" height="40" />
       <span className="brand-text">
         <span className="brand-name">APHIA</span>
         <span className="brand-tagline">Gestión inmobiliaria</span>

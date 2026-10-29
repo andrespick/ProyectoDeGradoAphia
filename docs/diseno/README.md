@@ -68,3 +68,19 @@ Solo existe tema claro (la identidad no define uno oscuro).
   pólizas, recaudo, mora ni comisiones: no existen en el modelo 3FN ni en los requisitos.
 - Los mockups usan Tailwind; la web usa CSS plano con los mismos tokens, por lo que hay
   diferencias de detalle en sombras y espaciados.
+
+## Logotipo
+
+Tres versiones vectoriales (fondo transparente, letras como contornos, sin fuentes externas) en
+`apps/web/public/logo/`. Colores propios del logo: negro `#171714`, rojos `#FF2521` / `#BF2015`
+y gris `#BBBCBF`; se usan tal cual, sin recolorear.
+
+| Archivo | Contenido | Dónde se usa |
+| --- | --- | --- |
+| `aphia-simbolo.svg` | Solo el símbolo (edificios, árboles y franja roja) | Barra lateral, riel, cajón y barra superior (junto al texto «APHIA / Gestión inmobiliaria»); `public/favicon.svg` es el mismo símbolo recortado a su contenido |
+| `aphia-logo-con-nombre.svg` | Símbolo + nombre | Tarjeta de inicio de sesión |
+| `aphia-logo-completo.svg` | Símbolo + nombre + descripción de la empresa | Membrete de la vista de impresión del contrato |
+
+Regla: el símbolo nunca va dentro de una caja roja ni sobre fondos de color; siempre sobre
+blanco o `#F8FAFC`. Los PNG de Stitch muestran un icono genérico porque se hicieron antes de
+recibir el logotipo.

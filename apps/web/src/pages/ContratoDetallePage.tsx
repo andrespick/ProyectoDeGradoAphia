@@ -220,7 +220,11 @@ export function ContratoDetallePage() {
 
           <section className="card contrato-impresion" aria-labelledby="texto-titulo">
             <header className="contrato-encabezado">
-              <p className="contrato-marca">APHIA S.A.S. · Gestión inmobiliaria</p>
+              <img
+                className="contrato-logo"
+                src="/logo/aphia-logo-completo.svg"
+                alt="APHIA S.A.S. — Administración de Propiedad Horizontal, Inmobiliaria, Asesorías y Consultorías"
+              />
               <h2 id="texto-titulo">{titulo}</h2>
               <p>
                 {contrato.inmueble.direccion}

@@ -1,4 +1,4 @@
-import { Building2, Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router";
 
@@ -56,9 +56,7 @@ export function LoginPage() {
       </section>
 
       <section className="card login-card" aria-labelledby="login-titulo">
-        <span className="brand-logo login-logo" aria-hidden="true">
-          <Building2 size={22} />
-        </span>
+        <img className="login-logo" src="/logo/aphia-logo-con-nombre.svg" alt="APHIA" />
         <h1 id="login-titulo">Iniciar sesión</h1>
         <p className="muted">Ingrese con sus credenciales institucionales</p>
         <form className="form" onSubmit={handleSubmit} noValidate aria-label="Iniciar sesión">
