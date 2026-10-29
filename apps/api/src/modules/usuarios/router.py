@@ -6,10 +6,13 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from db.connection import Database
 from db.dependencies import get_database
-from modules.auth.dependencies import get_current_principal, require_roles
-from modules.auth.schemas import GESTION_USUARIOS, Principal, Role
+from modules.auth.dependencies import Auditar, get_current_principal, require_roles
+from modules.auth.schemas import GESTION_SISTEMA, Principal, Role
+from modules.configuracion.dependencies import get_configuracion_repository
+from modules.configuracion.service import ConfiguracionRepositoryPort
 from modules.usuarios.repository import UsuariosRepository
 from modules.usuarios.schemas import (
+    ClaveTemporal,
     EstadoUsuario,
     Usuario,
     UsuarioCreate,
@@ -21,7 +24,7 @@ from modules.usuarios.service import UsuariosRepositoryPort, UsuariosService
 router = APIRouter(
     prefix="/api/v1/usuarios",
     tags=["usuarios"],
-    dependencies=[Depends(require_roles(*GESTION_USUARIOS))],
+    dependencies=[Depends(require_roles(*GESTION_SISTEMA))],
 )
 
 
@@ -33,8 +36,9 @@ def get_usuarios_repository(
 
 def get_usuarios_service(
     repository: Annotated[UsuariosRepositoryPort, Depends(get_usuarios_repository)],
+    configuracion: Annotated[ConfiguracionRepositoryPort, Depends(get_configuracion_repository)],
 ) -> UsuariosService:
-    return UsuariosService(repository)
+    return UsuariosService(repository, configuracion)
 
 
 Service = Annotated[UsuariosService, Depends(get_usuarios_service)]
@@ -59,23 +63,54 @@ async def obtener_usuario(id: int, service: Service) -> Usuario:
 
 
 @router.post("", response_model=Usuario, status_code=status.HTTP_201_CREATED)
-async def crear_usuario(datos: UsuarioCreate, service: Service) -> Usuario:
-    return await service.crear(datos)
+async def crear_usuario(datos: UsuarioCreate, service: Service, auditar: Auditar) -> Usuario:
+    usuario = await service.crear(datos)
+    await auditar.registrar("crear", "usuario", usuario.id, f"rol {usuario.rol.value}")
+    return usuario
 
 
 @router.put("/{id}", response_model=Usuario)
 async def actualizar_usuario(
-    id: int, datos: UsuarioUpdate, service: Service, principal: Actor
+    id: int, datos: UsuarioUpdate, service: Service, principal: Actor, auditar: Auditar
 ) -> Usuario:
-    return await service.actualizar(id, datos, principal)
+    usuario = await service.actualizar(id, datos, principal)
+    await auditar.registrar(
+        "actualizar", "usuario", id, "con cambio de clave" if datos.clave else None
+    )
+    return usuario
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def eliminar_usuario(id: int, service: Service, principal: Actor) -> Response:
+async def eliminar_usuario(
+    id: int, service: Service, principal: Actor, auditar: Auditar
+) -> Response:
     await service.eliminar(id, principal)
+    await auditar.registrar("eliminar", "usuario", id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{id}/desbloquear", response_model=Usuario)
-async def desbloquear_usuario(id: int, service: Service, principal: Actor) -> Usuario:
-    return await service.desbloquear(id, principal)
+async def desbloquear_usuario(
+    id: int, service: Service, principal: Actor, auditar: Auditar
+) -> Usuario:
+    usuario = await service.desbloquear(id, principal)
+    await auditar.registrar("desbloquear", "usuario", id)
+    return usuario
+
+
+@router.post("/{id}/restablecer-clave", response_model=ClaveTemporal)
+async def restablecer_clave(
+    id: int, service: Service, principal: Actor, auditar: Auditar
+) -> ClaveTemporal:
+    clave = await service.restablecer_clave(id, principal)
+    await auditar.registrar("restablecer_clave", "usuario", id)
+    return clave
+
+
+@router.post("/{id}/cerrar-sesiones", status_code=status.HTTP_204_NO_CONTENT)
+async def cerrar_sesiones(
+    id: int, service: Service, principal: Actor, auditar: Auditar
+) -> Response:
+    await service.cerrar_sesiones(id, principal)
+    await auditar.registrar("cerrar_sesiones", "usuario", id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

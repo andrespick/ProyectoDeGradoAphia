@@ -55,7 +55,7 @@ export function InmueblesPage() {
   }
 
   async function eliminar(inmueble: Inmueble) {
-    if (!window.confirm(`¿Eliminar el inmueble ${inmueble.direccion}? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar el inmueble ${inmueble.direccion}? Irá a la papelera; solo el Administrador de Sistemas puede restaurarlo.`)) return;
     setMensaje(null);
     setErrorAccion(null);
     try {

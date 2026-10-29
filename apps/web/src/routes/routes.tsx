@@ -1,20 +1,26 @@
 import type { RouteObject } from "react-router";
 
-import { GESTION_USUARIOS, LECTURA } from "../features/auth/roles";
+import { GESTION_SISTEMA, LECTURA } from "../features/auth/roles";
 import { type Modulo, MODULOS } from "../features/personas/modulos";
 import { MainLayout } from "../layouts/MainLayout";
+import { AuditoriaPage } from "../pages/AuditoriaPage";
 import { AyudaPage } from "../pages/AyudaPage";
+import { CambiarClavePage } from "../pages/CambiarClavePage";
+import { CatalogosPage } from "../pages/CatalogosPage";
+import { ConfiguracionPage } from "../pages/ConfiguracionPage";
 import { ContratoDetallePage } from "../pages/ContratoDetallePage";
 import { ContratoFormPage } from "../pages/ContratoFormPage";
 import { ContratosPage } from "../pages/ContratosPage";
-import { HomePage } from "../pages/HomePage";
+import { InicioPage } from "../pages/HomePage";
 import { InmuebleFormPage } from "../pages/InmuebleFormPage";
 import { InmueblesPage } from "../pages/InmueblesPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { PapeleraPage } from "../pages/PapeleraPage";
 import { PersonaDetallePage } from "../pages/PersonaDetallePage";
 import { PersonaFormPage } from "../pages/PersonaFormPage";
 import { PersonasListPage } from "../pages/PersonasListPage";
+import { SistemaPage } from "../pages/SistemaPage";
 import { UsuarioFormPage } from "../pages/UsuarioFormPage";
 import { UsuariosPage } from "../pages/UsuariosPage";
 import { ProtectedRoute } from "./ProtectedRoute";
@@ -41,9 +47,15 @@ export const routes: RouteObject[] = [
       { path: "login", element: <LoginPage /> },
       { path: "ayuda", element: <AyudaPage /> },
       {
+        element: <ProtectedRoute />,
+        children: [
+          { index: true, element: <InicioPage /> },
+          { path: "cambiar-clave", element: <CambiarClavePage /> },
+        ],
+      },
+      {
         element: <ProtectedRoute roles={LECTURA} />,
         children: [
-          { index: true, element: <HomePage /> },
           ...rutasDePersonas("clientes"),
           ...rutasDePersonas("propietarios"),
           ...rutasDePersonas("codeudores"),
@@ -62,8 +74,13 @@ export const routes: RouteObject[] = [
         ],
       },
       {
-        element: <ProtectedRoute roles={GESTION_USUARIOS} />,
+        element: <ProtectedRoute roles={GESTION_SISTEMA} />,
         children: [
+          { path: "sistema", element: <SistemaPage /> },
+          { path: "auditoria", element: <AuditoriaPage /> },
+          { path: "catalogos", element: <CatalogosPage /> },
+          { path: "configuracion", element: <ConfiguracionPage /> },
+          { path: "papelera", element: <PapeleraPage /> },
           {
             path: "usuarios",
             element: <UsuariosPage />,

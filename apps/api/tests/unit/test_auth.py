@@ -34,8 +34,9 @@ async def test_modo_desarrollo_entrega_usuario_ficticio(client: httpx.AsyncClien
     assert response.json() == {
         "sujeto": "desarrollo-local",
         "nombre": "Usuario de desarrollo",
-        "roles": ["admin_sistemas"],
+        "roles": ["admin_sistemas", "administrativo"],
         "modo": "development",
+        "debe_cambiar_clave": False,
     }
 
 
@@ -141,6 +142,7 @@ class TestLogin:
             "nombre": "Persona ana",
             "roles": ["administrativo"],
             "modo": "database",
+            "debe_cambiar_clave": False,
         }
         assert body["expira_en"].endswith("Z") or "+00:00" in body["expira_en"]
         assert "Clave" not in response.text
@@ -287,3 +289,24 @@ class TestLogin:
         assert "ana.secreta" not in logs
         assert "nadie.aqui" not in logs
         assert "ClaveMala99" not in logs
+
+
+@pytest.mark.parametrize(
+    ("ruta", "esperado"),
+    [
+        ("/api/v1/usuarios", 200),
+        ("/api/v1/catalogos", 200),
+        ("/api/v1/resumen", 200),
+        ("/api/v1/clientes", 403),
+        ("/api/v1/propietarios", 403),
+        ("/api/v1/inmuebles", 403),
+        ("/api/v1/contratos", 403),
+        ("/api/v1/buscar?q=ana", 403),
+    ],
+)
+async def test_admin_sistemas_solo_accede_a_la_gestion_del_sistema(
+    db_client: httpx.AsyncClient, ruta: str, esperado: int
+) -> None:
+    response = await db_client.get(ruta, headers=bearer(roles=(Role.ADMIN_SISTEMAS,)))
+
+    assert response.status_code == esperado

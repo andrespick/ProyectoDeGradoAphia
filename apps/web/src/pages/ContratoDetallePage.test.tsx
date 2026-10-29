@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { routes } from "../routes/routes";
-import { baseRoutes, contrato, DB_PRINCIPAL, json, mockApi, persona } from "../test/mockApi";
+import { baseRoutes, contrato, ADMINISTRATIVO_PRINCIPAL, json, mockApi, persona } from "../test/mockApi";
 
-function renderAt(path: string, principal: unknown = DB_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
+function renderAt(path: string, principal: unknown = ADMINISTRATIVO_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
   mockApi({ ...baseRoutes(principal), ...extra });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
@@ -23,7 +23,7 @@ describe("ContratoDetallePage", () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
     let guardado: unknown = null;
     const user = userEvent.setup();
-    renderAt("/contratos/7", DB_PRINCIPAL, {
+    renderAt("/contratos/7", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/contratos/7": () => json(contrato(7)),
       "GET /api/v1/personas/buscar": () => json(persona(5, "Sofía Fiadora", "1005", [])),
       "PUT /api/v1/contratos/7": (init) => {
@@ -60,7 +60,7 @@ describe("ContratoDetallePage", () => {
   });
 
   it("sin texto deshabilita la impresión y el asesor no ve «Eliminar»", async () => {
-    renderAt("/contratos/7", { ...DB_PRINCIPAL, roles: ["asesor"] }, {
+    renderAt("/contratos/7", { ...ADMINISTRATIVO_PRINCIPAL, roles: ["asesor"] }, {
       "GET /api/v1/contratos/7": () => json(contrato(7, { texto: null, codeudores: [] })),
     });
 

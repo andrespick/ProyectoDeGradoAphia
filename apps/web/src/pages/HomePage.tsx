@@ -1,10 +1,10 @@
 import { ArrowRight, Building2, FileText, type LucideIcon, ShieldUser, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 
 import { KpiCard } from "../components/KpiCard";
 import { useAuth } from "../features/auth/AuthProvider";
-import { GESTION_USUARIOS } from "../features/auth/roles";
+import { GESTION_SISTEMA, LECTURA } from "../features/auth/roles";
 import { MODULOS } from "../features/personas/modulos";
 import { diasRestantesTexto } from "../features/contratos/ContratosTable";
 import { useResumen } from "../features/resumen/useResumen";
@@ -67,12 +67,18 @@ const MODULOS_TABLERO: readonly Modulo[] = [
     titulo: "Gestión de usuarios",
     descripcion: "Roles de administradores, administrativos y asesores; bloqueos y desbloqueos.",
     icon: ShieldUser,
-    roles: GESTION_USUARIOS,
+    roles: GESTION_SISTEMA,
     conteo: (r) => plural(r.usuarios.total, "cuenta", "cuentas"),
   },
 ];
 
 const fechaLarga = new Intl.DateTimeFormat("es-CO", { dateStyle: "full", timeZone: "America/Bogota" });
+
+/** El administrador de sistemas no usa los módulos de negocio: su inicio es el estado del sistema. */
+export function InicioPage() {
+  const { tiene } = useAuth();
+  return tiene(LECTURA) ? <HomePage /> : <Navigate to="/sistema" replace />;
+}
 
 export function HomePage() {
   const { principal, tiene } = useAuth();

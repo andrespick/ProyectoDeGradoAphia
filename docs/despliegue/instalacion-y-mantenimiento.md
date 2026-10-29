@@ -60,10 +60,14 @@ Inicie sesión y cambie la contraseña desde Usuarios. Los demás usuarios se cr
 
 | Tarea | Frecuencia | Cómo |
 | --- | --- | --- |
-| Respaldo cifrado (MySQL + documentos) | Diario (cron 03:15 UTC) | `infra/production/backup/backup.sh`: copia local en `BACKUP_LOCAL_DIR` (700/600, retención 14 días) y copia externa opcional con rclone. Ver [restauración](restauracion.md) |
+| Respaldo cifrado (MySQL + documentos) | Diario (cron 03:15 UTC) y cada 5 min `--solicitudes` | `infra/production/backup/backup.sh`: copia local en `BACKUP_LOCAL_DIR` (700/600, retención 14 días) y copia externa opcional con rclone; cada ejecución queda en `backup_run` y se ve en la pantalla Sistema. Ver [restauración](restauracion.md) |
+| Revisión del estado del sistema | Semanal | Pantalla Sistema: base en línea, último respaldo de menos de 26 h, migraciones al día |
+| Vaciado de la papelera | Según la política de datos de la empresa | Pantalla Papelera → «Eliminar» en lo que ya no se necesite (contiene datos personales) |
 | Prueba de restauración | Trimestral | `restore.sh` en una réplica local; verificar `/api/ready` y un contrato |
 | Rotación de `AUTH_SECRET` | Anual o ante sospecha de fuga | `pywrangler secret put AUTH_SECRET`; cierra todas las sesiones (los usuarios vuelven a iniciar sesión) |
 | Desbloqueo manual de una cuenta | A demanda | Pantalla Usuarios → «Desbloquear», o por SQL: `UPDATE user_account SET failed_login_attempts = 0, locked_until = NULL WHERE user_name = '…'` |
+| Contraseña olvidada | A demanda | Pantalla Usuarios → «Clave»: genera una clave temporal que se entrega por un canal seguro; la persona debe cambiarla al entrar |
+| Equipo perdido o sospecha de acceso indebido | A demanda | Pantalla Usuarios → «Sesiones» cierra todas las sesiones de esa cuenta; revise la Auditoría |
 | Migraciones | En cada versión | Respaldo verificado → `pnpm db:migrate -- --confirm-backup` contra producción (nunca al iniciar el Worker) |
 | Actualización de dependencias | Mensual | `pnpm update --interactive`, `uv lock --upgrade` en `apps/api` y `apps/files`; correr las pruebas; verificar compatibilidad con Pyodide antes de subir una dependencia Python |
 | Revisión de logs | Semanal | Ver abajo |
@@ -75,7 +79,9 @@ Los logs de la API son JSON (una línea por evento) sin datos personales ni cuer
 | Evento | Significado | Acción |
 | --- | --- | --- |
 | `login_failed` repetido para un `account_id` | Contraseña olvidada o intento de fuerza bruta | Confirmar con el usuario; el bloqueo de 15 min actúa solo |
-| `cuenta_bloqueada` | Tercer intento fallido | Desbloquear desde Usuarios si el usuario lo solicita |
+| `cuenta_bloqueada` | Se alcanzó el máximo de intentos de la política | Desbloquear desde Usuarios si el usuario lo solicita; también aparece en la Auditoría |
+| `auditoria_no_registrada` | La operación se hizo pero su evento de auditoría no se pudo guardar (MySQL no respondió) | Revisar la disponibilidad de MySQL; el cambio sí quedó guardado |
+| `clave_restablecida` | El administrador generó una clave temporal | Confirmar que fue solicitado por la persona |
 | `login_failed` con `motivo: cuenta_no_disponible` | Usuario inexistente o inactivo | Muchos seguidos = enumeración de usuarios; revisar origen |
 | `unhandled_exception` | Error no controlado (respuesta 500) | Buscar el `request_id` que el usuario cita como «código de soporte» |
 | `db_connect_failed` / `/api/ready` 503 | MySQL o Hyperdrive inaccesibles | Revisar túnel, contenedor MySQL y Hyperdrive |

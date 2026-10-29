@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { routes } from "../routes/routes";
-import { apiError, baseRoutes, DB_PRINCIPAL, json, mockApi, page, persona } from "../test/mockApi";
+import { apiError, baseRoutes, ADMINISTRATIVO_PRINCIPAL, json, mockApi, page, persona } from "../test/mockApi";
 
 function inmueble(id: number, direccion: string, extras: Record<string, unknown> = {}) {
   return {
@@ -23,7 +23,7 @@ function inmueble(id: number, direccion: string, extras: Record<string, unknown>
   };
 }
 
-function renderAt(path: string, principal: unknown = DB_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
+function renderAt(path: string, principal: unknown = ADMINISTRATIVO_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
   mockApi({ ...baseRoutes(principal), ...extra });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
@@ -37,7 +37,7 @@ function renderAt(path: string, principal: unknown = DB_PRINCIPAL, extra: Record
 describe("InmueblesPage", () => {
   it("lista inmuebles con canon formateado y envía los filtros de la URL", async () => {
     const llamadas: string[] = [];
-    renderAt("/inmuebles?estado=OCUPADO&ciudad=bog&propietario_id=1", DB_PRINCIPAL, {
+    renderAt("/inmuebles?estado=OCUPADO&ciudad=bog&propietario_id=1", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/inmuebles": (_init, url) => {
         llamadas.push(url.search);
         return json(page([inmueble(1, "Calle 93B # 11A-44", { estado: "OCUPADO" })]));
@@ -60,7 +60,7 @@ describe("InmueblesPage", () => {
   it("restablece los filtros y elimina mostrando el 409 de la API", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = userEvent.setup();
-    const router = renderAt("/inmuebles?q=calle", DB_PRINCIPAL, {
+    const router = renderAt("/inmuebles?q=calle", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/inmuebles": () => json(page([inmueble(1, "Calle 1", { total_contratos: 2 })])),
       "DELETE /api/v1/inmuebles/1": () =>
         apiError(409, "inmueble_con_contratos", "No se puede eliminar el inmueble: tiene 2 contrato(s). Elimine primero los contratos."),
@@ -75,7 +75,7 @@ describe("InmueblesPage", () => {
   });
 
   it("el asesor registra y edita pero no ve «Eliminar»", async () => {
-    renderAt("/inmuebles", { ...DB_PRINCIPAL, roles: ["asesor"] }, {
+    renderAt("/inmuebles", { ...ADMINISTRATIVO_PRINCIPAL, roles: ["asesor"] }, {
       "GET /api/v1/inmuebles": () => json(page([inmueble(1, "Calle 1")])),
     });
 
@@ -88,7 +88,7 @@ describe("InmueblesPage", () => {
   it("abre el panel de edición con los datos y guarda", async () => {
     let guardado: unknown = null;
     const user = userEvent.setup();
-    const router = renderAt("/inmuebles/1/editar", DB_PRINCIPAL, {
+    const router = renderAt("/inmuebles/1/editar", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/inmuebles": () => json(page([inmueble(1, "Calle 1")])),
       "GET /api/v1/inmuebles/1": () => json(inmueble(1, "Calle 1")),
       "PUT /api/v1/inmuebles/1": (init) => {

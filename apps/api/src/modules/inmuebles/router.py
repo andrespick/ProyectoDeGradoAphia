@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from db.connection import Database
 from db.dependencies import get_database
-from modules.auth.dependencies import require_roles
-from modules.auth.schemas import ELIMINACION, LECTURA
+from modules.auth.dependencies import Auditar, get_current_principal, require_roles
+from modules.auth.schemas import ELIMINACION, LECTURA, Principal
 from modules.inmuebles.repository import InmueblesRepository
 from modules.inmuebles.schemas import (
     Inmueble,
@@ -60,13 +60,19 @@ async def obtener_inmueble(id: int, service: Service) -> Inmueble:
 
 
 @router.post("", response_model=Inmueble, status_code=status.HTTP_201_CREATED)
-async def crear_inmueble(datos: InmuebleCreate, service: Service) -> Inmueble:
-    return await service.crear(datos)
+async def crear_inmueble(datos: InmuebleCreate, service: Service, auditar: Auditar) -> Inmueble:
+    inmueble = await service.crear(datos)
+    await auditar.registrar("crear", "inmueble", inmueble.id)
+    return inmueble
 
 
 @router.put("/{id}", response_model=Inmueble)
-async def actualizar_inmueble(id: int, datos: InmuebleUpdate, service: Service) -> Inmueble:
-    return await service.actualizar(id, datos)
+async def actualizar_inmueble(
+    id: int, datos: InmuebleUpdate, service: Service, auditar: Auditar
+) -> Inmueble:
+    inmueble = await service.actualizar(id, datos)
+    await auditar.registrar("actualizar", "inmueble", id)
+    return inmueble
 
 
 @router.delete(
@@ -74,6 +80,12 @@ async def actualizar_inmueble(id: int, datos: InmuebleUpdate, service: Service) 
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(*ELIMINACION))],
 )
-async def eliminar_inmueble(id: int, service: Service) -> Response:
-    await service.eliminar(id)
+async def eliminar_inmueble(
+    id: int,
+    service: Service,
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    auditar: Auditar,
+) -> Response:
+    await service.eliminar(id, principal)
+    await auditar.registrar("eliminar", "inmueble", id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

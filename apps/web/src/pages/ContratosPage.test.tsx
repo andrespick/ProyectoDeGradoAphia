@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { routes } from "../routes/routes";
-import { apiError, baseRoutes, contrato, DB_PRINCIPAL, json, mockApi, page, persona } from "../test/mockApi";
+import { apiError, baseRoutes, contrato, ADMINISTRATIVO_PRINCIPAL, json, mockApi, page, persona } from "../test/mockApi";
 
-function renderAt(path: string, principal: unknown = DB_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
+function renderAt(path: string, principal: unknown = ADMINISTRATIVO_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
   mockApi({ ...baseRoutes(principal), ...extra });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
@@ -21,7 +21,7 @@ function renderAt(path: string, principal: unknown = DB_PRINCIPAL, extra: Record
 describe("ContratosPage", () => {
   it("lista contratos con estado calculado y envía los filtros de la URL", async () => {
     const llamadas: string[] = [];
-    renderAt("/contratos?estado=por_vencer&inmueble_id=1&q=calle&fecha_desde=2026-01-01", DB_PRINCIPAL, {
+    renderAt("/contratos?estado=por_vencer&inmueble_id=1&q=calle&fecha_desde=2026-01-01", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/contratos": (_init, url) => {
         llamadas.push(url.search);
         return json(page([contrato(1, { dias_restantes: 20 }), contrato(2, { estado: "finalizado", dias_restantes: 0, fecha_fin: "2026-02-01" })]));
@@ -45,7 +45,7 @@ describe("ContratosPage", () => {
   it("cambia de pestaña, restablece filtros y muestra el 409 al eliminar", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = userEvent.setup();
-    const router = renderAt("/contratos?q=calle", DB_PRINCIPAL, {
+    const router = renderAt("/contratos?q=calle", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/contratos": () => json(page([contrato(1)])),
       "DELETE /api/v1/contratos/1": () =>
         apiError(409, "contrato_con_dependencias", "No se puede modificar ni eliminar el contrato: tiene 2 registro(s) financiero(s)."),
@@ -62,7 +62,7 @@ describe("ContratosPage", () => {
   });
 
   it("el asesor crea y edita pero no ve «Eliminar»", async () => {
-    renderAt("/contratos", { ...DB_PRINCIPAL, roles: ["asesor"] }, {
+    renderAt("/contratos", { ...ADMINISTRATIVO_PRINCIPAL, roles: ["asesor"] }, {
       "GET /api/v1/contratos": () => json(page([contrato(1, { codeudores: [persona(9, "Sin Codeudor", "9", [])] })])),
     });
 

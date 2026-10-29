@@ -1954,6 +1954,12 @@ legend {
   margin: 0 0 0.75rem;
 }
 
+.contrato-empresa {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 @media (max-width: 767px) {
   .busqueda-global {
     display: none;
@@ -2028,4 +2034,17 @@ legend {
   .ayuda-indice ol {
     columns: 1;
   }
+}
+
+/* ── Administración del sistema ────────────────────────────────────────────── */
+
+/* Clave temporal: monoespaciada y seleccionable de un clic para copiarla sin errores. */
+.clave-temporal {
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  user-select: all;
 }

@@ -58,7 +58,9 @@ Solo existe tema claro (la identidad no define uno oscuro).
 | Gestión de contratos y codeudores | `/contratos`, `/codeudores` | 2 y 4 |
 | Gestión de usuarios y roles (1 y 2) | `/usuarios` | 1 |
 | Recuperación de contraseña y desbloqueo | — (se cubre con `/ayuda#inicio-de-sesion` y el desbloqueo desde Usuarios) | — |
-| Auditoría de intentos de acceso; exportar reporte forense (PDF, CSV/Excel); paquete ZIP cifrado | — (fase futura: requiere bitácora de accesos y generación de archivos) | — |
+| Auditoría de intentos de acceso | `/auditoria` (tabla con filtros; sin gráficos ni exportación) | 6 |
+| Exportar reporte forense (PDF, CSV/Excel); paquete ZIP cifrado | — (fase futura: requiere generación de archivos) | — |
+| Sin mockup: estado del sistema, catálogos, configuración, papelera, cambio de contraseña | `/sistema`, `/catalogos`, `/configuracion`, `/papelera`, `/cambiar-clave` (misma plantilla de página: migas, cabecera, KPI, filtros, tarjeta con tabla) | 6 |
 
 ## Adaptaciones respecto al mockup
 

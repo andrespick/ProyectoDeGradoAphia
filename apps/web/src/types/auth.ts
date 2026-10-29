@@ -5,6 +5,8 @@ export interface Principal {
   nombre: string;
   roles: Role[];
   modo: "development" | "database";
+  /** Tras un restablecimiento: solo puede cambiar su contraseña. */
+  debe_cambiar_clave: boolean;
 }
 
 export interface LoginResponse {

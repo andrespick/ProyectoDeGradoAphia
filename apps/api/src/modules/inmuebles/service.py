@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from core.errors import ConflictError, NotFoundError
+from modules.auth.schemas import Principal
 from modules.inmuebles.schemas import Inmueble, InmuebleCreate, InmuebleFiltros, InmueblesPage
+from modules.papelera.schemas import EntradaPapelera, entrada
 
 
 class InmuebleNoEncontradoError(NotFoundError):
@@ -34,7 +36,7 @@ class InmueblesRepositoryPort(Protocol):
 
     async def contar_contratos(self, property_id: int) -> int: ...
 
-    async def eliminar(self, property_id: int) -> bool: ...
+    async def eliminar(self, property_id: int, papelera: EntradaPapelera) -> bool: ...
 
 
 class InmueblesService:
@@ -60,9 +62,22 @@ class InmueblesService:
             raise InmuebleNoEncontradoError()
         return inmueble
 
-    async def eliminar(self, property_id: int) -> None:
+    async def eliminar(self, property_id: int, actor: Principal) -> None:
+        inmueble = await self.obtener(property_id)
         contratos = await self._repository.contar_contratos(property_id)
         if contratos:
             raise InmuebleConContratosError(contratos)
-        if not await self._repository.eliminar(property_id):
+        descripcion = ", ".join(filter(None, [inmueble.direccion, inmueble.ciudad]))
+        papelera = entrada("inmueble", property_id, descripcion, _instantanea(inmueble), actor)
+        if not await self._repository.eliminar(property_id, papelera):
             raise InmuebleNoEncontradoError()
+
+
+def _instantanea(inmueble: Inmueble) -> dict[str, Any]:
+    """Datos con la forma de ``InmuebleCreate`` para restaurarlo desde la papelera."""
+    datos = inmueble.model_dump(
+        mode="json", include={"direccion", "ciudad", "matricula", "canon", "estado"}
+    )
+    datos["servicios"] = [s.model_dump(mode="json", exclude={"id"}) for s in inmueble.servicios]
+    datos["propietarios_ids"] = [p.id for p in inmueble.propietarios]
+    return datos

@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { routes } from "../routes/routes";
-import { apiError, baseRoutes, DB_PRINCIPAL, json, mockApi, page, persona, personaDetalle } from "../test/mockApi";
+import { apiError, baseRoutes, ADMINISTRATIVO_PRINCIPAL, json, mockApi, page, persona, personaDetalle } from "../test/mockApi";
 
-function renderAt(path: string, principal: unknown = DB_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
+function renderAt(path: string, principal: unknown = ADMINISTRATIVO_PRINCIPAL, extra: Record<string, Parameters<typeof mockApi>[0][string]> = {}) {
   mockApi({ ...baseRoutes(principal), ...extra });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
@@ -29,7 +29,7 @@ const PERSONAS = [
 describe("PersonasListPage", () => {
   it("lista clientes, envía los filtros de la URL y muestra los papeles", async () => {
     const llamadas: string[] = [];
-    renderAt("/clientes?papel=codeudor&q=mario", DB_PRINCIPAL, {
+    renderAt("/clientes?papel=codeudor&q=mario", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/clientes": (_init, url) => {
         llamadas.push(url.search);
         return json(page(PERSONAS));
@@ -46,7 +46,7 @@ describe("PersonasListPage", () => {
   });
 
   it("propietarios muestra la cuenta enmascarada, los inmuebles y la regla de eliminación", async () => {
-    renderAt("/propietarios", DB_PRINCIPAL, { "GET /api/v1/propietarios": () => json(page([PERSONAS[1]!])) });
+    renderAt("/propietarios", ADMINISTRATIVO_PRINCIPAL, { "GET /api/v1/propietarios": () => json(page([PERSONAS[1]!])) });
 
     const table = await screen.findByRole("table");
     expect(within(table).getByText("•••• 6789", { exact: false })).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe("PersonasListPage", () => {
   });
 
   it("el asesor puede registrar y editar pero no ve «Eliminar»", async () => {
-    renderAt("/clientes", { ...DB_PRINCIPAL, roles: ["asesor"] }, {
+    renderAt("/clientes", { ...ADMINISTRATIVO_PRINCIPAL, roles: ["asesor"] }, {
       "GET /api/v1/clientes": () => json(page(PERSONAS)),
     });
 
@@ -68,7 +68,7 @@ describe("PersonasListPage", () => {
   it("elimina con confirmación y muestra el motivo cuando la API responde 409", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = userEvent.setup();
-    renderAt("/propietarios", DB_PRINCIPAL, {
+    renderAt("/propietarios", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/propietarios": () => json(page([PERSONAS[1]!])),
       "DELETE /api/v1/propietarios/2": () =>
         apiError(409, "persona_con_dependencias", "No se puede eliminar: es propietaria de 2 inmueble(s)."),
@@ -84,7 +84,7 @@ describe("PersonasListPage", () => {
   it("abre el panel de registro y vuelve a la lista con el mensaje", async () => {
     const creados: unknown[] = [];
     const user = userEvent.setup();
-    const router = renderAt("/codeudores/nuevo", DB_PRINCIPAL, {
+    const router = renderAt("/codeudores/nuevo", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/codeudores": () => json(page([])),
       "POST /api/v1/codeudores": (init) => {
         creados.push(JSON.parse(String(init?.body)));
@@ -104,7 +104,7 @@ describe("PersonasListPage", () => {
   });
 
   it("el detalle muestra los datos y las relaciones por papel", async () => {
-    renderAt("/clientes/2", DB_PRINCIPAL, {
+    renderAt("/clientes/2", ADMINISTRATIVO_PRINCIPAL, {
       "GET /api/v1/clientes/2": () =>
         json(
           personaDetalle(PERSONAS[1]!, {

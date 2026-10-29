@@ -23,6 +23,9 @@ SECRET = "secreto-de-integracion-de-al-menos-32-caracteres"
 
 # Orden de borrado compatible con las FK RESTRICT (hijas antes que padres).
 TABLAS_A_LIMPIAR = [
+    "audit_event",
+    "deleted_record",
+    "backup_run",
     "file_agreement",
     "file_person",
     "file_property",
@@ -81,6 +84,16 @@ def db_params() -> Iterator[ConnectionParams]:
 def db_conn(db_params: ConnectionParams) -> Iterator[pymysql.connections.Connection]:
     with db_params.connect() as conn:
         with conn.cursor() as cursor:
+            # Filas únicas de configuración (0018): se devuelven a sus valores iniciales.
+            cursor.execute(
+                "UPDATE organization_profile SET legal_name = 'APHIA S.A.S.', "
+                "tax_identifier = NULL, address = NULL, city_id = NULL, phone_number = NULL, "
+                "email_address = NULL"
+            )
+            cursor.execute(
+                "UPDATE security_policy SET max_failed_attempts = 3, lock_minutes = 15, "
+                "session_hours = 8, min_password_length = 8"
+            )
             for tabla in TABLAS_A_LIMPIAR:
                 cursor.execute(f"DELETE FROM {tabla}")  # noqa: S608 - lista fija
         conn.commit()

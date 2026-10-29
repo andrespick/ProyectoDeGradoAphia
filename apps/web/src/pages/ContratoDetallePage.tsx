@@ -2,6 +2,7 @@ import { ArrowLeft, Pencil, Printer, Trash2, UserPlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 
+import { useEmpresa } from "../features/administracion/useEmpresa";
 import { useAuth } from "../features/auth/AuthProvider";
 import { ELIMINACION, ESCRITURA } from "../features/auth/roles";
 import { diasRestantesTexto } from "../features/contratos/ContratosTable";
@@ -18,6 +19,7 @@ export function ContratoDetallePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { tiene } = useAuth();
+  const empresa = useEmpresa();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>((location.state as { mensaje?: string } | null)?.mensaje ?? null);
@@ -47,7 +49,7 @@ export function ContratoDetallePage() {
   }
 
   async function eliminar() {
-    if (!contrato || !window.confirm(`¿Eliminar el contrato #${contrato.id}? Esta acción no se puede deshacer.`)) return;
+    if (!contrato || !window.confirm(`¿Eliminar el contrato #${contrato.id}? Irá a la papelera; solo el Administrador de Sistemas puede restaurarlo.`)) return;
     try {
       await deleteContrato(contrato.id);
       navigate("/contratos", { state: { mensaje: "Contrato eliminado correctamente." } });
@@ -225,6 +227,19 @@ export function ContratoDetallePage() {
                 src="/logo/aphia-logo-completo.svg"
                 alt="APHIA S.A.S. — Administración de Propiedad Horizontal, Inmobiliaria, Asesorías y Consultorías"
               />
+              {empresa && (
+                <p className="contrato-empresa">
+                  {[
+                    empresa.nombre,
+                    empresa.nit && `NIT ${empresa.nit}`,
+                    [empresa.direccion, empresa.ciudad].filter(Boolean).join(", "),
+                    empresa.telefono,
+                    empresa.correo,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
               <h2 id="texto-titulo">{titulo}</h2>
               <p>
                 {contrato.inmueble.direccion}

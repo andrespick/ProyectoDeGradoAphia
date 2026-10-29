@@ -47,10 +47,15 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Compatibilidad de navegadores (RNF-08) | `auth.spec.ts` y `clientes.spec.ts` etiquetadas `@smoke` en Firefox y WebKit | ✅ |
 | Rendimiento (RNF-01) | `test_rendimiento_mysql.py`: 500 personas; `GET /clientes?q=`, `/propietarios` y `/contratos?fecha_desde=` en menos de 3 s | ✅ |
 | Código de soporte en errores | `errorMessage()` añade el `request_id` (`apiClient.test.ts`) | ✅ |
+| Administración del sistema (RF-19…RF-24, fase 6) | `test_sesiones.py` (sesión revocada por versión o desactivación, clave temporal solo permite cambiarla, token nuevo al cambiarla, política de intentos/minutos/horas, `/auth/politica`, login auditado sin el usuario tecleado), `test_administracion.py` (clave temporal, cerrar sesiones, cuenta propia 409, política de largo, configuración y límites, empresa por rol, auditoría y fallo tolerado, estado con y sin MySQL, respaldo atrasado y solicitud única, catálogos), `test_papelera.py` (instantánea y restauración de persona, inmueble y contrato; 409 si no es posible), `test_administracion_mysql.py` (colación y valores de 0012–0018, sesiones y auditoría reales, clave temporal → cambio, papelera en la misma transacción, catálogos y empresa con FK, respaldo `SOLICITADO`, política aplicada al bloqueo), `Administracion.test.tsx`, E2E `administracion.spec.ts` | ✅ |
 
-Totales: 67 (web) + 178 (API) + 31 (documentos) unitarias; 47 (API ↔ MySQL) + 5 (documentos)
-de integración; 21 E2E en Chromium + 2 `@smoke` en Firefox y 2 en WebKit (inicio de sesión real
-contra el Worker local).
+Totales: 76 (web) + 238 (API) + 31 (documentos) unitarias; 56 (API ↔ MySQL) + 5 (documentos)
+de integración; 26 E2E en Chromium + 2 `@smoke` en Firefox y 2 en WebKit (inicio de sesión real
+contra el Worker local). Última ejecución E2E completa (2026-10-29): 29 de 30 sobre el Worker
+local; la restante falla de forma intermitente porque el runtime local de Workers destruye
+solicitudes concurrentes (riesgo 15 del plan de implementación). Con la API en Uvicorn la suite
+de Chromium pasó 25 de 26 en 3 ejecuciones, con 0 respuestas 500 (la única falla es la prueba
+que espera la etiqueta «Cloudflare Workers»).
 
 ## CI
 

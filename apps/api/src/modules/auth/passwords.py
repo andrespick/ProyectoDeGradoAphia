@@ -43,6 +43,18 @@ def hash_password(clave: str, iterations: int = PBKDF2_ITERATIONS) -> str:
     )
 
 
+# Sin caracteres que se confunden al dictarlos o copiarlos (0/O, 1/l/I).
+_ALFABETO_TEMPORAL = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def generar_clave_temporal(largo: int) -> str:
+    """Clave aleatoria con al menos una letra y un dígito (lo que exige la validación)."""
+    while True:
+        clave = "".join(secrets.choice(_ALFABETO_TEMPORAL) for _ in range(largo))
+        if any(c.isalpha() for c in clave) and any(c.isdigit() for c in clave):
+            return clave
+
+
 def verify_password(clave: str, almacenado: str) -> bool:
     try:
         prefix, iterations_text, salt_b64, hash_b64 = almacenado.split("$")

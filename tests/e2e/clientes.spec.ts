@@ -7,7 +7,7 @@ const unique = `${Date.now()}`;
 
 test.describe("Clientes", () => {
   test.beforeEach(async ({ page }) => {
-    await iniciarSesion(page, "admin");
+    await iniciarSesion(page, "administrativo");
   });
 
   test("la pantalla inicial muestra el estado del sistema y el runtime real", async ({ page }) => {

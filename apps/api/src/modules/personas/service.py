@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from core.errors import ConflictError, NotFoundError
+from modules.auth.schemas import Principal
+from modules.papelera.schemas import EntradaPapelera, entrada
 from modules.personas.schemas import (
     PAPELES,
     Dependencias,
@@ -52,7 +54,7 @@ class PersonasRepositoryPort(Protocol):
 
     async def contar_dependencias(self, person_id: int) -> Dependencias: ...
 
-    async def eliminar(self, person_id: int) -> bool: ...
+    async def eliminar(self, person_id: int, papelera: EntradaPapelera) -> bool: ...
 
     async def detalle(self, person_id: int) -> PersonaDetalle | None: ...
 
@@ -98,7 +100,10 @@ class PersonasService:
             raise PersonaNoEncontradaError()
         return persona
 
-    async def eliminar(self, person_id: int) -> None:
+    async def eliminar(self, person_id: int, actor: Principal) -> None:
+        persona = await self._repository.obtener(person_id)
+        if persona is None:
+            raise PersonaNoEncontradaError()
         dependencias = await self._repository.contar_dependencias(person_id)
         partes = []
         if dependencias.inmuebles:
@@ -109,8 +114,31 @@ class PersonasService:
             partes.append("tiene una cuenta de usuario")
         if partes:
             raise PersonaConDependenciasError("No se puede eliminar: " + ", ".join(partes) + ".")
-        if not await self._repository.eliminar(person_id):
+        descripcion = f"{persona.nombre} ({persona.tipo_identificacion} {persona.identificacion})"
+        papelera = entrada("persona", person_id, descripcion, _instantanea(persona), actor)
+        if not await self._repository.eliminar(person_id, papelera):
             raise PersonaNoEncontradaError()
+
+
+def _instantanea(persona: Persona) -> dict[str, Any]:
+    """Datos con la forma de ``PersonaCreate`` para restaurarla desde la papelera."""
+    datos = persona.model_dump(
+        mode="json",
+        include={
+            "nombre",
+            "tipo_identificacion",
+            "identificacion",
+            "telefono",
+            "correo",
+            "direccion",
+            "papeles",
+        },
+    )
+    cuenta = persona.cuenta_bancaria
+    datos["cuenta_bancaria"] = (
+        None if cuenta is None else cuenta.model_dump(mode="json", exclude={"id"})
+    )
+    return datos
 
 
 def _papeles(datos: PersonaCreate, papel_fijo: Papel | None) -> list[Papel]:

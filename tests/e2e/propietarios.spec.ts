@@ -6,7 +6,7 @@ const unique = `${Date.now()}`;
 
 test.describe("Propietarios", () => {
   test.beforeEach(async ({ page }) => {
-    await iniciarSesion(page, "admin");
+    await iniciarSesion(page, "administrativo");
   });
 
   test("registra un propietario con cuenta bancaria y lo encuentra por correo", async ({ page }) => {

@@ -44,8 +44,9 @@ export const READY_OK = { status: "ready", checks: { database: "ok" } };
 export const DEV_PRINCIPAL = {
   sujeto: "desarrollo-local",
   nombre: "Usuario de desarrollo",
-  roles: ["admin_sistemas"],
+  roles: ["admin_sistemas", "administrativo"],
   modo: "development",
+  debe_cambiar_clave: false,
 };
 
 export const DB_PRINCIPAL = {
@@ -53,12 +54,34 @@ export const DB_PRINCIPAL = {
   nombre: "Administradora Ficticia",
   roles: ["admin_sistemas"],
   modo: "database",
+  debe_cambiar_clave: false,
 };
+
+export const ADMINISTRATIVO_PRINCIPAL = { ...DB_PRINCIPAL, roles: ["administrativo"] };
 
 export const LOGIN_OK = {
   token: "cuerpo.firma",
   expira_en: "2026-10-28T23:00:00Z",
   principal: DB_PRINCIPAL,
+};
+
+export const POLITICA_PUBLICA = { max_intentos: 3, minutos_bloqueo: 15, largo_minimo_clave: 8 };
+
+export const EMPRESA = {
+  nombre: "Inmobiliaria Ficticia S.A.S.",
+  nit: "900.123.456-7",
+  direccion: "Calle 100 # 10-20",
+  ciudad: "Bogotá",
+  telefono: "601 555 0000",
+  correo: "contacto@example.test",
+};
+
+export const ESTADO_SISTEMA = {
+  api: { version: "0.1.0", entorno: "test", runtime: "asgi" },
+  base_de_datos: { disponible: true, latencia_ms: 1.5, version: "8.4.0", tamano_bytes: 2_097_152 },
+  migraciones: { aplicadas: 18, ultima: "0018", aplicada_en: "2026-10-28T12:00:00Z" },
+  registros: { personas: 6, inmuebles: 3, contratos: 2, usuarios: 3, eventos_auditoria: 10, en_papelera: 1 },
+  respaldos: { ultimo_exitoso: null, pendiente: null, atrasado: true },
 };
 
 export const RESUMEN = {
@@ -184,6 +207,7 @@ export function usuario(
     bloqueada: false,
     bloqueada_hasta: null,
     intentos_fallidos: 0,
+    debe_cambiar_clave: false,
     creado_en: "2026-10-27T15:00:00Z",
     ...extras,
   };
@@ -198,5 +222,9 @@ export function baseRoutes(principal: unknown = DEV_PRINCIPAL): Record<string, H
     "GET /api/v1/resumen": () => json(RESUMEN),
     "GET /api/v1/catalogos": () => json(CATALOGOS),
     "GET /api/v1/contratos": () => json(page([])),
+    "GET /api/v1/auth/politica": () => json(POLITICA_PUBLICA),
+    "GET /api/v1/configuracion/empresa": () => json(EMPRESA),
+    "GET /api/v1/sistema/estado": () => json(ESTADO_SISTEMA),
+    "GET /api/v1/sistema/respaldos": () => json(page([])),
   };
 }

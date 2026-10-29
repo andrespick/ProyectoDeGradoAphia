@@ -23,11 +23,13 @@ class Role(StrEnum):
         return self.value.upper()
 
 
-# Grupos de permisos (decisión con el responsable: el asesor crea y edita, pero no elimina).
-LECTURA = (Role.ADMIN_SISTEMAS, Role.ADMINISTRATIVO, Role.ASESOR)
+# Grupos de permisos (decisión con el responsable: el asesor crea y edita, pero no elimina;
+# el administrador de sistemas solo gestiona el sistema, no los módulos de negocio).
+LECTURA = (Role.ADMINISTRATIVO, Role.ASESOR)
 ESCRITURA = LECTURA
-ELIMINACION = (Role.ADMIN_SISTEMAS, Role.ADMINISTRATIVO)
-GESTION_USUARIOS = (Role.ADMIN_SISTEMAS,)
+ELIMINACION = (Role.ADMINISTRATIVO,)
+GESTION_SISTEMA = (Role.ADMIN_SISTEMAS,)
+TODOS = tuple(Role)
 
 
 class Principal(BaseModel):
@@ -37,6 +39,8 @@ class Principal(BaseModel):
     nombre: str
     roles: list[Role]
     modo: Literal["development", "database"]
+    # Tras un restablecimiento: solo puede consultar /auth/me y cambiar su contraseña.
+    debe_cambiar_clave: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -50,6 +54,24 @@ class LoginRequest(BaseModel):
     @classmethod
     def recortar_usuario(cls, value: str) -> str:
         return value.strip()
+
+
+class CambioClaveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    clave_actual: str = Field(min_length=1, max_length=128)
+    clave_nueva: str = Field(min_length=8, max_length=128)
+
+    @field_validator("clave_nueva")
+    @classmethod
+    def clave_segura(cls, value: str) -> str:
+        return validar_clave(value)
+
+
+def validar_clave(value: str) -> str:
+    if not any(c.isalpha() for c in value) or not any(c.isdigit() for c in value):
+        raise ValueError("La clave debe tener al menos una letra y un dígito")
+    return value
 
 
 class LoginResponse(BaseModel):

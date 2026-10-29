@@ -5,11 +5,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from core.text import vacio_a_none
 from modules.personas.schemas import PersonaResumen
-
-
-def _vacio_a_none(value: object) -> object:
-    return None if isinstance(value, str) and not value.strip() else value
 
 
 class ServicioPublicoCreate(BaseModel):
@@ -21,8 +18,8 @@ class ServicioPublicoCreate(BaseModel):
 
     @field_validator("tipo", "proveedor", mode="before")
     @classmethod
-    def vacio_a_none(cls, value: object) -> object:
-        return _vacio_a_none(value)
+    def blancos_a_none(cls, value: object) -> object:
+        return vacio_a_none(value)
 
     @field_validator("tipo")
     @classmethod
@@ -47,8 +44,8 @@ class InmuebleCreate(BaseModel):
 
     @field_validator("ciudad", "matricula", "estado", mode="before")
     @classmethod
-    def vacio_a_none(cls, value: object) -> object:
-        return _vacio_a_none(value)
+    def blancos_a_none(cls, value: object) -> object:
+        return vacio_a_none(value)
 
     @field_validator("estado")
     @classmethod

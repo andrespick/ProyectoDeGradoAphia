@@ -27,11 +27,21 @@ rclone config                            # destino externo (S3, B2, Drive...)
 ./backup.sh                              # primera ejecución manual
 ```
 
-Cron diario (UTC):
+Cron (UTC): el respaldo diario y, cada 5 minutos, la atención de los respaldos solicitados
+desde la web (pantalla Sistema → «Solicitar respaldo ahora»; si no hay solicitudes termina sin
+hacer nada):
 
 ```cron
-15 3 * * * /opt/aphia/infra/production/backup/backup.sh >> /var/log/aphia-backup.log 2>&1
+15 3 * * *  /opt/aphia/infra/production/backup/backup.sh               >> /var/log/aphia-backup.log 2>&1
+*/5 * * * * /opt/aphia/infra/production/backup/backup.sh --solicitudes >> /var/log/aphia-backup.log 2>&1
 ```
+
+Cada ejecución queda en la tabla `backup_run` (programado o manual, en curso, completado o
+fallido con el paso que falló, archivo, tamaño y si hubo copia externa) y la pantalla Sistema
+avisa si no hay un respaldo exitoso en las últimas 26 horas. `flock` impide dos respaldos a la
+vez; un registro «en curso» que quedó de una ejecución interrumpida (o que viene dentro de un
+volcado restaurado) se marca como fallido en la siguiente ejecución. La API nunca ejecuta
+comandos en el VPS: solo inserta la solicitud y lee el historial.
 
 Con respaldos diarios, la pérdida máxima de datos (RPO) es de 24 h. Si la empresa necesita
 menos, aumente la frecuencia o active binlogs con copia externa.

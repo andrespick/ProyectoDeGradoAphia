@@ -1,12 +1,18 @@
 import {
+  Activity,
   Building2,
   CircleHelp,
   FileText,
+  KeyRound,
   LayoutDashboard,
+  ListChecks,
   LogOut,
   type LucideIcon,
   Menu,
+  ScrollText,
+  Settings,
   ShieldUser,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -14,8 +20,9 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import { Avatar } from "../components/Avatar";
 import { BusquedaGlobal } from "../components/BusquedaGlobal";
+import { useEmpresa } from "../features/administracion/useEmpresa";
 import { useAuth } from "../features/auth/AuthProvider";
-import { GESTION_USUARIOS, LECTURA, NOMBRE_ROL } from "../features/auth/roles";
+import { GESTION_SISTEMA, LECTURA, NOMBRE_ROL, TODOS } from "../features/auth/roles";
 import { MODULOS } from "../features/personas/modulos";
 import { useApiStatus } from "../hooks/useApiStatus";
 import type { Role } from "../types/auth";
@@ -28,7 +35,6 @@ interface NavItem {
   end?: boolean;
 }
 
-// Contratos se agrega en la fase 4 del plan.
 const NAV: readonly NavItem[] = [
   { to: "/", label: "Inicio", icon: LayoutDashboard, roles: LECTURA, end: true },
   { to: MODULOS.clientes.ruta, label: "Clientes", icon: MODULOS.clientes.icon, roles: LECTURA },
@@ -36,8 +42,13 @@ const NAV: readonly NavItem[] = [
   { to: MODULOS.codeudores.ruta, label: "Codeudores", icon: MODULOS.codeudores.icon, roles: LECTURA },
   { to: "/inmuebles", label: "Inmuebles", icon: Building2, roles: LECTURA },
   { to: "/contratos", label: "Contratos", icon: FileText, roles: LECTURA },
-  { to: "/usuarios", label: "Usuarios", icon: ShieldUser, roles: GESTION_USUARIOS },
-  { to: "/ayuda", label: "Ayuda", icon: CircleHelp, roles: LECTURA },
+  { to: "/sistema", label: "Sistema", icon: Activity, roles: GESTION_SISTEMA },
+  { to: "/usuarios", label: "Usuarios", icon: ShieldUser, roles: GESTION_SISTEMA },
+  { to: "/auditoria", label: "Auditoría", icon: ScrollText, roles: GESTION_SISTEMA },
+  { to: "/catalogos", label: "Catálogos", icon: ListChecks, roles: GESTION_SISTEMA },
+  { to: "/configuracion", label: "Configuración", icon: Settings, roles: GESTION_SISTEMA },
+  { to: "/papelera", label: "Papelera", icon: Trash2, roles: GESTION_SISTEMA },
+  { to: "/ayuda", label: "Ayuda", icon: CircleHelp, roles: TODOS },
 ];
 
 const RUNTIME_LABELS = { workers: "Cloudflare Workers", asgi: "ASGI (Uvicorn)" } as const;
@@ -116,14 +127,14 @@ export function MainLayout() {
             <Menu size={20} aria-hidden="true" />
           </button>
           <Brand />
-          <BusquedaGlobal />
+          {auth.tiene(LECTURA) && <BusquedaGlobal />}
           <span className="topbar-spacer" />
           <UserMenu />
         </header>
         <main id="contenido" className="app-main">
           <Outlet />
         </main>
-        <Footer />
+        <Footer autenticado />
       </div>
       {drawerOpen && (
         <>
@@ -149,8 +160,12 @@ function Brand() {
   );
 }
 
-function Footer() {
-  return <footer className="app-footer">APHIA S.A.S. · Gestión inmobiliaria · v0.1.0</footer>;
+function Footer({ autenticado = false }: { autenticado?: boolean }) {
+  // Los datos de la empresa exigen sesión; en las pantallas públicas se usa el nombre por defecto.
+  const empresa = useEmpresa(autenticado);
+  return (
+    <footer className="app-footer">{empresa?.nombre ?? "APHIA S.A.S."} · Gestión inmobiliaria · v0.1.0</footer>
+  );
 }
 
 function SystemStatus({ compact = false }: { compact?: boolean }) {
@@ -184,6 +199,11 @@ function UserMenu() {
         <strong>{principal.nombre}</strong>
         <span>{rol ? NOMBRE_ROL[rol] : ""}</span>
       </span>
+      {principal.modo === "database" && (
+        <Link to="/cambiar-clave" className="button-link ghost" aria-label="Cambiar contraseña" title="Cambiar contraseña">
+          <KeyRound size={18} aria-hidden="true" />
+        </Link>
+      )}
       <button
         type="button"
         className="ghost"

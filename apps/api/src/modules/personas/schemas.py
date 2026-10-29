@@ -6,15 +6,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from core.text import normalizar_correo, normalizar_nombre
+from core.text import normalizar_correo, normalizar_nombre, vacio_a_none
 from modules.catalogos.schemas import CODIGO_POR_PAPEL
 
 Papel = Literal["propietario", "arrendatario", "codeudor"]
 PAPELES: tuple[Papel, ...] = ("propietario", "arrendatario", "codeudor")
-
-
-def _vacio_a_none(value: object) -> object:
-    return None if isinstance(value, str) and not value.strip() else value
 
 
 class CuentaBancariaCreate(BaseModel):
@@ -48,8 +44,8 @@ class PersonaBase(BaseModel):
 
     @field_validator("telefono", "correo", "direccion", mode="before")
     @classmethod
-    def vacio_a_none(cls, value: object) -> object:
-        return _vacio_a_none(value)
+    def blancos_a_none(cls, value: object) -> object:
+        return vacio_a_none(value)
 
     @field_validator("nombre")
     @classmethod

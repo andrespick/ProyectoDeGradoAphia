@@ -5,10 +5,12 @@ from typing import Protocol
 
 from core.errors import ConflictError, NotFoundError
 from core.logging import get_logger, log_event
-from modules.auth.passwords import hash_password
+from modules.auth.passwords import generar_clave_temporal, hash_password
 from modules.auth.schemas import Principal, Role
+from modules.configuracion.service import ConfiguracionRepositoryPort, exigir_clave_segura
 from modules.usuarios.repository import UsuarioDuplicadoError as _Duplicado
 from modules.usuarios.schemas import (
+    ClaveTemporal,
     EstadoUsuario,
     Usuario,
     UsuarioCreate,
@@ -17,6 +19,8 @@ from modules.usuarios.schemas import (
 )
 
 logger = get_logger("usuarios")
+
+LARGO_CLAVE_TEMPORAL = 12
 
 
 class UsuarioNoEncontradoError(NotFoundError):
@@ -64,10 +68,17 @@ class UsuariosRepositoryPort(Protocol):
 
     async def unlock(self, account_id: int) -> Usuario | None: ...
 
+    async def restablecer_clave(self, account_id: int, hashed_password: str) -> Usuario | None: ...
+
+    async def cerrar_sesiones(self, account_id: int) -> bool: ...
+
 
 class UsuariosService:
-    def __init__(self, repository: UsuariosRepositoryPort) -> None:
+    def __init__(
+        self, repository: UsuariosRepositoryPort, configuracion: ConfiguracionRepositoryPort
+    ) -> None:
         self._repository = repository
+        self._configuracion = configuracion
 
     async def listar(
         self,
@@ -90,6 +101,7 @@ class UsuariosService:
         return usuario
 
     async def crear(self, datos: UsuarioCreate) -> Usuario:
+        exigir_clave_segura(datos.clave, await self._configuracion.obtener_politica())
         try:
             return await self._repository.crear(datos, hash_password(datos.clave))
         except _Duplicado as exc:
@@ -101,13 +113,21 @@ class UsuariosService:
         actual = await self.obtener(account_id)
         if str(account_id) == principal.sujeto and not datos.activo:
             raise UsuarioActualError()
+        # Cambiarla aquí cerraría la propia sesión sin aviso; «Cambiar contraseña» la renueva.
+        if str(account_id) == principal.sujeto and datos.clave:
+            raise UsuarioActualError("Para cambiar su propia clave use «Cambiar contraseña».")
         pierde_admin = datos.rol != Role.ADMIN_SISTEMAS or not datos.activo
         if actual.rol == Role.ADMIN_SISTEMAS and actual.activo and pierde_admin:
             await self._exigir_otro_admin(account_id)
+        if datos.clave:
+            exigir_clave_segura(datos.clave, await self._configuracion.obtener_politica())
         hashed = hash_password(datos.clave) if datos.clave else None
         usuario = await self._repository.actualizar(account_id, datos, hashed)
         if usuario is None:
             raise UsuarioNoEncontradoError()
+        # Los tokens llevan el rol: si cambia algo que afecta el acceso, se cierran las sesiones.
+        if datos.rol != actual.rol or not datos.activo or datos.clave:
+            await self._repository.cerrar_sesiones(account_id)
         return usuario
 
     async def eliminar(self, account_id: int, principal: Principal) -> None:
@@ -131,6 +151,22 @@ class UsuariosService:
             por=principal.sujeto,
         )
         return usuario
+
+    async def restablecer_clave(self, account_id: int, principal: Principal) -> ClaveTemporal:
+        if str(account_id) == principal.sujeto:
+            raise UsuarioActualError("Para cambiar su propia clave use «Cambiar contraseña».")
+        politica = await self._configuracion.obtener_politica()
+        clave = generar_clave_temporal(max(LARGO_CLAVE_TEMPORAL, politica.largo_minimo_clave))
+        if await self._repository.restablecer_clave(account_id, hash_password(clave)) is None:
+            raise UsuarioNoEncontradoError()
+        log_event(logger, logging.INFO, "clave_restablecida", account_id=account_id)
+        return ClaveTemporal(clave_temporal=clave)
+
+    async def cerrar_sesiones(self, account_id: int, principal: Principal) -> None:
+        if str(account_id) == principal.sujeto:
+            raise UsuarioActualError("Para cerrar su propia sesión use «Cerrar sesión».")
+        if not await self._repository.cerrar_sesiones(account_id):
+            raise UsuarioNoEncontradoError()
 
     async def _exigir_otro_admin(self, account_id: int) -> None:
         if await self._repository.count_other_active_admins(account_id) == 0:

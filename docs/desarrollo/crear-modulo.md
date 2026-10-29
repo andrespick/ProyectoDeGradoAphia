@@ -10,7 +10,7 @@ Las tablas del negocio ya existen (migraciones `0002`–`0007`, ver
 [modelo de datos](../arquitectura/modelo-de-datos.md)). Para propietarios se usan `person`,
 `person_document`, `person_phone`, `person_email` y el vínculo `property_owner`.
 
-Solo si el módulo necesita un cambio de esquema, cree una migración nueva (`0011_...`, ver
+Solo si el módulo necesita un cambio de esquema, cree una migración nueva (`0019_...`, ver
 [migraciones](migraciones.md)) y aplíquela con `pnpm db:migrate`. Si necesita datos de ejemplo,
 agregue un archivo idempotente en `database/seeds/` (solo datos ficticios).
 
@@ -32,7 +32,12 @@ Reglas:
 
 - Cada endpoint protegido declara roles con los grupos de `modules/auth/schemas.py`: el router
   completo con `dependencies=[Depends(require_roles(*LECTURA))]` y cada `DELETE` con
-  `require_roles(*ELIMINACION)`; solo `/api/v1/usuarios` usa `GESTION_USUARIOS`.
+  `require_roles(*ELIMINACION)`; las pantallas del Administrador de Sistemas (usuarios,
+  auditoría, catálogos, configuración, papelera, sistema) usan `GESTION_SISTEMA`, y la lectura
+  de catálogos, resumen y datos de la empresa usa `TODOS`.
+- Cada `POST`/`PUT`/`DELETE` registra el evento en la auditoría con el parámetro
+  `auditar: Auditar` y `await auditar.registrar("crear", "<entidad>", id)` tras confirmar la
+  operación. En las pruebas unitarias, `auditoria_repository.acciones()` devuelve lo registrado.
 - Errores de MySQL: use `db.sql.mysql_error_code(exc)` con `ER_DUP_ENTRY` (1062, duplicado →
   409), `ER_ROW_IS_REFERENCED` (1451, borrado con referencias → 409) y `ER_NO_REFERENCED_ROW`
   (1452, FK inexistente → 404). Filtros de texto con `db.sql.like_pattern` y

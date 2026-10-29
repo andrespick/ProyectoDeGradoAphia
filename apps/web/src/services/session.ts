@@ -22,6 +22,17 @@ export function setToken(token: string, recordar = false): void {
   }
 }
 
+/** Sustituye el token conservando dónde estaba guardado (pestaña o «Recordarme»). */
+export function replaceToken(token: string): void {
+  let recordado = false;
+  try {
+    recordado = localStorage.getItem(KEY) !== null;
+  } catch {
+    // Sin almacenamiento: setToken tampoco podrá guardarlo.
+  }
+  setToken(token, recordado);
+}
+
 export function clearToken(): void {
   try {
     sessionStorage.removeItem(KEY);

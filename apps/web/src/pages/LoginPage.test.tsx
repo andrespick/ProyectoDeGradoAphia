@@ -27,7 +27,7 @@ describe("LoginPage", () => {
     localStorage.clear();
   });
 
-  it("inicia sesión, guarda el token y vuelve a la ruta de origen", async () => {
+  it("inicia sesión, guarda el token y lleva al inicio de su rol, no a la pantalla anterior", async () => {
     let sesion = false;
     const fetchMock = mockApi({
       ...baseRoutes(DB_PRINCIPAL),
@@ -49,12 +49,13 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("Contraseña"), "Aphia.2026");
     await user.click(screen.getByRole("button", { name: "Iniciar sesión" }));
 
-    expect(await screen.findByRole("heading", { name: /Usuarios y roles/ })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/usuarios");
+    // Aunque venía de /usuarios (p. ej. la sesión de otra persona), entra a su inicio: /sistema.
+    expect(await screen.findByRole("heading", { name: "Estado del sistema" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/sistema");
     expect(sessionStorage.getItem("aphia.token")).toBe("cuerpo.firma");
     expect(localStorage.getItem("aphia.token")).toBeNull();
-    const usuariosCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/api/v1/usuarios"));
-    expect(usuariosCall?.[1]?.headers).toMatchObject({ Authorization: "Bearer cuerpo.firma" });
+    const estadoCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/api/v1/sistema/estado"));
+    expect(estadoCall?.[1]?.headers).toMatchObject({ Authorization: "Bearer cuerpo.firma" });
   });
 
   it("«Recordarme» guarda el token en localStorage", async () => {
@@ -71,7 +72,8 @@ describe("LoginPage", () => {
     await user.click(screen.getByLabelText("Recordarme en este equipo"));
     await user.click(screen.getByRole("button", { name: "Iniciar sesión" }));
 
-    expect(await screen.findByRole("heading", { name: /Bienvenido de nuevo/ })).toBeInTheDocument();
+    // El administrador de sistemas aterriza en el estado del sistema, no en el tablero de negocio.
+    expect(await screen.findByRole("heading", { name: "Estado del sistema" })).toBeInTheDocument();
     expect(localStorage.getItem("aphia.token")).toBe("cuerpo.firma");
   });
 

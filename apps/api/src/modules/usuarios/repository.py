@@ -17,7 +17,8 @@ from modules.usuarios.schemas import EstadoUsuario, Usuario, UsuarioCreate, Usua
 
 _SELECT = (
     "SELECT ua.account_id, ua.user_name, ua.login_email, ua.is_active, ua.created_at, "
-    "ua.failed_login_attempts, ua.locked_until, p.person_id, p.full_name, "
+    "ua.failed_login_attempts, ua.locked_until, ua.must_change_password, p.person_id, "
+    "p.full_name, "
     "dt.code AS tipo_identificacion, d.document_identifier, "
     "(SELECT GROUP_CONCAT(ar.code) FROM user_role ur JOIN app_role ar ON ar.role_id = ur.role_id "
     " WHERE ur.account_id = ua.account_id) AS roles "
@@ -179,6 +180,29 @@ class UsuariosRepository:
             )
             return await _fetch(cursor, account_id)
 
+    async def restablecer_clave(self, account_id: int, hashed_password: str) -> Usuario | None:
+        """Clave temporal: obliga a cambiarla, desbloquea y cierra las sesiones abiertas."""
+        async with (
+            self._db.transaction() as conn,
+            conn.cursor(aiomysql.DictCursor) as cursor,
+        ):
+            await cursor.execute(
+                "UPDATE user_account SET hashed_password = %s, must_change_password = 1, "
+                "failed_login_attempts = 0, locked_until = NULL, "
+                "session_version = session_version + 1 WHERE account_id = %s",
+                (hashed_password, account_id),
+            )
+            return await _fetch(cursor, account_id)
+
+    async def cerrar_sesiones(self, account_id: int) -> bool:
+        async with self._db.transaction() as conn, conn.cursor() as cursor:
+            await cursor.execute(
+                "UPDATE user_account SET session_version = session_version + 1 "
+                "WHERE account_id = %s",
+                (account_id,),
+            )
+            return cursor.rowcount > 0
+
 
 class UsuarioDuplicadoError(Exception):
     """Marcador interno; el service lo traduce al error de dominio (evita import circular)."""
@@ -228,5 +252,6 @@ def _usuario(row: dict[str, Any]) -> Usuario:
         bloqueada=bloqueada_hasta is not None and bloqueada_hasta > datetime.now(UTC),
         bloqueada_hasta=bloqueada_hasta,
         intentos_fallidos=row["failed_login_attempts"],
+        debe_cambiar_clave=bool(row["must_change_password"]),
         creado_en=en_utc(row["created_at"]),
     )

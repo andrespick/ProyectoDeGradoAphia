@@ -27,6 +27,8 @@ class AppError(Exception):
     code = "error_interno"
     default_message = "Ocurrió un error inesperado."
     headers: dict[str, str] | None = None
+    # Mismo formato que los errores de validación: permite a la web marcar el campo.
+    details: list[dict[str, Any]] | None = None
 
     def __init__(self, message: str | None = None) -> None:
         self.message = message or self.default_message
@@ -134,7 +136,12 @@ def register_exception_handlers(app: FastAPI) -> None:
                 request_id=request_id_of(request),
             )
         return error_response(
-            exc.status_code, exc.code, exc.message, request_id_of(request), headers=exc.headers
+            exc.status_code,
+            exc.code,
+            exc.message,
+            request_id_of(request),
+            details=exc.details,
+            headers=exc.headers,
         )
 
     @app.exception_handler(RequestValidationError)
