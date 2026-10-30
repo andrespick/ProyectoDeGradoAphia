@@ -1,6 +1,7 @@
-# Despliegue MANUAL de la API (Docker en el VPS, por SSH) y del frontend (Cloudflare Pages).
+# Despliegue de la API (Docker en el VPS, por SSH) y del frontend (Cloudflare Pages).
 #
-# - Solo se ejecuta a mano (Actions → Deploy → Run workflow).
+# - Automático a producción en cada push a main; a mano (Actions → Deploy → Run workflow)
+#   para staging o para repetir un despliegue.
 # - Ejecuta antes toda la CI.
 # - Usa GitHub Environments "staging" y "production". En Settings → Environments configure
 #   "Required reviewers" para production: el job queda en espera hasta que alguien lo apruebe.
@@ -14,6 +15,8 @@
 name: Deploy
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -26,7 +29,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ inputs.environment }}
+  group: deploy-${{ inputs.environment || 'production' }}
   cancel-in-progress: false
 
 env:
@@ -37,12 +40,12 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   deploy:
-    name: Desplegar en ${{ inputs.environment }}
+    name: Desplegar en ${{ inputs.environment || 'production' }}
     needs: ci
     if: inputs.environment == 'staging' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
-      name: ${{ inputs.environment }}
+      name: ${{ inputs.environment || 'production' }}
       url: ${{ vars.API_BASE_URL }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -93,5 +96,5 @@ jobs:
         run: >
           pnpm exec wrangler pages deploy ../web/dist
           --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}"
-          --branch "${{ inputs.environment == 'production' && 'main' || 'staging' }}"
+          --branch "${{ inputs.environment == 'staging' && 'staging' || 'main' }}"
           --commit-dirty=true

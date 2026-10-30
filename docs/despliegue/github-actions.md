@@ -16,8 +16,11 @@ Las credenciales de MySQL de CI son efímeras y solo existen en el contenedor de
 
 ## Deploy (`.github/workflows/deploy.yml`)
 
-Manual (Actions → Deploy → Run workflow → elegir entorno). Ejecuta primero toda la CI.
-Producción solo desde `main`. **No ejecuta migraciones.**
+Se ejecuta solo en cada push a `main` (despliega a `production`) y a mano (Actions → Deploy →
+Run workflow → elegir entorno) para staging o para repetir un despliegue. Ejecuta primero toda
+la CI. Producción solo desde `main`. **No ejecuta migraciones.** Si el entorno `production`
+tiene *Required reviewers*, el despliegue espera la aprobación; sin revisores es totalmente
+automático.
 
 ### Configuración necesaria
 

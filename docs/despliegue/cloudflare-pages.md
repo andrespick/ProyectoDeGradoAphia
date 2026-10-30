@@ -43,20 +43,21 @@ manual, y un proyecto Direct Upload no puede cambiarse luego a integración Git.
 ## Después del primer despliegue
 
 1. Copie la URL de Pages (y el dominio propio, p. ej. `https://app.aphia.com.co`) en
-   `CORS_ORIGINS` del entorno correspondiente en `apps/api/wrangler.jsonc`.
-2. Redespliegue la API (`uv run pywrangler deploy --env production`).
+   `CORS_ORIGINS` de `infra/production/.env.production` en el VPS (varios orígenes separados
+   por coma). Con la API en Workers, el valor va en `apps/api/wrangler.jsonc`.
+2. Aplique el cambio: `docker compose --env-file .env.production up -d api`.
 3. Abra la URL: debe aparecer la pantalla de inicio de sesión y, en la barra lateral, «En línea».
 
 ## Dominio propio
 
 En el proyecto de Pages → Custom domains agregue `app.aphia.com.co` (DNS en la misma cuenta).
-La API puede quedar en `https://aphia-api.<cuenta>.workers.dev` o en un subdominio propio
-(`api.aphia.com.co`, ruta del Worker); en ambos casos ese valor es `VITE_API_BASE_URL`.
+La API queda en el subdominio que atiende Caddy en el VPS (`api.aphia.com.co`); ese valor es
+`VITE_API_BASE_URL` (variable `API_BASE_URL` del entorno en GitHub).
 
 ## Síntomas de configuración incorrecta
 
 | Síntoma | Causa | Solución |
 | --- | --- | --- |
 | Al abrir la web aparece el gestor sin pedir usuario y sin datos | La web se construyó sin `VITE_API_BASE_URL` (llama a Pages, que responde `index.html`) | Defina la variable en Pages (Production y Preview), vuelva a desplegar |
-| «No fue posible conectar con la API» o error de CORS en la consola | El origen de Pages no está en `CORS_ORIGINS` del Worker | Agregue el origen exacto (con `https://`) y redespliegue la API |
-| «API sin conexión» pero `/api/health` responde | `/api/ready` falla: Hyperdrive o túnel caídos | Ver [hyperdrive.md](hyperdrive.md) y [tunnel-y-acceso-privado.md](tunnel-y-acceso-privado.md) |
+| «No fue posible conectar con la API» o error de CORS en la consola | El origen de Pages no está en `CORS_ORIGINS` de la API | Agregue el origen exacto (con `https://`) en `.env.production` y `up -d api` |
+| «API sin conexión» pero `/api/health` responde | `/api/ready` falla: MySQL caído o sin migrar | `docker compose ps`, logs de `mysql`, [mysql.md](mysql.md) |
