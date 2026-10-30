@@ -1,17 +1,18 @@
-# Despliegue de la API (Docker en el VPS, por SSH) y del frontend (Cloudflare Pages).
+# Despliegue de la API y del servicio de documentos (Docker en el VPS, por SSH).
+# El frontend lo compila y publica Cloudflare Pages por su integración con Git
+# (docs/despliegue/cloudflare-pages.md), fuera de este workflow.
 #
 # - Automático a producción en cada push a main; a mano (Actions → Deploy → Run workflow)
 #   para staging o para repetir un despliegue.
 # - Ejecuta antes toda la CI.
 # - Usa GitHub Environments "staging" y "production". En Settings → Environments configure
-#   "Required reviewers" para production: el job queda en espera hasta que alguien lo apruebe.
+#   "Required reviewers" para production si quiere aprobar cada despliegue.
 # - Producción solo se despliega desde la rama main.
 # - NO ejecuta migraciones: se aplican en el VPS de forma controlada (docs/despliegue/mysql.md).
 #
 # Configuración requerida por entorno (docs/despliegue/github-actions.md):
-#   Secrets:   VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY, VPS_SSH_KNOWN_HOSTS,
-#              CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-#   Variables: CLOUDFLARE_PAGES_PROJECT, API_BASE_URL, VPS_DEPLOY_PATH (opcional, /opt/aphia)
+#   Secrets:   VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY, VPS_SSH_KNOWN_HOSTS
+#   Variables: API_BASE_URL (URL mostrada en el entorno), VPS_DEPLOY_PATH (opcional, /opt/aphia)
 name: Deploy
 
 on:
@@ -32,9 +33,6 @@ concurrency:
   group: deploy-${{ inputs.environment || 'production' }}
   cancel-in-progress: false
 
-env:
-  NODE_VERSION: "24"
-
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
@@ -48,8 +46,6 @@ jobs:
       name: ${{ inputs.environment || 'production' }}
       url: ${{ vars.API_BASE_URL }}
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       VPS_SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
       VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -59,20 +55,10 @@ jobs:
       - name: Verificar configuración del entorno
         run: |
           missing=0
-          for name in VPS_SSH_HOST VPS_SSH_USER VPS_SSH_KEY VPS_SSH_KNOWN_HOSTS CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+          for name in VPS_SSH_HOST VPS_SSH_USER VPS_SSH_KEY VPS_SSH_KNOWN_HOSTS; do
             [ -n "${!name}" ] || { echo "::error::Falta el secreto $name"; missing=1; }
           done
-          [ -n "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" ] || { echo "::error::Falta la variable CLOUDFLARE_PAGES_PROJECT"; missing=1; }
-          [ -n "${{ vars.API_BASE_URL }}" ] || { echo "::error::Falta la variable API_BASE_URL"; missing=1; }
           exit $missing
-
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
 
       # El VPS tiene el repositorio clonado en VPS_DEPLOY_PATH (docs/despliegue/vps.md).
       # Se despliega exactamente el commit que pasó la CI; MySQL no se reinicia.
@@ -86,15 +72,6 @@ jobs:
              && cd infra/production && docker compose --env-file .env.production up -d --build api files \
              && docker compose --env-file .env.production ps"
 
-      - name: Construir frontend
-        run: pnpm --filter @aphia/web build
-        env:
-          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
-
-      - name: Desplegar frontend (Cloudflare Pages)
-        working-directory: apps/api
-        run: >
-          pnpm exec wrangler pages deploy ../web/dist
-          --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}"
-          --branch "${{ inputs.environment == 'staging' && 'staging' || 'main' }}"
-          --commit-dirty=true
+      - name: Comprobar la API publicada
+        if: vars.API_BASE_URL != ''
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 5 "${{ vars.API_BASE_URL }}/api/health"

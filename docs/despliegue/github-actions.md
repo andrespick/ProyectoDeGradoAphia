@@ -34,13 +34,11 @@ automático.
 | Secret | `VPS_SSH_USER` | Usuario con acceso a Docker (`aphia`) |
 | Secret | `VPS_SSH_KEY` | Clave privada OpenSSH de despliegue (ver abajo) |
 | Secret | `VPS_SSH_KNOWN_HOSTS` | Salida de `ssh-keyscan <host>` (fija la huella del servidor) |
-| Secret | `CLOUDFLARE_API_TOKEN` | Token con permiso *Cloudflare Pages: Edit* |
-| Secret | `CLOUDFLARE_ACCOUNT_ID` | Id de la cuenta |
-| Variable | `CLOUDFLARE_PAGES_PROJECT` | Nombre del proyecto de Pages |
-| Variable | `API_BASE_URL` | URL pública de la API (Caddy), por ejemplo `https://api.aphia.example.com` |
+| Variable | `API_BASE_URL` | URL pública de la API (Caddy), por ejemplo `https://api.aphia.example.com`; el job la comprueba al final |
 | Variable | `VPS_DEPLOY_PATH` | Opcional; ruta del clon en el VPS (`/opt/aphia`) |
 
-Si falta cualquiera, el job falla antes de desplegar.
+Si falta un secreto, el job falla antes de desplegar. El frontend no pasa por este workflow:
+lo compila Cloudflare Pages desde el mismo repositorio ([cloudflare-pages.md](cloudflare-pages.md)).
 
 ### Clave SSH de despliegue
 

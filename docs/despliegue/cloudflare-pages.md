@@ -9,36 +9,25 @@
   `vite build` falla en modo producción si falta. Sin ella la web llamaría a su propio origen,
   Pages respondería `index.html` a `/api/...` y la aplicación mostraría el cascarón sin sesión.
 
-## Opción A (configurada): despliegue desde GitHub Actions
+## Configuración en uso: integración Git nativa de Pages
 
-El workflow `Deploy` compila con la `API_BASE_URL` del entorno y ejecuta
-`wrangler pages deploy apps/web/dist --project-name <proyecto> --branch <main|staging>`:
-
-- `--branch main` → producción del proyecto de Pages.
-- `--branch staging` → despliegue de vista previa con URL estable `staging.<proyecto>.pages.dev`.
-
-Crear el proyecto una vez (Direct Upload):
-
-```bash
-pnpm --filter @aphia/api exec wrangler pages project create <proyecto> --production-branch main
-```
-
-Ventaja: producción solo se publica con la aprobación del entorno `production` en GitHub.
-
-## Opción B: integración Git nativa de Pages
-
-En el panel: Workers & Pages → Create → Pages → Connect to Git, con:
+Proyecto `proyectodegradoaphia` conectado al repositorio; cada push a `main` compila y publica
+producción, y cada otra rama genera una vista previa. En el panel: Workers & Pages → proyecto →
+Settings → Builds & deployments y Variables and Secrets:
 
 | Campo | Valor |
 | --- | --- |
 | Framework preset | None |
-| Build command | `pnpm install --frozen-lockfile && pnpm --filter @aphia/web build` |
+| Build command | `pnpm --filter @aphia/web build` (Pages ejecuta `pnpm install` solo) |
 | Build output directory | `apps/web/dist` |
 | Root directory | `/` |
-| Variables (Production / Preview) | `VITE_API_BASE_URL`, `NODE_VERSION=24` |
+| Variables (Production **y** Preview) | `VITE_API_BASE_URL=https://api.aphia.com.co` |
 
-Atención: con esta opción Pages publica producción en cada push a `main` **sin** la aprobación
-manual, y un proyecto Direct Upload no puede cambiarse luego a integración Git. Elija una sola.
+Sin la variable, el build falla con «Defina VITE_API_BASE_URL». Tras agregarla hay que
+relanzar el despliegue (Deployments → Retry deployment) o hacer un push.
+
+Alternativa no usada: subir el build desde GitHub Actions con `wrangler pages deploy`
+(Direct Upload). Un proyecto conectado a Git no admite ese modo, y viceversa.
 
 ## Después del primer despliegue
 
