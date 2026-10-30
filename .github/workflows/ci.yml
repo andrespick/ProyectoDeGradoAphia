@@ -90,6 +90,8 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pytest
       - run: docker build -t aphia-files:ci .
+      - name: Imagen Docker de la API (producción en el VPS)
+        run: docker build -t aphia-api:ci ../api
 
   worker:
     name: Validación del Worker (pywrangler dry-run)

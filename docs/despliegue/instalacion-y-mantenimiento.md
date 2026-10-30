@@ -30,7 +30,7 @@ Hyperdrive → Workers (API) → Pages (web) → GitHub Actions → respaldos. S
 | Secreto | Dónde | Cómo |
 | --- | --- | --- |
 | `AUTH_SECRET` (≥ 32 caracteres) | Worker | `uv run pywrangler secret put AUTH_SECRET --env production` |
-| Contraseñas de MySQL y token del servicio de documentos | VPS | `infra/production/secrets/` (no versionado) |
+| Contraseñas de MySQL, token del servicio de documentos y clave de firma de sesiones (`auth_secret`) | VPS | `infra/production/secrets/` (no versionado) |
 | Clave privada `age` de respaldos | Fuera del VPS | Gestor de contraseñas |
 
 La API no arranca en modo `database` sin `AUTH_SECRET`; el mensaje de configuración lo indica.

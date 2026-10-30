@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 mkdir -p secrets
 chmod 700 secrets
 
-for name in mysql_root_password mysql_app_password mysql_migrator_password files_service_token; do
+for name in mysql_root_password mysql_app_password mysql_migrator_password files_service_token auth_secret; do
 	target="secrets/${name}"
 	if [[ -s "$target" ]]; then
 		echo "existe: ${target} (no se modifica)"

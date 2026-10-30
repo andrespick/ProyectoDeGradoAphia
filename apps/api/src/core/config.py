@@ -10,12 +10,14 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 ENVIRONMENTS = frozenset({"development", "test", "staging", "production"})
 LOCAL_ENVIRONMENTS = frozenset({"development", "test"})
 # disabled: todo protegido responde 401. development: usuario ficticio (solo local).
 # database: usuarios de MySQL con contraseña y token firmado con AUTH_SECRET.
 AUTH_MODES = frozenset({"disabled", "development", "database"})
+DB_SSL_MODES = frozenset({"disabled", "required"})
 MIN_AUTH_SECRET_LENGTH = 32
 
 Getter = Callable[[str], str | None]
@@ -38,6 +40,8 @@ class Settings:
     db_user: str | None = None
     db_password: str | None = field(default=None, repr=False)
     db_connect_timeout: int = 5
+    # required: TLS hacia MySQL sin validar el certificado autofirmado (red privada de Docker).
+    db_ssl_required: bool = False
 
     @property
     def is_local(self) -> bool:
@@ -61,6 +65,10 @@ class Settings:
                 "caracteres"
             )
 
+        db_ssl_mode = _clean(get("DB_SSL_MODE")) or "disabled"
+        if db_ssl_mode not in DB_SSL_MODES:
+            raise ConfigurationError(f"DB_SSL_MODE inválido: {db_ssl_mode!r}")
+
         return cls(
             app_env=app_env,
             cors_origins=parse_origins(get("CORS_ORIGINS")),
@@ -73,11 +81,20 @@ class Settings:
             db_user=get("DB_USER") or None,
             db_password=get("DB_PASSWORD"),
             db_connect_timeout=_parse_int(get("DB_CONNECT_TIMEOUT"), "DB_CONNECT_TIMEOUT", 5),
+            db_ssl_required=db_ssl_mode == "required",
         )
 
     @classmethod
     def from_environ(cls) -> Settings:
-        return cls.from_getter(os.environ.get)
+        return cls.from_getter(read_environ)
+
+
+def read_environ(name: str) -> str | None:
+    """Lee ``NOMBRE``; si existe ``NOMBRE_FILE`` (Docker secrets) lee ese archivo."""
+    file_path = os.environ.get(f"{name}_FILE")
+    if file_path:
+        return Path(file_path).read_text(encoding="utf-8").strip()
+    return os.environ.get(name)
 
 
 def parse_origins(raw: str | None) -> tuple[str, ...]:

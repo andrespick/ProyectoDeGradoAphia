@@ -13,6 +13,7 @@ Las consultas siempre usan parámetros (``%s``); nunca se interpolan valores en 
 from __future__ import annotations
 
 import logging
+import ssl
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 
@@ -31,6 +32,15 @@ _CONNECTION_ERRORS = (
     OSError,
     TimeoutError,
 )
+
+
+def _tls_context() -> ssl.SSLContext:
+    # MySQL usa un certificado autofirmado y solo es accesible en la red interna de Docker:
+    # se cifra el tráfico sin validar la cadena (igual que database/scripts/dbscripts.py).
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
 
 
 class Database:
@@ -53,6 +63,7 @@ class Database:
                 autocommit=False,
                 connect_timeout=config.connect_timeout,
                 init_command="SET time_zone = '+00:00'",
+                ssl=_tls_context() if config.ssl_required else None,
             )
         except _CONNECTION_ERRORS as exc:
             log_event(logger, logging.WARNING, "db_connect_failed", error_type=type(exc).__name__)
