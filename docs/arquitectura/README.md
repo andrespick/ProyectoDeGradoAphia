@@ -3,7 +3,15 @@
 Modelo de datos (32 tablas en 3FN, relaciones y decisiones pendientes):
 [modelo-de-datos.md](modelo-de-datos.md).
 
-## Diagrama de componentes
+## Despliegue vigente (VPS)
+
+La API se ejecuta con Uvicorn en Docker dentro del VPS, junto a MySQL y al servicio de
+documentos, en la red interna `backend`; Caddy (en el host) publica la API por HTTPS y el
+frontend sigue en Cloudflare Pages. La API conecta a MySQL con TLS (`DB_SSL_MODE=required`)
+y lee los secretos desde archivos (`*_FILE`). El diagrama siguiente describe la ruta
+alternativa en Cloudflare Workers, que el código sigue soportando.
+
+## Diagrama de componentes (ruta Workers)
 
 ```mermaid
 flowchart LR

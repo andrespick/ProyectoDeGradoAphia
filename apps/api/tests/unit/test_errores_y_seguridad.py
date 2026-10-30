@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import pytest
 from fastapi import FastAPI
 
-from core.config import ConfigurationError, Settings
+from core.config import ConfigurationError, Settings, read_environ
 from core.errors import DatabaseUnavailableError
 from main import create_app
 from modules.personas.router import get_personas_repository
@@ -167,6 +169,24 @@ class TestConfiguracion:
     def test_puerto_invalido(self) -> None:
         with pytest.raises(ConfigurationError):
             Settings.from_getter({"DB_PORT": "tres"}.get)
+
+    def test_tls_hacia_mysql(self) -> None:
+        assert Settings.from_getter({}.get).db_ssl_required is False
+        assert Settings.from_getter({"DB_SSL_MODE": "required"}.get).db_ssl_required is True
+        with pytest.raises(ConfigurationError):
+            Settings.from_getter({"DB_SSL_MODE": "preferred"}.get)
+
+    def test_secretos_por_archivo_docker(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archivo = tmp_path / "db_password"
+        archivo.write_text("desde-archivo\n", encoding="utf-8")
+        monkeypatch.setenv("DB_PASSWORD_FILE", str(archivo))
+        monkeypatch.setenv("DB_PASSWORD", "desde-variable")
+        monkeypatch.setenv("DB_HOST", "mysql")
+        assert read_environ("DB_PASSWORD") == "desde-archivo"
+        assert read_environ("DB_HOST") == "mysql"
+        assert read_environ("DB_INEXISTENTE") is None
 
     async def test_configuracion_invalida_responde_500_sin_detalles(self) -> None:
         def broken_provider(_scope: object) -> Settings:

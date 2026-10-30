@@ -13,6 +13,7 @@ class DatabaseConfig:
     password: str = field(repr=False)
     database: str
     connect_timeout: int = 5
+    ssl_required: bool = False
 
     @classmethod
     def from_settings(cls, settings: Settings) -> DatabaseConfig | None:
@@ -28,4 +29,5 @@ class DatabaseConfig:
             password=settings.db_password,
             database=settings.db_name,
             connect_timeout=settings.db_connect_timeout,
+            ssl_required=settings.db_ssl_required,
         )

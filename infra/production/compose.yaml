@@ -1,11 +1,12 @@
-# Producción en el VPS: MySQL + servicio de documentos + Cloudflare Tunnel.
+# Producción en el VPS: API (FastAPI/Uvicorn) + MySQL + servicio de documentos.
 #
 #   cd infra/production
 #   docker compose --env-file .env.production up -d --build
 #
-# Ningún servicio publica puertos en el host. MySQL y el servicio de documentos viven en
-# la red interna "backend" (sin salida a Internet); solo cloudflared tiene salida, y
-# Cloudflare (Workers VPC / Hyperdrive) llega a ellos únicamente a través del túnel.
+# Solo la API publica un puerto, y solo en 127.0.0.1:8000: Caddy (instalado en el host) la
+# expone por HTTPS. MySQL y el servicio de documentos viven en la red interna "backend" sin
+# salida a Internet. El túnel de Cloudflare (perfil "tunnel") es opcional y solo hace falta
+# si la API se despliega en Cloudflare Workers.
 # Guía completa: docs/despliegue/vps.md
 name: aphia
 
@@ -69,12 +70,56 @@ services:
           memory: 256m
     logging: *logging
 
+  api:
+    build:
+      context: ../../apps/api
+    image: aphia-api:production
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Defina CORS_ORIGINS (URL del frontend) en .env.production}
+      AUTH_MODE: database
+      AUTH_SECRET_FILE: /run/secrets/auth_secret
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-aphia}
+      DB_USER: ${DB_APP_USER:-aphia_app}
+      DB_PASSWORD_FILE: /run/secrets/mysql_app_password
+      DB_SSL_MODE: required
+      FILES_SERVICE_URL: http://files:4000
+      FILES_SERVICE_TOKEN_FILE: /run/secrets/files_service_token
+    secrets: [auth_secret, mysql_app_password, files_service_token]
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    # "egress" porque Docker no publica puertos de redes internas.
+    networks: [backend, egress]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      files:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+    logging: *logging
+
+  # Solo si la API se despliega en Cloudflare Workers (docs/despliegue/tunnel-y-acceso-privado.md):
+  #   docker compose --env-file .env.production --profile tunnel up -d
   cloudflared:
-    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:?Fije CLOUDFLARED_VERSION en .env.production}
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:-latest}
     restart: unless-stopped
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Defina TUNNEL_TOKEN en .env.production}
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
     networks: [backend, egress]
     depends_on:
       mysql:
@@ -133,3 +178,5 @@ secrets:
     file: ./secrets/mysql_migrator_password
   files_service_token:
     file: ./secrets/files_service_token
+  auth_secret:
+    file: ./secrets/auth_secret

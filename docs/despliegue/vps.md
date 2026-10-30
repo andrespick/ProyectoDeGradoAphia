@@ -27,9 +27,13 @@ sudo ufw allow OpenSSH
 sudo ufw enable
 ```
 
-**No abra los puertos 3306, 4000, 80 ni 443**: el túnel de Cloudflare es una conexión
-saliente. Nota: Docker puede saltarse ufw para puertos publicados; por eso el Compose de
-producción no publica ninguno.
+```bash
+sudo ufw allow 80/tcp && sudo ufw allow 443/tcp   # solo Caddy
+```
+
+**No abra los puertos 3306, 4000 ni 8000**: MySQL y documentos viven en la red interna de
+Docker, y la API solo escucha en `127.0.0.1:8000` para Caddy. Nota: Docker puede saltarse ufw
+para puertos publicados; por eso el Compose solo publica la API y solo en `127.0.0.1`.
 
 Con 2 GB de RAM agregue swap:
 
@@ -57,35 +61,57 @@ git clone https://github.com/andrespick/ProyectoDeGradoAphia.git /opt/aphia
 cd /opt/aphia/infra/production
 bash scripts/generate-secrets.sh
 cp .env.production.example .env.production && chmod 600 .env.production
-# Edite .env.production: TUNNEL_TOKEN (paso del túnel) y ajuste de memoria
+# Edite .env.production: CORS_ORIGINS (URL del frontend en Pages) y ajuste de memoria
 chmod 644 mysql/conf.d/aphia.cnf   # MySQL ignora archivos de configuración con escritura global
 ```
 
 ## 5. Arranque
 
 ```bash
-docker compose --env-file .env.production up -d --build mysql files
-docker compose --env-file .env.production ps        # ambos "healthy"
+docker compose --env-file .env.production up -d --build
+docker compose --env-file .env.production ps        # api, mysql y files "healthy"
 docker compose --env-file .env.production logs mysql | grep 01-usuarios
+curl -s http://127.0.0.1:8000/api/health            # {"status":"ok",...,"runtime":"asgi"}
 ```
 
-Luego continúe con [MySQL](mysql.md) (migraciones) y [el túnel](tunnel-y-acceso-privado.md).
-Cuando el túnel esté creado: `docker compose --env-file .env.production up -d`.
+Luego aplique las [migraciones](mysql.md); hasta entonces `/api/ready` responde 503.
 
-## 6. Actualizaciones
+## 6. Caddy (HTTPS público hacia la API)
+
+Caddy se instala en el sistema (no en Docker), obtiene el certificado de Let's Encrypt y
+reenvía a la API. Apunte un registro DNS `A` de `api.<su dominio>` a la IP del VPS e
+instale Caddy desde su repositorio oficial (https://caddyserver.com/docs/install). En
+`/etc/caddy/Caddyfile`:
+
+```
+api.aphia.example.com {
+    reverse_proxy 127.0.0.1:8000
+}
+```
+
+`sudo systemctl reload caddy` y compruebe `curl https://api.aphia.example.com/api/health`.
+Esa URL es `API_BASE_URL` en GitHub; la del frontend debe estar en `CORS_ORIGINS`.
+
+## 7. Actualizaciones
+
+El workflow *Deploy* de GitHub Actions hace esto por SSH con el commit que pasó la CI
+([github-actions.md](github-actions.md)). A mano:
 
 ```bash
-cd /opt/aphia && git pull
+cd /opt/aphia && git fetch origin && git checkout --detach origin/main
 cd infra/production
-docker compose --env-file .env.production up -d --build
+docker compose --env-file .env.production up -d --build api files
 ```
 
-Actualice `MYSQL_VERSION` y `CLOUDFLARED_VERSION` de forma deliberada, con respaldo previo.
+MySQL no se reconstruye en cada despliegue. Actualice `MYSQL_VERSION` de forma deliberada,
+con respaldo previo. El túnel de Cloudflare (`--profile tunnel`) solo se necesita si la API se
+despliega en Workers ([tunnel-y-acceso-privado.md](tunnel-y-acceso-privado.md)).
 
 ## Recursos estimados
 
 | Servicio | Límite de memoria |
 | --- | --- |
 | MySQL (buffer pool 512 MB) | 1200 MB (`MYSQL_MEMORY_LIMIT`) |
+| API (Uvicorn) | 384 MB |
 | Documentos | 256 MB |
-| cloudflared | 128 MB |
+| cloudflared (opcional) | 128 MB |

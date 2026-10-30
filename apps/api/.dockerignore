@@ -1,0 +1,13 @@
+.venv
+.venv-workers
+python_modules
+node_modules
+dist
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+tests
+package.json
+wrangler.jsonc
+.dev.vars

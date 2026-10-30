@@ -15,9 +15,9 @@ clientes, propietarios, inmuebles, contratos, documentos, usuarios, permisos y t
 
 ## Arquitectura en una línea
 
-React + Vite en **Cloudflare Pages** → FastAPI en **Cloudflare Python Workers** →
-**Hyperdrive** + **Cloudflare Tunnel / Workers VPC** → **MySQL 8.4** y servicio de documentos en
-un **VPS Linux** con Docker. La misma API corre también con **Uvicorn** en cualquier Linux.
+React + Vite en **Cloudflare Pages** → FastAPI con **Uvicorn** detrás de **Caddy** →
+**MySQL 8.4** y servicio de documentos, todo en un **VPS Linux** con Docker Compose. La misma
+API puede desplegarse en **Cloudflare Python Workers** (Hyperdrive + Tunnel / Workers VPC).
 
 Detalle y diagramas: [docs/arquitectura](docs/arquitectura/README.md).
 
