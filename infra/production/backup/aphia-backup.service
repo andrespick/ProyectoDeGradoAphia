@@ -1,0 +1,12 @@
+# Respaldo cifrado de APHIA (MySQL + documentos) con backup.sh.
+# Instalación: ver docs/despliegue/restauracion.md. Lo dispara aphia-backup.timer.
+[Unit]
+Description=Respaldo cifrado de APHIA (MySQL + documentos)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/aphia/infra/production/backup/backup.sh
+StandardOutput=append:/var/log/aphia-backup.log
+StandardError=append:/var/log/aphia-backup.log

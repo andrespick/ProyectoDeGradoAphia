@@ -1,0 +1,12 @@
+# Cada viernes a medianoche, hora de Colombia (el minuto en que empieza el sábado).
+# Para uno diario: OnCalendar=*-*-* 03:15:00 America/Bogota
+[Unit]
+Description=Respaldo semanal de APHIA (viernes a medianoche, hora de Colombia)
+
+[Timer]
+OnCalendar=Sat *-*-* 00:00:00 America/Bogota
+# Si el VPS estaba apagado a esa hora, lo ejecuta al encender.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

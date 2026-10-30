@@ -27,7 +27,19 @@ rclone config                            # destino externo (S3, B2, Drive...)
 ./backup.sh                              # primera ejecución manual
 ```
 
-Cron (UTC): el respaldo diario y, cada 5 minutos, la atención de los respaldos solicitados
+Programación con systemd (unidades versionadas en `infra/production/backup/`). El temporizador
+corre cada viernes a medianoche, hora de Colombia; cámbielo en `aphia-backup.timer` si se
+quiere diario:
+
+```bash
+sudo cp /opt/aphia/infra/production/backup/aphia-backup.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now aphia-backup.timer
+systemctl list-timers aphia-backup.timer      # muestra la próxima ejecución
+sudo systemctl start aphia-backup.service     # prueba inmediata; log en /var/log/aphia-backup.log
+```
+
+Alternativa con cron (UTC), incluida la atención cada 5 minutos de los respaldos solicitados
 desde la web (pantalla Sistema → «Solicitar respaldo ahora»; si no hay solicitudes termina sin
 hacer nada):
 
