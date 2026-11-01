@@ -39,7 +39,7 @@
 | Bloqueo | `max_intentos` fallidos consecutivos (3 por defecto) → `locked_until = ahora + minutos_bloqueo` (15 por defecto) con `register_failed_attempt` (`SELECT … FOR UPDATE`); el login correcto reinicia el contador; una cuenta bloqueada responde 423 aunque la clave sea correcta. El evento queda en los logs (`cuenta_bloqueada`), en la auditoría y en la pantalla de Usuarios con «Desbloquear». Los valores se cambian en Configuración dentro de los límites de los CHECK de `security_policy` (3–10 intentos, 5–1440 min, 1–24 h, clave de 8–64). |
 | Enumeración de usuarios | Usuario inexistente, inactivo o clave incorrecta responden el mismo 401 `credenciales_invalidas`; los inexistentes verifican contra un hash ficticio para igualar el tiempo. Excepción conocida (requisito del cliente): una cuenta existente responde 423 al bloquearse, lo que confirma que existe; se mitiga con el límite de peticiones por IP en `/login` (ver `docs/despliegue/vps.md`). |
 | Logs | Nunca incluyen usuario, clave ni token; solo `account_id` e intentos. |
-| Perímetro (VPS) | Caddy limita el cuerpo de las solicitudes (`request_body max_size`) y el WAF de Cloudflare limita las peticiones por IP a `/login`: sin eso, cualquiera puede agotar la memoria o la CPU de la API o mantener bloqueada una cuenta conocida. Configuración en `docs/despliegue/vps.md`. |
+| Perímetro (VPS) | Caddy limita el cuerpo de las solicitudes (`request_body max_size`) y las peticiones por IP (plugin `caddy-ratelimit`: 10/min a `/login`, 300/min al resto): sin eso, cualquiera puede agotar la memoria o la CPU de la API o mantener bloqueada una cuenta conocida. Configuración en `docs/despliegue/vps.md`. |
 | Desarrollo | `AUTH_MODE=development` (usuario ficticio) queda **solo** para pruebas unitarias; `pnpm env:init` genera `AUTH_SECRET` en `.env` y `apps/api/.dev.vars`, y `pnpm db:seed` crea `admin`, `administrativo` y `asesor` con la contraseña `Aphia.2026` (nunca en staging/producción). |
 
 Primer administrador en producción: ver `docs/despliegue/instalacion-y-mantenimiento.md`
@@ -76,7 +76,6 @@ servicio afectado y verifique `/api/ready`. Rote inmediatamente ante cualquier s
 
 - Retención de la auditoría y de la papelera (hoy se conservan hasta que se vacían a mano).
 - Exportación de reportes de auditoría (PDF/CSV) de los mockups forenses.
-- Límite de tasa (Cloudflare WAF / Rate Limiting) en la API.
 - Endurecimiento del VPS (ver `docs/despliegue/vps.md`) y monitoreo de logs.
 - Integración API ↔ documentos con autorización por entidad (quién puede ver qué contrato).
 - Escaneo de dependencias en CI (p. ej. Dependabot) y revisión periódica de versiones.

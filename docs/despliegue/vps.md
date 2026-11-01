@@ -80,26 +80,65 @@ Luego aplique las [migraciones](mysql.md); hasta entonces `/api/ready` responde 
 
 Caddy se instala en el sistema (no en Docker), obtiene el certificado de Let's Encrypt y
 reenvía a la API. Apunte un registro DNS `A` de `api.<su dominio>` a la IP del VPS e
-instale Caddy desde su repositorio oficial (https://caddyserver.com/docs/install). En
-`/etc/caddy/Caddyfile`:
+instale Caddy desde su repositorio oficial (https://caddyserver.com/docs/install).
+
+Instale además el plugin oficial de límite de peticiones y fije el paquete para que una
+actualización de apt no reemplace el binario por uno sin el plugin:
+
+```bash
+sudo caddy add-package github.com/mholt/caddy-ratelimit
+caddy list-modules | grep rate_limit   # debe mostrar http.handlers.rate_limit
+sudo apt-mark hold caddy
+```
+
+En `/etc/caddy/Caddyfile`:
 
 ```
+{
+    # El plugin no es estándar: hay que ordenarlo antes del proxy.
+    order rate_limit before reverse_proxy
+}
+
 api.aphia.example.com {
     # Sin este límite cualquiera puede enviar un cuerpo de cientos de MB y agotar la memoria
     # de la API (384 MB). 12 MB cubre el futuro envío de documentos (10 MB máximo).
     request_body {
         max_size 12MB
     }
+
+    # Cada intento de login calcula PBKDF2 (CPU) y tres intentos bastan para bloquear una
+    # cuenta conocida; por encima del límite Caddy responde 429 sin llegar a la API.
+    rate_limit {
+        zone login {
+            match {
+                path /api/v1/auth/login
+            }
+            key    {remote_host}
+            events 10
+            window 1m
+        }
+        zone api {
+            key    {remote_host}
+            events 300
+            window 1m
+        }
+    }
+
     reverse_proxy 127.0.0.1:8000
 }
 ```
 
-Además, proteja `/api/v1/auth/login` con un límite de peticiones por IP: cada intento calcula
-PBKDF2 (CPU) y tres intentos bastan para bloquear una cuenta conocida. Lo más sencillo es
-activar el proxy de Cloudflare (nube naranja) en el registro `api` y crear una regla de
-*Rate Limiting* en Security → WAF (por ejemplo, 10 peticiones por minuto por IP a esa ruta).
+`sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl restart caddy` (reinicio,
+no recarga, la primera vez tras cambiar el binario) y compruebe
+`curl https://api.aphia.example.com/api/health`. Para probar el límite use un usuario que no
+exista (así no bloquea ninguna cuenta real): tras diez `401` deben seguir `429`.
 
-`sudo systemctl reload caddy` y compruebe `curl https://api.aphia.example.com/api/health`.
+```bash
+for i in $(seq 1 12); do curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  -H 'Content-Type: application/json' -d '{"usuario":"nadie","clave":"x"}' \
+  https://api.aphia.example.com/api/v1/auth/login; done
+```
+
 Esa URL es `API_BASE_URL` en GitHub; la del frontend debe estar en `CORS_ORIGINS`.
 
 ## 7. Actualizaciones
