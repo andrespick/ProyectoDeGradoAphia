@@ -22,6 +22,7 @@ Settings → Builds & deployments y Variables and Secrets:
 | Build output directory | `apps/web/dist` |
 | Root directory | `/` |
 | Variables (Production **y** Preview) | `VITE_API_BASE_URL=https://api.aphia.com.co` |
+| Branch control → Preview branches | Custom: incluir `*`, excluir `dependabot/*` (sus PRs solo cambian la CI; sin esto cada uno lanza un build de vista previa) |
 
 Sin la variable, el build falla con «Defina VITE_API_BASE_URL». Tras agregarla hay que
 relanzar el despliegue (Deployments → Retry deployment) o hacer un push.

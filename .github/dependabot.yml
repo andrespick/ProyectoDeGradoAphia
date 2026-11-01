@@ -6,3 +6,7 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # Un solo PR (y un solo build de vista previa en Pages) con todas las acciones del mes.
+    groups:
+      acciones:
+        patterns: ["*"]
