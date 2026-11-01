@@ -31,7 +31,7 @@ test.describe("Usuarios y roles", () => {
     await dialog.getByRole("button", { name: "Guardar usuario" }).click();
     expect((await creado).status()).toBe(201);
 
-    await expect(page.getByRole("status")).toContainText("Usuario registrado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Usuario registrado correctamente." })).toBeVisible();
     const fila = page.getByRole("row").filter({ hasText: `@${usuario}` });
     await expect(fila).toBeVisible({ timeout: 2_000 }); // RNF: cambios visibles en menos de 2 s
     await expect(fila.getByText("Asesor", { exact: true })).toBeVisible();
@@ -41,11 +41,11 @@ test.describe("Usuarios y roles", () => {
     await expect(edicion.getByLabel(/Nombre completo/)).toHaveValue(`Persona E2E ${unique}`);
     await edicion.getByLabel(/^Rol/).selectOption("administrativo");
     await edicion.getByRole("button", { name: "Guardar usuario" }).click();
-    await expect(page.getByRole("status")).toContainText("Usuario actualizado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Usuario actualizado correctamente." })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: `@${usuario}` }).getByText("Administrativo")).toBeVisible();
 
     await page.getByRole("row").filter({ hasText: `@${usuario}` }).getByRole("button", { name: `Eliminar ${usuario}` }).click();
-    await expect(page.getByRole("status")).toContainText("eliminado");
+    await expect(page.getByRole("status").filter({ hasText: "eliminado" })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: `@${usuario}` })).toHaveCount(0);
   });
 

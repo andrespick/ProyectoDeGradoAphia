@@ -17,7 +17,7 @@ test.describe("Administración del sistema", () => {
     const boton = page.getByRole("button", { name: /Solicitar respaldo ahora/ });
     if (await boton.isEnabled()) {
       await boton.click();
-      await expect(page.getByRole("status")).toContainText("Respaldo solicitado");
+      await expect(page.getByRole("status").filter({ hasText: "Respaldo solicitado" })).toBeVisible();
     }
     await expect(page.getByText(/Respaldo solicitado desde/)).toBeVisible();
     await expect(boton).toBeDisabled();
@@ -38,7 +38,7 @@ test.describe("Administración del sistema", () => {
     await iniciarSesion(page, "admin");
     await page.goto("/papelera?tipo=persona");
     await page.getByRole("button", { name: `Restaurar ${nombre} (CC ${identificacion})` }).click({ timeout: 30_000 });
-    await expect(page.getByRole("status")).toContainText("se restauró como persona #");
+    await expect(page.getByRole("status").filter({ hasText: "se restauró como persona #" })).toBeVisible();
 
     const busqueda = await page.request.get(`${API}/api/v1/clientes?q=${identificacion}`, { headers: auth(administrativo) });
     expect(((await busqueda.json()) as { total: number }).total).toBe(1);
@@ -97,13 +97,13 @@ test.describe("Administración del sistema", () => {
 
     await page.getByLabel(/^Nombre/).fill(ciudad, { timeout: 30_000 });
     await page.getByRole("button", { name: /Agregar/ }).click();
-    await expect(page.getByRole("status")).toContainText(`«${ciudad}» agregado.`);
+    await expect(page.getByRole("status").filter({ hasText: `«${ciudad}» agregado.` })).toBeVisible();
 
     await page.getByRole("button", { name: `Renombrar ${ciudad}` }).click();
     await expect(page.getByRole("cell", { name: `${ciudad} renombrada`, exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: `Eliminar ${ciudad} renombrada` }).click();
-    await expect(page.getByRole("status")).toContainText("eliminado");
+    await expect(page.getByRole("status").filter({ hasText: "eliminado" })).toBeVisible();
     await expect(page.getByRole("cell", { name: `${ciudad} renombrada`, exact: true })).toHaveCount(0);
   });
 

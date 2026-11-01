@@ -73,7 +73,7 @@ test.describe("Acceso", () => {
     const aviso = page.getByRole("alert").filter({ hasText: `@${usuario}` });
     await expect(aviso).toContainText("acceso suspendido");
     await aviso.getByRole("button", { name: "Desbloquear" }).click();
-    await expect(page.getByRole("status")).toContainText("quedó desbloqueada");
+    await expect(page.getByRole("status").filter({ hasText: "quedó desbloqueada" })).toBeVisible();
 
     const login = await page.request.post(`${API}/api/v1/auth/login`, {
       data: { usuario, clave: "Clave.Segura1" },
@@ -85,6 +85,10 @@ test.describe("Acceso", () => {
 
   test("el asesor entra, no ve Usuarios y la API le niega el módulo", async ({ page }) => {
     const token = await iniciarSesion(page, "asesor");
+    // Antes de abrir la página: el Worker local de Pyodide a veces deja colgada una petición
+    // que llega mientras el navegador cancela las suyas al navegar.
+    const respuesta = await page.request.get(`${API}/api/v1/usuarios`, { headers: auth(token) });
+    expect(respuesta.status()).toBe(403);
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: /Bienvenido de nuevo/ })).toBeVisible({ timeout: 30_000 });
@@ -92,8 +96,6 @@ test.describe("Acceso", () => {
     await expect(nav.getByRole("link", { name: "Inicio" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Usuarios" })).toHaveCount(0);
 
-    const respuesta = await page.request.get(`${API}/api/v1/usuarios`, { headers: auth(token) });
-    expect(respuesta.status()).toBe(403);
     await page.goto("/usuarios");
     await expect(page.getByRole("alert")).toContainText("No tiene permisos");
   });

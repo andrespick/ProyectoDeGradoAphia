@@ -41,7 +41,7 @@ test.describe("Clientes", () => {
     await dialog.getByRole("button", { name: "Guardar cliente" }).click();
     expect((await created).status()).toBe(201);
 
-    await expect(page.getByRole("status")).toContainText("Cliente registrado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Cliente registrado correctamente." })).toBeVisible();
     const fila = page.getByRole("row").filter({ hasText: identificacion });
     await expect(fila).toBeVisible({ timeout: 2_000 }); // RNF: cambios visibles en menos de 2 s
     await expect(fila.getByText("Arrendatario", { exact: true })).toBeVisible();
@@ -59,7 +59,7 @@ test.describe("Clientes", () => {
     const edicion = page.getByRole("dialog", { name: "Editar cliente" });
     await edicion.getByLabel("Codeudor", { exact: true }).check();
     await edicion.getByRole("button", { name: "Guardar cliente" }).click();
-    await expect(page.getByRole("status")).toContainText("Cliente actualizado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Cliente actualizado correctamente." })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: identificacion }).getByText("Codeudor", { exact: true })).toBeVisible();
 
     // Detalle y eliminación.

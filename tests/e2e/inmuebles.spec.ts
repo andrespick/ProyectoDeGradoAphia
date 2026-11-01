@@ -42,7 +42,7 @@ test.describe("Inmuebles", () => {
     await dialog.getByLabel(/Número de contrato/).fill(`EN-${unique}`);
     await dialog.getByRole("button", { name: "Guardar inmueble" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Inmueble registrado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Inmueble registrado correctamente." })).toBeVisible();
     const fila = page.getByRole("row").filter({ hasText: direccion });
     await expect(fila).toBeVisible({ timeout: 2_000 });
     await expect(fila.getByText(/1\.250\.000/)).toBeVisible();
@@ -65,7 +65,7 @@ test.describe("Inmuebles", () => {
     await expect(edicion.getByLabel(/Dirección completa/)).toHaveValue(direccion);
     await edicion.getByLabel(/Canon mensual/).fill("1.300.000");
     await edicion.getByRole("button", { name: "Guardar inmueble" }).click();
-    await expect(page.getByRole("status")).toContainText("Inmueble actualizado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Inmueble actualizado correctamente." })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: direccion }).getByText(/1\.300\.000/)).toBeVisible({
       timeout: 2_000,
     });
@@ -79,7 +79,7 @@ test.describe("Inmuebles", () => {
     // Eliminar el inmueble.
     await page.goto(`/inmuebles?q=E2E-${unique}`);
     await page.getByRole("button", { name: `Eliminar ${direccion}` }).click();
-    await expect(page.getByRole("status")).toContainText("Inmueble eliminado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Inmueble eliminado correctamente." })).toBeVisible();
     await expect(page.getByText(/No hay inmuebles que coincidan/)).toBeVisible();
   });
 

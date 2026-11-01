@@ -29,7 +29,7 @@ test.describe("Propietarios", () => {
     await dialog.getByLabel(/Número de cuenta/).fill("4455667788");
     await dialog.getByRole("button", { name: "Guardar propietario" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Propietario registrado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Propietario registrado correctamente." })).toBeVisible();
     const fila = page.getByRole("row").filter({ hasText: identificacion });
     await expect(fila).toBeVisible({ timeout: 2_000 });
     await expect(fila.getByText("•••• 7788", { exact: false })).toBeVisible();

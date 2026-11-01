@@ -20,7 +20,7 @@ test.describe("Codeudores", () => {
     await dialog.getByLabel(/Teléfono/).fill("3012223344");
     await dialog.getByRole("button", { name: "Guardar codeudor" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Codeudor registrado correctamente.");
+    await expect(page.getByRole("status").filter({ hasText: "Codeudor registrado correctamente." })).toBeVisible();
     await page.getByLabel("Buscar").fill(identificacion);
     await page.getByRole("button", { name: "Buscar" }).click();
     const fila = page.getByRole("row").filter({ hasText: identificacion });
