@@ -13,7 +13,9 @@ _AI = "COLLATE utf8mb4_0900_ai_ci LIKE %s"
 _PERSONAS = (
     "SELECT pe.person_id, pe.full_name, dt.code AS tipo_identificacion, d.document_identifier, "
     f"ph.phone_number, e.email_address FROM person pe {PERSONA_JOINS} "
-    f"WHERE pe.full_name {_AI} OR d.document_identifier LIKE %s "
+    f"WHERE (pe.full_name {_AI} OR d.document_identifier LIKE %s) "
+    # Sin papel = solo cuenta de usuario: no se expone a los roles de negocio.
+    "AND EXISTS (SELECT 1 FROM person_party_role ppr WHERE ppr.person_id = pe.person_id) "
     f"ORDER BY pe.full_name LIMIT {LIMITE_POR_GRUPO}"
 )
 _INMUEBLES = (

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
 
 from pydantic import ValidationError
@@ -33,7 +34,9 @@ class PapeleraRepositoryPort(Protocol):
         self, tipo: TipoRegistro | None, *, limit: int, offset: int
     ) -> tuple[list[RegistroEliminado], int]: ...
 
-    async def obtener(self, record_id: int) -> tuple[RegistroEliminado, dict[str, Any]] | None: ...
+    def restaurando(
+        self, record_id: int
+    ) -> AbstractAsyncContextManager[tuple[RegistroEliminado, dict[str, Any]] | None]: ...
 
     async def eliminar(self, record_id: int) -> bool: ...
 
@@ -56,23 +59,22 @@ class PapeleraService:
         return PapeleraPage(items=items, total=total, limit=limit, offset=offset)
 
     async def restaurar(self, record_id: int) -> tuple[RegistroEliminado, Restaurado]:
-        encontrado = await self._repository.obtener(record_id)
-        if encontrado is None:
-            raise RegistroEliminadoNoEncontradoError()
-        registro, datos = encontrado
-        try:
-            nuevo_id = await self._crear(registro.tipo, datos)
-        except ValidationError as exc:
-            raise RestauracionImposibleError(
-                "No se puede restaurar: los datos guardados ya no cumplen las validaciones."
-            ) from exc
-        except AppError as exc:
-            if exc.status_code >= 500:
-                raise
-            # Ej.: la identificación ya se registró de nuevo o el inmueble ya no existe.
-            raise RestauracionImposibleError(f"No se puede restaurar: {exc.message}") from exc
-        # Primero se crea y después se quita de la papelera: si algo falla, no se pierde nada.
-        await self._repository.eliminar(record_id)
+        # Un doble clic o dos administradores a la vez no crean el registro dos veces.
+        async with self._repository.restaurando(record_id) as encontrado:
+            if encontrado is None:
+                raise RegistroEliminadoNoEncontradoError()
+            registro, datos = encontrado
+            try:
+                nuevo_id = await self._crear(registro.tipo, datos)
+            except ValidationError as exc:
+                raise RestauracionImposibleError(
+                    "No se puede restaurar: los datos guardados ya no cumplen las validaciones."
+                ) from exc
+            except AppError as exc:
+                if exc.status_code >= 500:
+                    raise
+                # Ej.: la identificación ya se registró de nuevo o el inmueble ya no existe.
+                raise RestauracionImposibleError(f"No se puede restaurar: {exc.message}") from exc
         return registro, Restaurado(tipo=registro.tipo, id=nuevo_id)
 
     async def eliminar(self, record_id: int) -> None:

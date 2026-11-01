@@ -26,5 +26,7 @@ binlog_expire_logs_seconds = 604800
 
 # Registro
 log_error_verbosity = 2
-slow_query_log = ON
+# Apagado: el log guarda el SQL con los valores literales (nombres, documentos, correos).
+# Para diagnosticar, actívelo un tiempo con SET GLOBAL slow_query_log = ON y bórrelo después.
+slow_query_log = OFF
 long_query_time = 2

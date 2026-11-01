@@ -131,6 +131,19 @@ async def test_cada_lista_muestra_solo_su_papel(
     assert [p["nombre"] for p in por_papel.json()["items"]] == ["Inquilino"]
 
 
+async def test_persona_sin_papel_no_se_ve_ni_se_edita_desde_negocio(
+    client: httpx.AsyncClient, personas_repository: InMemoryPersonasRepository
+) -> None:
+    # Al crear un usuario se crea su persona sin papel: un asesor no debe verla ni cambiarla.
+    cuenta = personas_repository.agregar("Admin del sistema", "1004", [])
+    ruta = f"/api/v1/clientes/{cuenta.id}"
+
+    assert (await client.get(ruta)).status_code == 404
+    assert (await client.put(ruta, json=CLIENTE)).status_code == 404
+    assert (await client.delete(ruta)).status_code == 404
+    assert personas_repository.items[cuenta.id].nombre == "Admin del sistema"
+
+
 async def test_filtros_por_nombre_identificacion_correo_y_contrato(
     client: httpx.AsyncClient, personas_repository: InMemoryPersonasRepository
 ) -> None:

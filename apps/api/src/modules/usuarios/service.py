@@ -33,11 +33,6 @@ class UsuarioDuplicadoError(ConflictError):
     default_message = "Ya existe un usuario con ese nombre de usuario."
 
 
-class UltimoAdministradorError(ConflictError):
-    code = "ultimo_administrador"
-    default_message = "No se puede dejar el sistema sin un Administrador de Sistemas activo."
-
-
 class UsuarioActualError(ConflictError):
     code = "usuario_actual"
     default_message = "No puede eliminar ni desactivar su propia cuenta."
@@ -63,8 +58,6 @@ class UsuariosRepositoryPort(Protocol):
     ) -> Usuario | None: ...
 
     async def eliminar(self, account_id: int) -> bool: ...
-
-    async def count_other_active_admins(self, account_id: int) -> int: ...
 
     async def unlock(self, account_id: int) -> Usuario | None: ...
 
@@ -116,12 +109,10 @@ class UsuariosService:
         # Cambiarla aquí cerraría la propia sesión sin aviso; «Cambiar contraseña» la renueva.
         if str(account_id) == principal.sujeto and datos.clave:
             raise UsuarioActualError("Para cambiar su propia clave use «Cambiar contraseña».")
-        pierde_admin = datos.rol != Role.ADMIN_SISTEMAS or not datos.activo
-        if actual.rol == Role.ADMIN_SISTEMAS and actual.activo and pierde_admin:
-            await self._exigir_otro_admin(account_id)
         if datos.clave:
             exigir_clave_segura(datos.clave, await self._configuracion.obtener_politica())
         hashed = hash_password(datos.clave) if datos.clave else None
+        # El repositorio rechaza (UltimoAdministradorError) dejar el sistema sin administradores.
         usuario = await self._repository.actualizar(account_id, datos, hashed)
         if usuario is None:
             raise UsuarioNoEncontradoError()
@@ -133,9 +124,7 @@ class UsuariosService:
     async def eliminar(self, account_id: int, principal: Principal) -> None:
         if str(account_id) == principal.sujeto:
             raise UsuarioActualError()
-        actual = await self.obtener(account_id)
-        if actual.rol == Role.ADMIN_SISTEMAS and actual.activo:
-            await self._exigir_otro_admin(account_id)
+        # El repositorio rechaza (UltimoAdministradorError) dejar el sistema sin administradores.
         if not await self._repository.eliminar(account_id):
             raise UsuarioNoEncontradoError()
 
@@ -167,7 +156,3 @@ class UsuariosService:
             raise UsuarioActualError("Para cerrar su propia sesión use «Cerrar sesión».")
         if not await self._repository.cerrar_sesiones(account_id):
             raise UsuarioNoEncontradoError()
-
-    async def _exigir_otro_admin(self, account_id: int) -> None:
-        if await self._repository.count_other_active_admins(account_id) == 0:
-            raise UltimoAdministradorError()

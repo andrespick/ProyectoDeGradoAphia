@@ -11,7 +11,7 @@ test.describe("Administración del sistema", () => {
 
     const kpis = page.getByRole("region", { name: "Indicadores del sistema" });
     await expect(kpis.getByText("En línea")).toBeVisible({ timeout: 30_000 });
-    await expect(kpis.getByText(/Última: 0018/)).toBeVisible();
+    await expect(kpis.getByText(/Última: 0020/)).toBeVisible();
 
     // En desarrollo no corre el cron de respaldos: una solicitud anterior puede seguir pendiente.
     const boton = page.getByRole("button", { name: /Solicitar respaldo ahora/ });

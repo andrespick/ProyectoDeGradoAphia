@@ -84,6 +84,28 @@ async def _nombres(cursor: aiomysql.DictCursor, sql: str) -> list[str]:
     return [row["name"] for row in await cursor.fetchall()]
 
 
+async def id_de_nombre(db: Database, tabla: str, columna_id: str, nombre: str) -> int:
+    """Busca o crea un valor de un catálogo de nombre libre (bancos, proveedores).
+
+    Va en su propia transacción, antes de la del registro: si otra solicitud crea el mismo nombre
+    a la vez, el UNIQUE (0019/0020) devuelve su id y la transacción del registro, que empieza
+    después, ve la fila (con REPEATABLE READ no la vería). Si el registro falla, el nombre queda
+    en el catálogo sin uso y el administrador puede eliminarlo. ``tabla`` y ``columna_id`` son
+    siempre literales del código.
+    """
+    async with db.transaction() as conn, conn.cursor() as cursor:
+        await cursor.execute(f"SELECT {columna_id} FROM {tabla} WHERE name = %s", (nombre,))
+        row = await cursor.fetchone()
+        if row is not None:
+            return int(row[0])
+        await cursor.execute(
+            f"INSERT INTO {tabla} (name) VALUES (%s) "
+            f"ON DUPLICATE KEY UPDATE {columna_id} = LAST_INSERT_ID({columna_id})",
+            (nombre,),
+        )
+        return int(cursor.lastrowid)
+
+
 # ── Administración de catálogos (Administrador de Sistemas) ──────────────────────────────────
 
 
@@ -222,15 +244,24 @@ class CatalogosAdminRepository:
         self, catalogo: CatalogoAdministrable, item_id: int, nombre: str
     ) -> ItemCatalogo:
         definicion = _CATALOGOS[catalogo]
-        async with self._db.transaction() as conn, conn.cursor(aiomysql.DictCursor) as cursor:
-            if await _fetch(cursor, definicion, item_id) is None:
-                raise ItemCatalogoNoEncontradoError()
-            await _exigir_nombre_libre(cursor, definicion, nombre, excepto=item_id)
-            await cursor.execute(
-                f"UPDATE {definicion.tabla} SET name = %s WHERE {definicion.id} = %s",
-                (nombre, item_id),
-            )
-            item = await _fetch(cursor, definicion, item_id)
+        try:
+            async with (
+                self._db.transaction() as conn,
+                conn.cursor(aiomysql.DictCursor) as cursor,
+            ):
+                if await _fetch(cursor, definicion, item_id) is None:
+                    raise ItemCatalogoNoEncontradoError()
+                await _exigir_nombre_libre(cursor, definicion, nombre, excepto=item_id)
+                await cursor.execute(
+                    f"UPDATE {definicion.tabla} SET name = %s WHERE {definicion.id} = %s",
+                    (nombre, item_id),
+                )
+                item = await _fetch(cursor, definicion, item_id)
+        except pymysql.err.IntegrityError as exc:
+            # Otro administrador usó el mismo nombre entre la comprobación y el UPDATE.
+            if mysql_error_code(exc) == ER_DUP_ENTRY:
+                raise CatalogoDuplicadoError() from exc
+            raise
         assert item is not None  # noqa: S101 - comprobado arriba en la misma transacción
         return item
 

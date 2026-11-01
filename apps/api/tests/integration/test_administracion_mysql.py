@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -165,6 +166,39 @@ async def test_papelera_guarda_en_la_misma_transaccion_y_restaura(
     ) == (1,)
 
 
+async def test_dos_restauraciones_simultaneas_crean_un_solo_registro(
+    client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
+) -> None:
+    person_id = (await client.post("/api/v1/propietarios", json=PROPIETARIO)).json()["id"]
+    inmueble = await client.post(
+        "/api/v1/inmuebles", json={"direccion": "Calle 2 # 3-4", "propietarios_ids": [person_id]}
+    )
+    assert (await client.delete(f"/api/v1/inmuebles/{inmueble.json()['id']}")).status_code == 204
+    (record_id,) = _uno(db_conn, "SELECT deleted_record_id FROM deleted_record")
+
+    respuestas = await asyncio.gather(
+        *(client.post(f"/api/v1/papelera/{record_id}/restaurar") for _ in range(2))
+    )
+
+    assert sorted(r.status_code for r in respuestas) == [200, 404]
+    assert _uno(db_conn, "SELECT COUNT(*) FROM property") == (1,)
+    assert _uno(db_conn, "SELECT COUNT(*) FROM deleted_record") == (0,)
+
+
+async def test_restauracion_fallida_deja_el_registro_en_la_papelera(
+    client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
+) -> None:
+    person_id = (await client.post("/api/v1/propietarios", json=PROPIETARIO)).json()["id"]
+    await client.delete(f"/api/v1/propietarios/{person_id}")
+    await client.post("/api/v1/propietarios", json=PROPIETARIO)  # misma identificación
+    (record_id,) = _uno(db_conn, "SELECT deleted_record_id FROM deleted_record")
+
+    response = await client.post(f"/api/v1/papelera/{record_id}/restaurar")
+
+    assert response.status_code == 409
+    assert _uno(db_conn, "SELECT COUNT(*) FROM deleted_record") == (1,)
+
+
 async def test_borrado_rechazado_no_deja_nada_en_la_papelera(
     client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
 ) -> None:
@@ -232,8 +266,8 @@ async def test_estado_del_sistema_y_solicitud_de_respaldo(
     assert _uno(db_conn, "SELECT trigger_type, status FROM backup_run") == ("MANUAL", "SOLICITADO")
     assert estado["base_de_datos"]["disponible"] is True
     assert estado["base_de_datos"]["version"].startswith("8.")
-    assert estado["migraciones"]["ultima"] == "0018"
-    assert estado["migraciones"]["aplicadas"] >= 18
+    assert estado["migraciones"]["ultima"] == "0020"
+    assert estado["migraciones"]["aplicadas"] >= 20
     assert estado["respaldos"]["pendiente"]["estado"] == "solicitado"
     assert estado["respaldos"]["atrasado"] is True
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pymysql
 import pytest
@@ -52,6 +54,18 @@ async def test_crear_persiste_persona_documento_cuenta_y_rol(
     obtenido = await client.get(f"{RUTA}/{account_id}")
     assert obtenido.json()["identificacion"] == "1020304050"
     assert obtenido.json()["rol"] == "asesor"
+
+
+async def test_la_persona_de_una_cuenta_no_aparece_en_los_modulos_de_negocio(
+    client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
+) -> None:
+    await client.post(RUTA, json=NUEVO)
+    person_id = _count(db_conn, "SELECT MAX(person_id) FROM person")
+
+    busqueda = await client.get("/api/v1/buscar", params={"q": "María"})
+    assert busqueda.status_code == 200
+    assert busqueda.json()["personas"] == []
+    assert (await client.get(f"/api/v1/clientes/{person_id}")).status_code == 404
 
 
 async def test_una_persona_existente_reutiliza_su_fila(
@@ -109,6 +123,40 @@ async def test_actualizar_cambia_rol_identificacion_y_estado(
     )
     inactivos = await client.get(RUTA, params={"estado": "inactivo"})
     assert [u["usuario"] for u in inactivos.json()["items"]] == ["mperez"]
+
+
+async def test_dos_admins_que_se_degradan_a_la_vez_no_dejan_el_sistema_sin_admin(
+    client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
+) -> None:
+    ids = []
+    for usuario, identificacion in (("root1", "1000001"), ("root2", "1000002")):
+        datos = {**NUEVO, "usuario": usuario, "identificacion": identificacion}
+        creado = await client.post(RUTA, json={**datos, "rol": "admin_sistemas"})
+        ids.append(creado.json()["id"])
+    degradar = {
+        "nombre": "Admin",
+        "tipo_identificacion": "CC",
+        "correo": "admin@example.test",
+        "rol": "asesor",
+        "activo": True,
+    }
+
+    respuestas = await asyncio.gather(
+        *(
+            client.put(f"{RUTA}/{account_id}", json={**degradar, "identificacion": ident})
+            for account_id, ident in zip(ids, ("1000001", "1000002"), strict=True)
+        )
+    )
+
+    assert sorted(r.status_code for r in respuestas) == [200, 409]
+    assert (
+        _count(
+            db_conn,
+            "SELECT COUNT(*) FROM user_account ua JOIN user_role ur USING (account_id) "
+            "JOIN app_role ar USING (role_id) WHERE ar.code = 'ADMIN_SISTEMAS' AND ua.is_active",
+        )
+        == 1
+    )
 
 
 async def test_identificacion_de_otra_persona_responde_409(client: httpx.AsyncClient) -> None:

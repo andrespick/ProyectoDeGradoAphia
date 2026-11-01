@@ -12,6 +12,8 @@ backup.env
 *.key
 *.p12
 *.age
+# Identidad age que descifra los respaldos (docs/despliegue/restauracion.md)
+*identity*.txt
 infra/production/secrets/*
 !infra/production/secrets/README.md
 infra/production/.env.production

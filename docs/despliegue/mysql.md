@@ -24,7 +24,8 @@ corregir la causa y volver a iniciar.
 - `innodb_buffer_pool_size = 512M`, `max_connections = 60`, `performance_schema = OFF`
   (VPS de 2 GB). Con 4 GB: buffer pool 1G y `MYSQL_MEMORY_LIMIT=2000m`.
 - Zona horaria UTC; `utf8mb4_0900_ai_ci`.
-- `slow_query_log` con umbral de 2 s.
+- `slow_query_log` apagado: guardaría el SQL con datos personales. Para diagnosticar,
+  actívelo un tiempo (`SET GLOBAL slow_query_log = ON`, umbral de 2 s) y borre el archivo después.
 
 ## Migraciones (siempre manuales y con respaldo previo)
 

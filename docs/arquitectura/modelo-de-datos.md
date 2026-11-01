@@ -98,6 +98,25 @@ momento del evento (desviación deliberada de la regla «FK con `RESTRICT`»; no
 negocio sino registro histórico). La papelera no cambia el resto del modelo: el registro se
 borra como antes y restaurarlo lo crea de nuevo con otro identificador.
 
+## Migraciones 0019–0020 (nombres únicos de catálogos)
+
+| Migración | Contenido | Motivo |
+| --- | --- | --- |
+| `0019_financial_institution_nombre_unico` | `UNIQUE (name)` en `financial_institution` | El banco se busca o crea por nombre exacto; dos registros simultáneos dejaban filas iguales |
+| `0020_service_provider_nombre_unico` | `UNIQUE (name)` en `service_provider` | Mismo motivo para los proveedores de servicios |
+
+La aplicación busca o crea el nombre en una transacción corta propia, antes de la del registro
+(`catalogos/repository.id_de_nombre`), con `INSERT … ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`:
+si otra solicitud lo creó a la vez recibe el id existente, y la transacción del registro, que
+empieza después, ve la fila (con `REPEATABLE READ` no la vería). `city` queda sin restricción
+porque la unicidad de ciudades sigue pendiente (decisión 3).
+
+Concurrencia en altas: las escrituras evitan lecturas con bloqueo sobre la tabla en la que van a
+insertar. Un `INSERT … SELECT … NOT EXISTS` sobre `person_party_role` o un `UPDATE` con subconsulta
+sobre `person_document` bloqueaban el hueco final del índice y dos altas simultáneas de personas se
+interbloqueaban (error 1213, respuesta 503). Los papeles usan ahora la clave primaria
+(`ON DUPLICATE KEY UPDATE` sin efecto) y el documento se lee sin bloqueo y se actualiza por id.
+
 ### Personas con varios papeles (decisión con el responsable, 2026-10-28)
 
 Una fila en `person` por identificación. La misma persona puede ser a la vez propietaria,
@@ -105,7 +124,7 @@ arrendataria y codeudora: cada papel es una fila en `person_party_role` (lo que 
 «es» frente a la inmobiliaria) y, cuando participa en un contrato, una fila en
 `agreement_party` con su papel en ese contrato. Al asociar a una persona como propietaria de
 un inmueble o como arrendataria/codeudora de un contrato, la aplicación agrega el papel
-declarado automáticamente (`INSERT IGNORE`). El «tipo de cliente» de los requisitos son esos
+declarado automáticamente (sin duplicar, por la clave primaria). El «tipo de cliente» de los requisitos son esos
 papeles. `person_category` queda sin uso (NULL).
 
 Códigos de `party_role`: `OWNER` (propietario), `TENANT` (arrendatario) y `CO_DEBTOR`
@@ -176,8 +195,8 @@ El formulario guarda un documento, un teléfono, un correo y una cuenta bancaria
 Las lecturas toman la fila de menor id de cada tabla hija (`MIN(id)`), de modo que datos
 migrados con varias filas no duplican resultados. Las escrituras reemplazan teléfono, correo y
 cuenta (`DELETE` + `INSERT`) y actualizan el documento principal; los papeles se agregan con
-`INSERT IGNORE` y solo se quitan los que el formulario deja de marcar, siempre que no tengan
-vínculos (`papel_en_uso`). Los bancos se crean por nombre exacto (`financial_institution`).
+la clave primaria (`ON DUPLICATE KEY UPDATE` sin efecto) y solo se quitan los que el formulario deja de marcar, siempre que no tengan
+vínculos (`papel_en_uso`). Los bancos se crean por nombre exacto (`financial_institution`, único desde 0019).
 
 ### Inmuebles (fase 3)
 

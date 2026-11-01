@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -62,7 +64,7 @@ from modules.sistema.schemas import (
     EstadoMigraciones,
     Respaldo,
 )
-from modules.usuarios.repository import UsuarioDuplicadoError
+from modules.usuarios.repository import UltimoAdministradorError, UsuarioDuplicadoError
 from modules.usuarios.schemas import EstadoUsuario, Usuario, UsuarioCreate, UsuarioUpdate
 
 # Pocas iteraciones para que las pruebas sean rápidas; el formato es el mismo.
@@ -95,8 +97,14 @@ class InMemoryPapeleraRepository:
             items = [r for r in items if r.tipo == tipo]
         return items[offset : offset + limit], len(items)
 
-    async def obtener(self, record_id: int) -> tuple[RegistroEliminado, dict[str, Any]] | None:
-        return self.items.get(record_id)
+    @asynccontextmanager
+    async def restaurando(
+        self, record_id: int
+    ) -> AsyncIterator[tuple[RegistroEliminado, dict[str, Any]] | None]:
+        encontrado = self.items.get(record_id)
+        yield encontrado
+        if encontrado is not None:
+            del self.items[record_id]
 
     async def eliminar(self, record_id: int) -> bool:
         return self.items.pop(record_id, None) is not None
@@ -447,6 +455,7 @@ class InMemoryUsuariosRepository:
         actual = self.items.get(account_id)
         if actual is None:
             return None
+        antes = self._admins_activos()
         item = actual.model_copy(
             update={
                 "nombre": datos.nombre,
@@ -458,19 +467,27 @@ class InMemoryUsuariosRepository:
             }
         )
         self.items[account_id] = item
+        self._exigir_admin(antes, account_id, actual)
         if hashed_password is not None:
             self.hashes[account_id] = hashed_password
         return item
 
     async def eliminar(self, account_id: int) -> bool:
-        return self.items.pop(account_id, None) is not None
+        antes = self._admins_activos()
+        actual = self.items.pop(account_id, None)
+        if actual is None:
+            return False
+        self._exigir_admin(antes, account_id, actual)
+        return True
 
-    async def count_other_active_admins(self, account_id: int) -> int:
-        return sum(
-            1
-            for u in self.items.values()
-            if u.id != account_id and u.activo and u.rol == Role.ADMIN_SISTEMAS
-        )
+    def _admins_activos(self) -> int:
+        return sum(1 for u in self.items.values() if u.activo and u.rol == Role.ADMIN_SISTEMAS)
+
+    def _exigir_admin(self, antes: int, account_id: int, previo: Usuario) -> None:
+        """Como el repositorio real: revierte si el cambio dejó el sistema sin administradores."""
+        if antes > 0 and self._admins_activos() == 0:
+            self.items[account_id] = previo
+            raise UltimoAdministradorError()
 
     async def unlock(self, account_id: int) -> Usuario | None:
         actual = self.items.get(account_id)

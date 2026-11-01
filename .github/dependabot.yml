@@ -1,0 +1,8 @@
+# Las acciones de los workflows están fijadas por SHA (una etiqueta se puede mover); Dependabot
+# abre un PR mensual cuando hay versión nueva, y la CI lo valida antes de fusionarlo.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

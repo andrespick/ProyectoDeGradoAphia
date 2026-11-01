@@ -31,9 +31,15 @@ def apply_seeds(conn: pymysql.connections.Connection) -> int:
 
 
 def main() -> int:
-    app_env = os.environ.get("APP_ENV", "development")
+    # Sin valor por defecto: la semilla reactiva «admin» con una clave pública, así que una
+    # variable olvidada en una consola con las credenciales de producción no debe bastar.
+    app_env = os.environ.get("APP_ENV")
     if app_env not in ALLOWED_ENVIRONMENTS:
-        print(f"ERROR: los datos ficticios no se cargan en APP_ENV={app_env}.", file=sys.stderr)
+        print(
+            f"ERROR: los datos ficticios solo se cargan con APP_ENV=development o test "
+            f"(actual: {app_env or 'sin definir'}).",
+            file=sys.stderr,
+        )
         return 2
     try:
         params = ConnectionParams.from_env()

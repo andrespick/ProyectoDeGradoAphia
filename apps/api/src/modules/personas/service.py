@@ -67,9 +67,11 @@ class PersonasService:
         items, total = await self._repository.listar(filtros, limit=limit, offset=offset)
         return PersonasPage(items=items, total=total, limit=limit, offset=offset)
 
+    # Una persona sin papel solo existe como cuenta de usuario: no es un registro del negocio y
+    # estas rutas (abiertas al asesor) no la muestran, editan ni eliminan.
     async def obtener(self, person_id: int) -> PersonaDetalle:
         persona = await self._repository.detalle(person_id)
-        if persona is None:
+        if persona is None or not persona.papeles:
             raise PersonaNoEncontradaError()
         return persona
 
@@ -86,7 +88,7 @@ class PersonasService:
         self, person_id: int, datos: PersonaCreate, papel_fijo: Papel | None
     ) -> Persona:
         actual = await self._repository.obtener(person_id)
-        if actual is None:
+        if actual is None or not actual.papeles:
             raise PersonaNoEncontradaError()
         papeles = _papeles(datos, papel_fijo)
         quitados = [papel for papel in actual.papeles if papel not in papeles]
@@ -102,7 +104,7 @@ class PersonasService:
 
     async def eliminar(self, person_id: int, actor: Principal) -> None:
         persona = await self._repository.obtener(person_id)
-        if persona is None:
+        if persona is None or not persona.papeles:
             raise PersonaNoEncontradaError()
         dependencias = await self._repository.contar_dependencias(person_id)
         partes = []

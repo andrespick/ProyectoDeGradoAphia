@@ -13,6 +13,7 @@ from core.errors import (
 )
 from db.connection import Database
 from db.sql import ER_DUP_ENTRY, ER_ROW_IS_REFERENCED, like_pattern, mysql_error_code
+from modules.catalogos.repository import id_de_nombre
 from modules.catalogos.schemas import PAPEL_POR_CODIGO
 from modules.papelera.repository import guardar_en_papelera
 from modules.papelera.schemas import EntradaPapelera
@@ -129,6 +130,7 @@ class PersonasRepository:
         return None if row is None else _persona(row)
 
     async def crear(self, datos: PersonaCreate, papeles: list[Papel]) -> Persona:
+        banco_id = await self._banco_id(datos)
         try:
             async with (
                 self._db.transaction() as conn,
@@ -144,7 +146,7 @@ class PersonasRepository:
                 )
                 await _guardar_contacto(cursor, person_id, datos)
                 await agregar_papeles(cursor, person_id, papeles)
-                await _guardar_cuenta(cursor, person_id, datos)
+                await _guardar_cuenta(cursor, person_id, datos, banco_id)
                 persona = await _fetch(cursor, person_id)
         except pymysql.err.IntegrityError as exc:
             if mysql_error_code(exc) == ER_DUP_ENTRY:
@@ -156,6 +158,7 @@ class PersonasRepository:
     async def actualizar(
         self, person_id: int, datos: PersonaCreate, papeles: list[Papel]
     ) -> Persona | None:
+        banco_id = await self._banco_id(datos)
         try:
             async with (
                 self._db.transaction() as conn,
@@ -184,12 +187,20 @@ class PersonasRepository:
                     (person_id, *[codigo_de(p) for p in papeles]),
                 )
                 await cursor.execute("DELETE FROM bank_account WHERE person_id = %s", (person_id,))
-                await _guardar_cuenta(cursor, person_id, datos)
+                await _guardar_cuenta(cursor, person_id, datos, banco_id)
                 return await _fetch(cursor, person_id)
         except pymysql.err.IntegrityError as exc:
             if mysql_error_code(exc) == ER_DUP_ENTRY:
                 raise IdentificacionDuplicadaError() from exc
             raise
+
+    async def _banco_id(self, datos: PersonaCreate) -> int | None:
+        cuenta = datos.cuenta_bancaria
+        if cuenta is None:
+            return None
+        return await id_de_nombre(
+            self._db, "financial_institution", "financial_institution_id", cuenta.banco
+        )
 
     async def contar_dependencias(self, person_id: int) -> Dependencias:
         async with self._db.connection() as conn, conn.cursor(aiomysql.DictCursor) as cursor:
@@ -285,32 +296,42 @@ async def guardar_documento(
     row = await cursor.fetchone()
     if row is None:
         raise CatalogoInvalidoError("tipo_identificacion")
+    # Lectura sin bloqueo y UPDATE por clave primaria: el UPDATE con subconsulta bloqueaba el
+    # hueco del índice y dos altas simultáneas se interbloqueaban. Quien edita ya bloqueó la fila
+    # de la persona (FOR UPDATE), así que nadie más cambia sus documentos entre tanto.
     await cursor.execute(
-        "UPDATE person_document SET document_type_id = %s, document_identifier = %s "
-        "WHERE person_document_id = (SELECT id FROM (SELECT MIN(person_document_id) AS id "
-        "FROM person_document WHERE person_id = %s) AS x)",
-        (row["document_type_id"], numero, person_id),
+        "SELECT MIN(person_document_id) AS id FROM person_document WHERE person_id = %s",
+        (person_id,),
     )
-    await cursor.execute("SELECT 1 FROM person_document WHERE person_id = %s LIMIT 1", (person_id,))
-    if await cursor.fetchone() is None:
+    principal = (await cursor.fetchone())["id"]
+    if principal is None:
         await cursor.execute(
             "INSERT INTO person_document (person_id, document_type_id, document_identifier) "
             "VALUES (%s, %s, %s)",
             (person_id, row["document_type_id"], numero),
+        )
+    else:
+        await cursor.execute(
+            "UPDATE person_document SET document_type_id = %s, document_identifier = %s "
+            "WHERE person_document_id = %s",
+            (row["document_type_id"], numero, principal),
         )
 
 
 async def agregar_papeles(
     cursor: aiomysql.DictCursor, person_id: int, papeles: list[Papel]
 ) -> None:
-    """Papeles declarados; omite los que ya existen (asociaciones automáticas previas)."""
+    """Papeles declarados; omite los que ya existen (asociaciones automáticas previas).
+
+    El duplicado se resuelve con la clave primaria: un ``NOT EXISTS`` sobre la misma tabla
+    bloqueaba el hueco del índice y dos altas simultáneas se interbloqueaban.
+    """
     for papel in papeles:
         await cursor.execute(
             "INSERT INTO person_party_role (person_id, party_role_id) "
-            "SELECT %s, pr.party_role_id FROM party_role pr WHERE pr.code = %s "
-            "AND NOT EXISTS (SELECT 1 FROM person_party_role ppr "
-            " WHERE ppr.person_id = %s AND ppr.party_role_id = pr.party_role_id)",
-            (person_id, codigo_de(papel), person_id),
+            "SELECT %s, party_role_id FROM party_role WHERE code = %s "
+            "ON DUPLICATE KEY UPDATE person_party_role.person_id = person_party_role.person_id",
+            (person_id, codigo_de(papel)),
         )
 
 
@@ -331,23 +352,11 @@ async def _guardar_contacto(
 
 
 async def _guardar_cuenta(
-    cursor: aiomysql.DictCursor, person_id: int, datos: PersonaCreate
+    cursor: aiomysql.DictCursor, person_id: int, datos: PersonaCreate, banco_id: int | None
 ) -> None:
     cuenta = datos.cuenta_bancaria
     if cuenta is None:
         return
-    await cursor.execute(
-        "SELECT financial_institution_id FROM financial_institution WHERE name = %s",
-        (cuenta.banco,),
-    )
-    row = await cursor.fetchone()
-    if row is None:
-        await cursor.execute(
-            "INSERT INTO financial_institution (name) VALUES (%s)", (cuenta.banco,)
-        )
-        banco_id = cursor.lastrowid
-    else:
-        banco_id = row["financial_institution_id"]
     await cursor.execute(
         "INSERT INTO bank_account (person_id, account_identifier, bank_account_category_id, "
         "financial_institution_id) SELECT %s, %s, bank_account_category_id, %s "

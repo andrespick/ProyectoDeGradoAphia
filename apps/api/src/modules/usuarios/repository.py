@@ -7,7 +7,7 @@ from typing import Any
 import aiomysql
 import pymysql
 
-from core.errors import CatalogoInvalidoError, IdentificacionDuplicadaError
+from core.errors import CatalogoInvalidoError, ConflictError, IdentificacionDuplicadaError
 from db.connection import Database
 from db.sql import ER_DUP_ENTRY, like_pattern, mysql_error_code
 from modules.auth.repository import en_utc
@@ -119,6 +119,7 @@ class UsuariosRepository:
                 self._db.transaction() as conn,
                 conn.cursor(aiomysql.DictCursor) as cursor,
             ):
+                admins_antes = await _bloquear_administradores(cursor)
                 await cursor.execute(
                     "SELECT person_id FROM user_account WHERE account_id = %s FOR UPDATE",
                     (account_id,),
@@ -145,6 +146,7 @@ class UsuariosRepository:
                 )
                 await cursor.execute("DELETE FROM user_role WHERE account_id = %s", (account_id,))
                 await _asignar_rol(cursor, account_id, datos.rol)
+                await _exigir_administrador(cursor, admins_antes)
                 return await _fetch(cursor, account_id)
         except pymysql.err.IntegrityError as exc:
             if mysql_error_code(exc) == ER_DUP_ENTRY:
@@ -152,21 +154,14 @@ class UsuariosRepository:
             raise
 
     async def eliminar(self, account_id: int) -> bool:
-        async with self._db.transaction() as conn, conn.cursor() as cursor:
+        async with self._db.transaction() as conn, conn.cursor(aiomysql.DictCursor) as cursor:
+            admins_antes = await _bloquear_administradores(cursor)
             await cursor.execute("DELETE FROM user_role WHERE account_id = %s", (account_id,))
             await cursor.execute("DELETE FROM user_account WHERE account_id = %s", (account_id,))
-            return cursor.rowcount > 0
-
-    async def count_other_active_admins(self, account_id: int) -> int:
-        async with self._db.connection() as conn, conn.cursor() as cursor:
-            await cursor.execute(
-                "SELECT COUNT(*) FROM user_account ua "
-                "JOIN user_role ur ON ur.account_id = ua.account_id "
-                "JOIN app_role ar ON ar.role_id = ur.role_id "
-                "WHERE ar.code = %s AND ua.is_active = 1 AND ua.account_id <> %s",
-                (Role.ADMIN_SISTEMAS.code, account_id),
-            )
-            return int((await cursor.fetchone())[0])
+            if cursor.rowcount == 0:
+                return False
+            await _exigir_administrador(cursor, admins_antes)
+            return True
 
     async def unlock(self, account_id: int) -> Usuario | None:
         async with (
@@ -206,6 +201,41 @@ class UsuariosRepository:
 
 class UsuarioDuplicadoError(Exception):
     """Marcador interno; el service lo traduce al error de dominio (evita import circular)."""
+
+
+class UltimoAdministradorError(ConflictError):
+    code = "ultimo_administrador"
+    default_message = "No se puede dejar el sistema sin un Administrador de Sistemas activo."
+
+
+async def _bloquear_administradores(cursor: aiomysql.DictCursor) -> int:
+    """Serializa los cambios que pueden quitar administradores y devuelve cuántos hay activos.
+
+    Sin el bloqueo, dos administradores que se degradan entre sí a la vez pasarían ambos la
+    comprobación y el sistema quedaría sin ninguno. Debe ser la primera lectura de la transacción.
+    """
+    await cursor.execute(
+        "SELECT role_id FROM app_role WHERE code = %s FOR UPDATE", (Role.ADMIN_SISTEMAS.code,)
+    )
+    await cursor.fetchone()
+    return await _administradores_activos(cursor)
+
+
+async def _exigir_administrador(cursor: aiomysql.DictCursor, antes: int) -> None:
+    """Revierte la transacción si este cambio dejó el sistema sin administradores activos."""
+    if antes > 0 and await _administradores_activos(cursor) == 0:
+        raise UltimoAdministradorError()
+
+
+async def _administradores_activos(cursor: aiomysql.DictCursor) -> int:
+    await cursor.execute(
+        "SELECT COUNT(*) AS total FROM user_account ua "
+        "JOIN user_role ur ON ur.account_id = ua.account_id "
+        "JOIN app_role ar ON ar.role_id = ur.role_id "
+        "WHERE ar.code = %s AND ua.is_active = 1",
+        (Role.ADMIN_SISTEMAS.code,),
+    )
+    return int((await cursor.fetchone())["total"])
 
 
 async def _fetch(cursor: aiomysql.DictCursor, account_id: int) -> Usuario | None:

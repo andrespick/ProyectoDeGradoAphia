@@ -26,7 +26,8 @@ async def listar_eventos(
     entidad_id: Annotated[int | None, Query(ge=1)] = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
     desde: date | None = None,
-    hasta: date | None = None,
+    # El filtro suma un día a «hasta»: el último día representable desbordaría (500).
+    hasta: Annotated[date | None, Query(lt=date.max)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
 ) -> AuditoriaPage:

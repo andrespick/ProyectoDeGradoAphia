@@ -10,6 +10,7 @@ import pymysql
 from core.errors import CatalogoInvalidoError, RegistroReferenciadoError
 from db.connection import Database
 from db.sql import ER_NO_REFERENCED_ROW, ER_ROW_IS_REFERENCED, like_pattern, mysql_error_code
+from modules.catalogos.repository import id_de_nombre
 from modules.inmuebles.schemas import (
     Inmueble,
     InmuebleCreate,
@@ -87,6 +88,7 @@ class InmueblesRepository:
             return await _fetch(cursor, property_id)
 
     async def crear(self, datos: InmuebleCreate) -> Inmueble:
+        proveedores = await self._proveedores(datos)
         async with (
             self._db.transaction() as conn,
             conn.cursor(aiomysql.DictCursor) as cursor,
@@ -105,12 +107,13 @@ class InmueblesRepository:
             )
             property_id = int(cursor.lastrowid)
             await _agregar_propietarios(cursor, property_id, datos.propietarios_ids)
-            await _guardar_servicios(cursor, property_id, datos.servicios)
+            await _guardar_servicios(cursor, property_id, datos.servicios, proveedores)
             inmueble = await _fetch(cursor, property_id)
         assert inmueble is not None  # noqa: S101 - recién insertado en la misma transacción
         return inmueble
 
     async def actualizar(self, property_id: int, datos: InmuebleCreate) -> Inmueble | None:
+        proveedores = await self._proveedores(datos)
         async with (
             self._db.transaction() as conn,
             conn.cursor(aiomysql.DictCursor) as cursor,
@@ -150,8 +153,15 @@ class InmueblesRepository:
             await cursor.execute(
                 "DELETE FROM property_utility WHERE property_id = %s", (property_id,)
             )
-            await _guardar_servicios(cursor, property_id, datos.servicios)
+            await _guardar_servicios(cursor, property_id, datos.servicios, proveedores)
             return await _fetch(cursor, property_id)
+
+    async def _proveedores(self, datos: InmuebleCreate) -> dict[str, int]:
+        nombres = sorted({s.proveedor for s in datos.servicios if s.proveedor})
+        return {
+            nombre: await id_de_nombre(self._db, "service_provider", "provider_id", nombre)
+            for nombre in nombres
+        }
 
     async def contar_contratos(self, property_id: int) -> int:
         async with self._db.connection() as conn, conn.cursor() as cursor:
@@ -225,7 +235,10 @@ async def _agregar_propietarios(
 
 
 async def _guardar_servicios(
-    cursor: aiomysql.DictCursor, property_id: int, servicios: list[ServicioPublicoCreate]
+    cursor: aiomysql.DictCursor,
+    property_id: int,
+    servicios: list[ServicioPublicoCreate],
+    proveedores: dict[str, int],
 ) -> None:
     for servicio in servicios:
         tipo_id = None
@@ -243,7 +256,7 @@ async def _guardar_servicios(
             (
                 property_id,
                 tipo_id,
-                await _proveedor_id(cursor, servicio.proveedor),
+                proveedores[servicio.proveedor] if servicio.proveedor else None,
                 servicio.numero_contrato,
             ),
         )
@@ -260,17 +273,6 @@ async def ciudad_id(cursor: aiomysql.DictCursor, nombre: str | None) -> int | No
     if row is not None:
         return int(row["city_id"])
     await cursor.execute("INSERT INTO city (name, country_code) VALUES (%s, 'CO')", (nombre,))
-    return int(cursor.lastrowid)
-
-
-async def _proveedor_id(cursor: aiomysql.DictCursor, nombre: str | None) -> int | None:
-    if not nombre:
-        return None
-    await cursor.execute("SELECT provider_id FROM service_provider WHERE name = %s", (nombre,))
-    row = await cursor.fetchone()
-    if row is not None:
-        return int(row["provider_id"])
-    await cursor.execute("INSERT INTO service_provider (name) VALUES (%s)", (nombre,))
     return int(cursor.lastrowid)
 
 

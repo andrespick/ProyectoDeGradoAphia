@@ -52,5 +52,10 @@ siendo manuales.
 ## Primera ejecución
 
 Los workflows están escritos pero **no se han ejecutado en GitHub**. Tras el primer push revise
-la pestaña Actions; las versiones mayores de las acciones (`actions/checkout@v5`,
-`actions/setup-node@v5`, `pnpm/action-setup@v4`, `astral-sh/setup-uv@v6`) pueden actualizarse.
+la pestaña Actions.
+
+Las acciones externas están fijadas por SHA de commit (con la versión en un comentario): una
+etiqueta como `v5` puede moverse y ejecutar código distinto en la CI que precede al despliegue.
+`.github/dependabot.yml` abre un PR mensual cuando hay versión nueva. `VPS_DEPLOY_PATH` y
+`API_BASE_URL` llegan a los pasos como variables de entorno, nunca interpoladas en el script, y
+la ruta se valida (`/ruta/absoluta` sin espacios ni comillas) antes de usarla en el comando SSH.

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import aiomysql
@@ -50,17 +52,30 @@ class PapeleraRepository:
             total = (await cursor.fetchone())["total"]
         return [_registro(row) for row in rows], int(total)
 
-    async def obtener(self, record_id: int) -> tuple[RegistroEliminado, dict[str, Any]] | None:
-        async with self._db.connection() as conn, conn.cursor(aiomysql.DictCursor) as cursor:
+    @asynccontextmanager
+    async def restaurando(
+        self, record_id: int
+    ) -> AsyncIterator[tuple[RegistroEliminado, dict[str, Any]] | None]:
+        """Bloquea el registro mientras se restaura y lo quita de la papelera al salir sin error.
+
+        Una segunda restauración simultánea espera el bloqueo y después ya no lo encuentra; si la
+        creación falla, la transacción se revierte y el registro sigue en la papelera.
+        """
+        async with self._db.transaction() as conn, conn.cursor(aiomysql.DictCursor) as cursor:
             await cursor.execute(
                 "SELECT deleted_record_id, entity_type, entity_id, label, deleted_at, "
-                "deleted_by_name, payload FROM deleted_record WHERE deleted_record_id = %s",
+                "deleted_by_name, payload FROM deleted_record WHERE deleted_record_id = %s "
+                "FOR UPDATE",
                 (record_id,),
             )
             row = await cursor.fetchone()
-        if row is None:
-            return None
-        return _registro(row), json.loads(row["payload"])
+            if row is None:
+                yield None
+                return
+            yield _registro(row), json.loads(row["payload"])
+            await cursor.execute(
+                "DELETE FROM deleted_record WHERE deleted_record_id = %s", (record_id,)
+            )
 
     async def eliminar(self, record_id: int) -> bool:
         async with self._db.transaction() as conn, conn.cursor() as cursor:

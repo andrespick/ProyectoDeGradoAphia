@@ -252,6 +252,12 @@ class TestAuditoria:
         assert evento["actor_id"] is None  # el usuario ficticio no tiene cuenta
         assert [e["accion"] for e in filtrados.json()["items"]] == ["solicitar_respaldo"]
 
+    async def test_fecha_limite_responde_422_y_no_500(self, client: httpx.AsyncClient) -> None:
+        response = await client.get("/api/v1/auditoria", params={"hasta": "9999-12-31"})
+
+        assert response.status_code == 422
+        assert (await client.get("/api/v1/auditoria", params={"hasta": "9999-12-30"})).is_success
+
     async def test_solo_el_administrador(self, db_client: httpx.AsyncClient) -> None:
         response = await db_client.get("/api/v1/auditoria", headers=ASESOR)
 

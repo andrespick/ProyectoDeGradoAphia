@@ -19,7 +19,7 @@ migraciones presentes), y el `tar` del volumen de documentos. El ciclo completo 
 ## Configuración en el VPS
 
 ```bash
-age-keygen -o aphia-backup-identity.txt   # en un equipo seguro, NO en el VPS
+age-keygen -o ~/aphia-backup-identity.txt   # en un equipo seguro, NO en el VPS ni en el repo
 # Copie la línea "public key: age1..." en backup.env; guarde el archivo de identidad fuera del VPS
 cd /opt/aphia/infra/production/backup
 cp backup.env.example backup.env && chmod 600 backup.env

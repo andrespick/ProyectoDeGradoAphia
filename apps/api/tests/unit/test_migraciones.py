@@ -8,6 +8,7 @@ import pytest
 
 from dbscripts import MIGRATIONS_DIR, SEEDS_DIR, ScriptError, SqlFile, discover, split_statements
 from migrate import pending_migrations
+from seed import main as seed_main
 
 
 def test_migraciones_del_repositorio_son_validas() -> None:
@@ -53,3 +54,16 @@ def test_checksum_independiente_de_fin_de_linea(tmp_path: Path) -> None:
     crlf = SqlFile("0001", "x", tmp_path / "a.sql", "SELECT 1;\r\n")
 
     assert lf.checksum == crlf.checksum
+
+
+@pytest.mark.parametrize("app_env", [None, "production", "staging"])
+def test_seed_exige_app_env_de_desarrollo(
+    monkeypatch: pytest.MonkeyPatch, app_env: str | None
+) -> None:
+    # Nunca llega a conectarse: la semilla reactivaría «admin» con una clave pública.
+    if app_env is None:
+        monkeypatch.delenv("APP_ENV", raising=False)
+    else:
+        monkeypatch.setenv("APP_ENV", app_env)
+
+    assert seed_main() == 2
