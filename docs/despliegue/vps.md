@@ -85,9 +85,19 @@ instale Caddy desde su repositorio oficial (https://caddyserver.com/docs/install
 
 ```
 api.aphia.example.com {
+    # Sin este límite cualquiera puede enviar un cuerpo de cientos de MB y agotar la memoria
+    # de la API (384 MB). 12 MB cubre el futuro envío de documentos (10 MB máximo).
+    request_body {
+        max_size 12MB
+    }
     reverse_proxy 127.0.0.1:8000
 }
 ```
+
+Además, proteja `/api/v1/auth/login` con un límite de peticiones por IP: cada intento calcula
+PBKDF2 (CPU) y tres intentos bastan para bloquear una cuenta conocida. Lo más sencillo es
+activar el proxy de Cloudflare (nube naranja) en el registro `api` y crear una regla de
+*Rate Limiting* en Security → WAF (por ejemplo, 10 peticiones por minuto por IP a esa ruta).
 
 `sudo systemctl reload caddy` y compruebe `curl https://api.aphia.example.com/api/health`.
 Esa URL es `API_BASE_URL` en GitHub; la del frontend debe estar en `CORS_ORIGINS`.

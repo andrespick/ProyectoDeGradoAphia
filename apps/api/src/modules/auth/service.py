@@ -50,6 +50,8 @@ class AuthRepositoryPort(Protocol):
 
     async def cambiar_clave(self, account_id: int, hashed_password: str) -> int: ...
 
+    async def cerrar_sesiones(self, account_id: int) -> None: ...
+
 
 class AuthService:
     def __init__(

@@ -8,7 +8,11 @@ import {
   useState,
 } from "react";
 
-import { getCurrentPrincipal, login as loginRequest } from "../../services/authService";
+import {
+  getCurrentPrincipal,
+  login as loginRequest,
+  logout as logoutRequest,
+} from "../../services/authService";
 import { clearToken, replaceToken, SESSION_EXPIRED_EVENT, setToken } from "../../services/session";
 import type { LoginResponse, Principal, Role } from "../../types/auth";
 import { tieneRol } from "./roles";
@@ -62,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Primero la API (usa el token guardado); si falla, la sesión local se cierra igual.
+    void logoutRequest().catch(() => undefined);
     clearToken();
     setState(ANONIMO);
   }, []);

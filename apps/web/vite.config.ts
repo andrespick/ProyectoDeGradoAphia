@@ -16,7 +16,8 @@ export default defineConfig(({ command, mode }) => {
     plugins: [react()],
     server: { host: "localhost", port: 5173, strictPort: true },
     preview: { host: "localhost", port: 4173, strictPort: true },
-    build: { outDir: "dist", sourcemap: true },
+    // Sin source maps en producción: no publicar el código fuente en Pages.
+    build: { outDir: "dist" },
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],

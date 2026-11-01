@@ -14,6 +14,11 @@ export function login(usuario: string, clave: string): Promise<LoginResponse> {
   });
 }
 
+/** Invalida el token en la API; cierra también las sesiones de otras pestañas o dispositivos. */
+export function logout(): Promise<void> {
+  return apiRequest<void>("/api/v1/auth/logout", { method: "POST", timeoutMs: 5_000 });
+}
+
 /** Cambia la clave propia; la API cierra las demás sesiones y entrega un token nuevo. */
 export function cambiarClave(clave_actual: string, clave_nueva: string): Promise<LoginResponse> {
   return apiRequest<LoginResponse>("/api/v1/auth/cambiar-clave", {

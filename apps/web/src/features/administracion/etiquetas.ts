@@ -6,6 +6,7 @@ export const ACCIONES: Record<string, string> = {
   inicio_sesion_fallido: "Intento fallido",
   cuenta_bloqueada: "Cuenta bloqueada",
   cambio_clave: "Cambio de contraseña",
+  cierre_sesion: "Cierre de sesión",
   crear: "Creación",
   actualizar: "Modificación",
   eliminar: "Eliminación",

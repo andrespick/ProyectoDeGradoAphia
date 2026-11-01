@@ -40,6 +40,30 @@ describe("AuthProvider", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: "Bearer tok.en" });
   });
 
+  it("cerrar sesión avisa a la API con el token y luego lo borra", async () => {
+    sessionStorage.setItem("aphia.token", "tok.en");
+    const fetchMock = mockApi({
+      "GET /api/v1/auth/me": () => json(DB_PRINCIPAL),
+      "POST /api/v1/auth/logout": () => new Response(null, { status: 204 }),
+    });
+
+    render(
+      <AuthProvider>
+        <Estado />
+      </AuthProvider>,
+    );
+    await screen.findByText("autenticado");
+
+    await act(async () => {
+      screen.getByRole("button", { name: "salir" }).click();
+    });
+
+    expect(await screen.findByText("anonimo")).toBeInTheDocument();
+    expect(sessionStorage.getItem("aphia.token")).toBeNull();
+    const logoutCall = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(logoutCall?.[1]?.headers).toMatchObject({ Authorization: "Bearer tok.en" });
+  });
+
   it("un 401 con token borra la sesión; el evento de expiración vuelve a anónimo", async () => {
     sessionStorage.setItem("aphia.token", "viejo");
     mockApi({ "GET /api/v1/auth/me": () => apiError(401, "no_autenticado", "Inicie sesión.") });

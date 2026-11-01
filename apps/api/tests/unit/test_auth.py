@@ -151,6 +151,20 @@ class TestLogin:
         assert me.status_code == 200
         assert me.json() == body["principal"]
 
+    async def test_logout_invalida_el_token_en_el_servidor(
+        self, db_client: httpx.AsyncClient, auth_repository: InMemoryAuthRepository
+    ) -> None:
+        auth_repository.agregar("ana", "Clave.Segura1", roles=(Role.ADMINISTRATIVO,))
+        login = await db_client.post(LOGIN, json={"usuario": "ana", "clave": "Clave.Segura1"})
+        headers = {"Authorization": f"Bearer {login.json()['token']}"}
+
+        response = await db_client.post("/api/v1/auth/logout", headers=headers)
+
+        assert response.status_code == 204
+        # El mismo token ya no sirve aunque no haya vencido.
+        assert (await db_client.get(ME, headers=headers)).status_code == 401
+        assert (await db_client.post("/api/v1/auth/logout", headers=headers)).status_code == 401
+
     @pytest.mark.parametrize(
         "headers",
         [

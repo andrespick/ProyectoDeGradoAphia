@@ -85,6 +85,15 @@ class AuthRepository:
             )
             return int((await cursor.fetchone())[0])
 
+    async def cerrar_sesiones(self, account_id: int) -> None:
+        """Invalida todos los tokens vigentes de la cuenta (cerrar sesión desde la web)."""
+        async with self._db.transaction() as conn, conn.cursor() as cursor:
+            await cursor.execute(
+                "UPDATE user_account SET session_version = session_version + 1 "
+                "WHERE account_id = %s",
+                (account_id,),
+            )
+
     async def register_failed_attempt(
         self, account_id: int, *, max_attempts: int, lock_minutes: int, now: datetime
     ) -> tuple[int, datetime | None]:

@@ -340,6 +340,10 @@ class InMemoryAuthRepository:
         )
         return version
 
+    async def cerrar_sesiones(self, account_id: int) -> None:
+        cuenta = self.por_id(account_id)
+        self._set(replace(cuenta, session_version=cuenta.session_version + 1))
+
     def _set(self, cuenta: CuentaLogin) -> None:
         name = next(n for n, c in self.cuentas.items() if c.account_id == cuenta.account_id)
         self.cuentas[name] = cuenta
