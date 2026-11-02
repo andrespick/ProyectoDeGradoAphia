@@ -189,7 +189,7 @@ class TestConfiguracion:
         assert read_environ("DB_INEXISTENTE") is None
 
     async def test_configuracion_invalida_responde_500_sin_detalles(self) -> None:
-        def broken_provider(_scope: object) -> Settings:
+        def broken_provider() -> Settings:
             raise ConfigurationError("APP_ENV inválido")
 
         from core.middleware import RequestContextMiddleware

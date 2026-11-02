@@ -4,7 +4,7 @@
 
 | Control | Dónde | Verificado |
 | --- | --- | --- |
-| Secretos fuera del repositorio (`.env`, `.dev.vars`, `secrets/`, `backup.env` ignorados) | `.gitignore` | ✅ |
+| Secretos fuera del repositorio (`.env`, `secrets/`, `backup.env` ignorados) | `.gitignore` | ✅ |
 | Contraseñas locales aleatorias generadas por `pnpm env:init` | `scripts/env-init.mjs` | ✅ |
 | Validación de entradas con Pydantic (`extra="forbid"`, longitudes, formato) | `modules/*/schemas.py` | ✅ |
 | SQL parametrizado; usuario de la app sin permisos DDL | repositorios, `01-usuarios.sh` | ✅ |
@@ -22,7 +22,7 @@
 | Personas que solo son cuentas de usuario (sin papel): las rutas de clientes, propietarios y codeudores y la búsqueda general responden como si no existieran, así un asesor no ve ni edita los datos ni el usuario de acceso de un administrador. La búsqueda exacta por identificación de los selectores sí las encuentra (hace falta conocer el documento) | `modules/personas`, `modules/buscar` | ✅ |
 | Servicio de documentos: token de servicio (comparación en tiempo constante), tipo por firma, tamaño máximo, ids UUID, sin *path traversal*, sin sobrescritura, contenedor sin privilegios y de solo lectura | `apps/files` | ✅ |
 | MySQL y documentos sin puertos públicos; red interna sin salida a Internet; TLS obligatorio a MySQL | `infra/production/compose.yaml`, `aphia.cnf` | ✅ (en réplica local) |
-| Bases separadas por entorno (desarrollo, pruebas, staging, producción) | Compose, Hyperdrive por entorno | Parcial (staging/prod por crear) |
+| Bases separadas por entorno (desarrollo, pruebas, producción) | Compose local (desarrollo y pruebas), VPS (producción) | ✅ (staging sin crear) |
 | Despliegue a producción solo con aprobación y desde `main` | `.github/workflows/deploy.yml` | Configurado, no ejecutado |
 | Respaldos cifrados con `age`: copia local diaria (directorio 700, archivos 600, retención) y copia externa opcional; cada ejecución queda en `backup_run` y se ve en Sistema. La API no ejecuta comandos en el VPS: solo anota solicitudes que `backup.sh --solicitudes` atiende | `infra/production/backup`, `modules/sistema` | Comandos de volcado y SQL de registro verificados; ciclo completo no ejecutado en un VPS real |
 | Código de soporte (`request_id`) en cada error mostrado al usuario, sin exponer trazas | `apiClient.errorMessage` | ✅ |
@@ -34,14 +34,14 @@
 
 | Aspecto | Implementación |
 | --- | --- |
-| Contraseñas | PBKDF2-HMAC-SHA256, sal aleatoria de 16 bytes por usuario, 100 000 iteraciones; formato `pbkdf2_sha256$iter$sal$hash` (`modules/auth/passwords.py`). En Pyodide (Workers) no existe `hashlib.pbkdf2_hmac`, así que se usa una implementación pura equivalente (probada contra `hashlib`). Medido en el Worker local: ~260 ms por inicio de sesión; cabe en el plan de pago de Workers (30 s de CPU) pero no en el gratuito (10 ms): en ese caso la API debe servirse con Uvicorn. |
+| Contraseñas | PBKDF2-HMAC-SHA256, sal aleatoria de 16 bytes por usuario, 100 000 iteraciones; formato `pbkdf2_sha256$iter$sal$hash` (`modules/auth/passwords.py`, `hashlib.pbkdf2_hmac`). El costo de CPU de cada inicio de sesión es la razón de servir la API con Uvicorn en el VPS y de limitar las peticiones por IP a `/login`. |
 | Sesión | Token `base64url(JSON{sub, nombre, roles, exp, ver}).firma` con HMAC-SHA256 y `AUTH_SECRET` (≥ 32 caracteres, nunca versionado); vigencia según la política (8 h por defecto); se envía como `Authorization: Bearer`. `ver` es la `session_version` de la cuenta: cada solicitud la compara con MySQL (una consulta por clave primaria), así que desactivar la cuenta, cambiar su rol o su clave, restablecerla o «Cerrar sesiones» invalidan los tokens de inmediato. Rotar `AUTH_SECRET` cierra todas las sesiones. La web lo guarda en `sessionStorage` (o `localStorage` con «Recordarme»). «Cerrar sesión» llama a `POST /api/v1/auth/logout`, que incrementa `session_version`: el token deja de servir en el servidor (no solo se borra del navegador), también en otras pestañas o dispositivos. |
 | Cambio de contraseña | `POST /api/v1/auth/cambiar-clave` exige la clave actual, una nueva distinta que cumpla la política, incrementa `session_version` (cierra las demás sesiones) y entrega un token nuevo. Tras un restablecimiento (`must_change_password = 1`) `require_roles` responde 403 `cambio_de_clave_requerido` a todo salvo `/auth/me` y `/auth/cambiar-clave`. |
 | Bloqueo | `max_intentos` fallidos consecutivos (3 por defecto) → `locked_until = ahora + minutos_bloqueo` (15 por defecto) con `register_failed_attempt` (`SELECT … FOR UPDATE`); el login correcto reinicia el contador; una cuenta bloqueada responde 423 aunque la clave sea correcta. El evento queda en los logs (`cuenta_bloqueada`), en la auditoría y en la pantalla de Usuarios con «Desbloquear». Los valores se cambian en Configuración dentro de los límites de los CHECK de `security_policy` (3–10 intentos, 5–1440 min, 1–24 h, clave de 8–64). |
 | Enumeración de usuarios | Usuario inexistente, inactivo o clave incorrecta responden el mismo 401 `credenciales_invalidas`; los inexistentes verifican contra un hash ficticio para igualar el tiempo. Excepción conocida (requisito del cliente): una cuenta existente responde 423 al bloquearse, lo que confirma que existe; se mitiga con el límite de peticiones por IP en `/login` (ver `docs/despliegue/vps.md`). |
 | Logs | Nunca incluyen usuario, clave ni token; solo `account_id` e intentos. |
 | Perímetro (VPS) | Caddy limita el cuerpo de las solicitudes (`request_body max_size`) y las peticiones por IP (plugin `caddy-ratelimit`: 10/min a `/login`, 300/min al resto): sin eso, cualquiera puede agotar la memoria o la CPU de la API o mantener bloqueada una cuenta conocida. Configuración en `docs/despliegue/vps.md`. |
-| Desarrollo | `AUTH_MODE=development` (usuario ficticio) queda **solo** para pruebas unitarias; `pnpm env:init` genera `AUTH_SECRET` en `.env` y `apps/api/.dev.vars`, y `pnpm db:seed` crea `admin`, `administrativo` y `asesor` con la contraseña `Aphia.2026` (nunca en staging/producción: la semilla se niega a correr si `APP_ENV` no es `development` o `test`, también cuando falta). |
+| Desarrollo | `AUTH_MODE=development` (usuario ficticio) queda **solo** para pruebas unitarias; `pnpm env:init` genera `AUTH_SECRET` en `.env`, y `pnpm db:seed` crea `admin`, `administrativo` y `asesor` con la contraseña `Aphia.2026` (nunca en staging/producción: la semilla se niega a correr si `APP_ENV` no es `development` o `test`, también cuando falta). |
 
 Primer administrador en producción: ver `docs/despliegue/instalacion-y-mantenimiento.md`
 (se escribe en la fase 5; mientras tanto, genere el hash con `hash_password` y ejecute los
@@ -53,14 +53,12 @@ Primer administrador en producción: ver `docs/despliegue/instalacion-y-mantenim
 | Secreto | Desarrollo | Producción |
 | --- | --- | --- |
 | Contraseñas MySQL | `.env` (generado) | `infra/production/secrets/` en el VPS (generate-secrets.sh) |
-| Contraseña `aphia_app` para Hyperdrive | — | Configuración de Hyperdrive (Cloudflare) |
-| Token del servicio de documentos | `.env` | `secrets/files_service_token` + `wrangler secret put FILES_SERVICE_TOKEN` |
-| `AUTH_SECRET` (firma de tokens de sesión) | `.env` y `apps/api/.dev.vars` (generados) | `wrangler secret put AUTH_SECRET --env …`; con Uvicorn, variable de entorno |
-| Token del túnel | — | `infra/production/.env.production` (chmod 600) |
-| Token de API de Cloudflare | — | GitHub Environment secrets |
+| Token del servicio de documentos | `.env` | `secrets/files_service_token` (lo leen la API y el servicio) |
+| `AUTH_SECRET` (firma de tokens de sesión) | `.env` (generado) | `secrets/auth_secret` (Docker secret) |
+| Clave SSH de despliegue (`VPS_SSH_*`) | — | GitHub Environment secrets |
 | Clave privada `age` de respaldos | — | **Fuera del VPS** (gestor de contraseñas) |
 
-Rotación: cambie el valor en el origen (secreto Docker / Hyperdrive / Worker), reinicie el
+Rotación: cambie el valor en el origen (secreto Docker o GitHub), reinicie el
 servicio afectado y verifique `/api/ready`. Rote inmediatamente ante cualquier sospecha de fuga.
 
 ## Datos personales

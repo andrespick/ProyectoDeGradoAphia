@@ -1,7 +1,7 @@
 """Servicio privado de documentos de APHIA.
 
 No está pensado para usuarios finales: solo la API lo invoca, con un token de servicio,
-a través de Cloudflare Tunnel/Workers VPC en producción. No publica rutas del sistema
+por la red interna de Docker en el VPS. No publica rutas del sistema
 de archivos ni documentación OpenAPI.
 
 Ejecución: ``uvicorn main:create_app --factory --app-dir src --port 4000``

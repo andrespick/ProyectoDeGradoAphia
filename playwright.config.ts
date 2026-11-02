@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Pruebas E2E: navegador → frontend (Vite) → API (Python Workers local) → MySQL (Docker).
+// Pruebas E2E: navegador → frontend (Vite) → API (Uvicorn, como en producción) → MySQL (Docker).
 // `pnpm test:e2e` levanta la infraestructura y aplica migraciones antes de ejecutar.
 // Si `pnpm dev` ya está corriendo, Playwright reutiliza esos servidores.
 export default defineConfig({
@@ -24,9 +24,9 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm --filter @aphia/api dev",
-      url: "http://127.0.0.1:8787/api/health",
+      url: "http://127.0.0.1:8000/api/health",
       reuseExistingServer: !process.env.CI,
-      timeout: 240_000,
+      timeout: 120_000,
       stdout: "pipe",
     },
     {

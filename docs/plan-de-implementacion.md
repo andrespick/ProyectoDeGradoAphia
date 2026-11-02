@@ -49,7 +49,7 @@ propio, en la rama `feat/entorno-desarrollo`.
    clientes/propietarios/codeudores → 3 inmuebles → 4 contratos → 5 ayuda, responsive,
    respaldo local y documentación.
 
-## Decisiones técnicas (sin dependencias nuevas; compatibles con Pyodide)
+## Decisiones técnicas (sin dependencias nuevas)
 
 - **Hash de contraseñas:** `hashlib.pbkdf2_hmac("sha256", clave, sal_aleatoria, iteraciones)`
   guardado como `pbkdf2_sha256$<iter>$<sal_b64>$<hash_b64>` en `user_account.hashed_password`.
@@ -1293,3 +1293,4 @@ Pruebas: `test_sesiones.py`, `test_administracion.py`, `test_papelera.py`,
 | 2026-10-29 | 6 | Correcciones de la auditoría del repositorio: «hoy» es el día de Colombia (`core/fechas.py`, `db.sql.HOY_SQL`) en estados de contrato, resumen y filtro de fechas de la auditoría; Papelera y Catálogos ejecutan una acción a la vez (un doble clic no restaura ni agrega dos veces); la clave propia no se cambia desde «Editar» (409; se usa «Cambiar contraseña»); los intentos de inicio de sesión que el bloqueo no acota (cuenta inexistente o inactiva, cuenta ya bloqueada) van solo a los logs; los avisos de borrado dicen que el registro va a la papelera; `vacio_a_none` vive una sola vez en `core/text.py`. |
 | 2026-10-29 | 6 | Al iniciar sesión cada persona va siempre a `/` (su inicio según el rol) y no a la ruta anterior: si otra persona cerró sesión en una pantalla de administración, quien entra después no debe aterrizar ahí. `ProtectedRoute` ya no guarda la ruta de origen. Cambia el criterio A1. |
 | 2026-10-30 | — | La API pasa a desplegarse con Uvicorn en Docker en el VPS (OVHcloud) detrás de Caddy, por el límite de CPU de Workers en el login. Nuevo `apps/api/Dockerfile`, servicio `api` en el Compose de producción, `DB_SSL_MODE=required` y secretos `*_FILE` en la API, `cloudflared` pasa al perfil opcional `tunnel` y el *Deploy* de GitHub Actions despliega por SSH. Workers sigue siendo una ruta soportada (CI lo valida). |
+| 2026-11-01 | — | Se retira por completo la ruta de la API en Cloudflare Workers (decisión del responsable): se eliminan `entry.py`, `wrangler.jsonc`, `pylock.toml`, el adaptador `integrations/cloudflare.py`, Hyperdrive, el PBKDF2 en Python puro para Pyodide, el perfil `tunnel` (cloudflared) del Compose, el job de validación del Worker y las guías de Workers, Hyperdrive y túnel. La API solo se sirve con Uvicorn (local en `127.0.0.1:8000`) y las E2E corren contra Uvicorn, como en producción; el campo `runtime` sale de `/api/health` y del panel Sistema. Cloudflare queda solo para el frontend (Pages). Las entradas anteriores de esta bitácora sobre Workers se conservan como historia. |

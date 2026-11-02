@@ -18,8 +18,7 @@ El servicio se niega a iniciar si el token tiene menos de 32 caracteres.
 - Sin puertos publicados; red `backend` interna (sin salida a Internet). Verificado en réplica local.
 - Usuario sin privilegios (uid 10001), sistema de archivos de solo lectura salvo `/data` y
   `/tmp`, `cap_drop: ALL`, `no-new-privileges`.
-- Solo `cloudflared` lo alcanza; Cloudflare lo expone al Worker como servicio HTTP de
-  Workers VPC (ver [túnel](tunnel-y-acceso-privado.md)). El usuario final nunca lo llama.
+- Solo la API lo alcanza, por la red interna `backend`. El usuario final nunca lo llama.
 
 ## API del servicio
 
@@ -43,4 +42,4 @@ Los archivos sobreviven a `docker compose up --force-recreate` y a actualizacion
 
 1. Genere un valor nuevo en `secrets/files_service_token`.
 2. `docker compose --env-file .env.production up -d files`
-3. `uv run pywrangler secret put FILES_SERVICE_TOKEN --env production` (en `apps/api`).
+3. `docker compose --env-file .env.production up -d api` (la API lee el mismo archivo).

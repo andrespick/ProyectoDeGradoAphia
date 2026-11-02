@@ -50,7 +50,7 @@ export interface Respaldo {
 }
 
 export interface EstadoSistema {
-  api: { version: string; entorno: string; runtime: "workers" | "asgi" };
+  api: { version: string; entorno: string };
   base_de_datos: {
     disponible: boolean;
     latencia_ms: number | null;

@@ -30,23 +30,19 @@
 ## Flujo diario
 
 ```bash
-pnpm dev            # Docker + web (5173) + API en Python Workers local (8787)
-# … editar código: Vite y pywrangler recargan automáticamente
+pnpm dev            # Docker + web (5173) + API con Uvicorn (8000)
+# … editar código: Vite y Uvicorn (--reload) recargan automáticamente
 pnpm lint && pnpm typecheck && pnpm test
 pnpm infra:down     # al terminar (los datos se conservan)
 ```
-
-`pnpm dev:asgi` ejecuta la API con Uvicorn en lugar de Workers. Úselo para depurar con
-herramientas de Python estándar, pero valide siempre los cambios también con `pnpm dev`,
-que reproduce el runtime de producción.
 
 ## Diferencias entre desarrollo local y producción
 
 | Aspecto | Local | Producción |
 | --- | --- | --- |
-| Runtime de la API | workerd local (`pywrangler dev`) | Cloudflare Workers |
-| Conexión a MySQL | Hyperdrive con cadena local: conexión directa, **sin pool ni caché** | Hyperdrive con pool, vía Workers VPC y túnel |
+| API | Uvicorn con recarga en `127.0.0.1:8000` | Uvicorn en Docker (`127.0.0.1:8000`) detrás de Caddy (HTTPS) |
+| Conexión a MySQL | Directa a `127.0.0.1:3307` | Red interna `backend` de Docker |
 | TLS a MySQL | No | Sí (obligatorio) |
-| Variables | `wrangler.jsonc` (`vars` raíz) + `.env` | `env.staging` / `env.production` + secretos |
-| Autenticación | Login real con los usuarios de `pnpm db:seed` (`AUTH_SECRET` en `.dev.vars`) | Login real (`AUTH_SECRET` como secreto del Worker) |
-| Servicio de documentos | `127.0.0.1:4000` (Docker) | Red interna del VPS, solo vía túnel |
+| Variables | `.env` de la raíz | `infra/production/.env.production` + Docker secrets (`*_FILE`) |
+| Autenticación | Login real con los usuarios de `pnpm db:seed` (`AUTH_SECRET` en `.env`) | Login real (`AUTH_SECRET` en `secrets/auth_secret`) |
+| Servicio de documentos | `127.0.0.1:4000` (Docker) | Red interna `backend`, solo lo alcanza la API |

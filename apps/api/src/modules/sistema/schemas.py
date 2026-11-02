@@ -34,7 +34,6 @@ class RespaldosPage(BaseModel):
 class EstadoApi(BaseModel):
     version: str
     entorno: str
-    runtime: Literal["workers", "asgi"]
 
 
 class EstadoBaseDatos(BaseModel):

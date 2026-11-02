@@ -82,7 +82,7 @@ los módulos de la API y las pantallas, y las decisiones de negocio que el model
 
 ## Restricciones
 
-- Backend en Cloudflare Python Workers con ruta alternativa en Linux (Uvicorn).
+- Backend en un VPS Linux: API FastAPI con Uvicorn en Docker, detrás de Caddy; frontend en Cloudflare Pages.
 - MySQL 8.4 LTS en un VPS Linux (2 vCPU, 2–4 GB RAM, 20–40 GB SSD), proveedor no definido.
 - Documentos en el VPS, no en MySQL.
 - Sin datos personales reales en desarrollo ni en pruebas.

@@ -86,8 +86,8 @@ versión que responda 503) para evitar escrituras.
 | --- | --- |
 | Borrado accidental de datos | Restaurar en una base temporal (cambiando el nombre en el volcado, como se probó localmente), extraer lo necesario y reinsertarlo; evita perder cambios posteriores. |
 | Contenedor dañado | `docker compose up -d --force-recreate <servicio>`: los volúmenes persisten. |
-| Pérdida total del VPS | Nuevo VPS ([vps.md](vps.md)) → restaurar secretos desde el gestor → `up -d mysql files` → `restore.sh` → nuevo token de túnel (o reutilizar) → verificar Hyperdrive y `/api/ready`. |
-| Migración fallida | Revertir el Worker (`pywrangler rollback`) y, si es necesario, restaurar el respaldo tomado antes de migrar. |
+| Pérdida total del VPS | Nuevo VPS ([vps.md](vps.md)) → restaurar secretos desde el gestor → `up -d mysql files` → `restore.sh` → `up -d --build api` → Caddy y DNS → verificar `/api/ready`. |
+| Migración fallida | Volver al commit anterior en el VPS (`git checkout --detach <commit>` y `up -d --build api`) y, si es necesario, restaurar el respaldo tomado antes de migrar. |
 | Fuga de un secreto | Rotarlo (ver docs/seguridad) y revisar logs de acceso. |
 
 ## Simulacro

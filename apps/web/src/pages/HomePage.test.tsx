@@ -26,7 +26,7 @@ describe("HomePage", () => {
     const sidebar = screen.getByRole("complementary", { name: "Barra lateral" });
     expect(within(sidebar).getByText("APHIA")).toBeInTheDocument();
     expect(await within(sidebar).findByText("En línea")).toBeInTheDocument();
-    expect(within(sidebar).getByText("ASGI (Uvicorn) · test")).toBeInTheDocument();
+    expect(within(sidebar).getByText("v0.1.0 · test")).toBeInTheDocument();
     for (const nombre of ["Inicio", "Clientes", "Propietarios", "Codeudores", "Usuarios"]) {
       expect(within(sidebar).getByRole("link", { name: nombre })).toBeInTheDocument();
     }

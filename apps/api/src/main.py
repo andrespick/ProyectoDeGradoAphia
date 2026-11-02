@@ -1,9 +1,7 @@
-"""Aplicación FastAPI de APHIA (ASGI estándar).
+"""Aplicación FastAPI de APHIA.
 
-- Linux/Uvicorn:      ``uvicorn main:app --app-dir src``
-- Cloudflare Workers: ``entry.py`` envuelve esta misma ``app``.
-
-Este módulo no importa nada específico de Cloudflare.
+Se sirve con Uvicorn: ``uvicorn main:app --app-dir src`` (en producción, la imagen Docker
+de ``apps/api/Dockerfile`` detrás de Caddy en el VPS).
 """
 
 from __future__ import annotations
@@ -17,7 +15,7 @@ from core.docs import add_local_docs
 from core.errors import register_exception_handlers
 from core.logging import configure_logging
 from core.middleware import RequestContextMiddleware, SettingsCORSMiddleware
-from core.runtime import settings_from_scope
+from core.runtime import settings_from_environ
 from modules.auditoria.router import router as auditoria_router
 from modules.auth.router import router as auth_router
 from modules.buscar.router import router as buscar_router
@@ -38,7 +36,7 @@ from modules.usuarios.router import router as usuarios_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """``settings`` fija la configuración (pruebas); si es ``None`` se resuelve por solicitud."""
+    """``settings`` fija la configuración (pruebas); si es ``None`` se lee del entorno."""
     configure_logging(settings.log_level if settings else os.environ.get("LOG_LEVEL", "INFO"))
 
     app = FastAPI(
@@ -67,7 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(papelera_router)
     add_local_docs(app)
 
-    provider = (lambda _scope: settings) if settings is not None else settings_from_scope
+    provider = (lambda: settings) if settings is not None else settings_from_environ
     # El último middleware agregado es el más externo.
     app.add_middleware(SettingsCORSMiddleware)
     app.add_middleware(RequestContextMiddleware, settings_provider=provider)

@@ -43,7 +43,7 @@ pnpm test:integration
 
 ## Producción
 
-Las migraciones **nunca** se ejecutan al iniciar el Worker ni desde la CI. Procedimiento:
+Las migraciones **nunca** se ejecutan al iniciar la API ni desde la CI. Procedimiento:
 
 1. Ejecute y verifique un respaldo (`infra/production/backup/backup.sh`).
 2. En el VPS: `docker compose --env-file .env.production --profile ops run --rm --build migrator --status`

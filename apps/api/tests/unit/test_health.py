@@ -18,7 +18,6 @@ async def test_health_responde_ok(client: httpx.AsyncClient) -> None:
     assert body["status"] == "ok"
     assert body["service"] == "aphia-api"
     assert body["environment"] == "test"
-    assert body["runtime"] == "asgi"
 
 
 async def test_ready_sin_base_de_datos_configurada_responde_503(client: httpx.AsyncClient) -> None:

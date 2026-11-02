@@ -1,9 +1,7 @@
 """Contrato del almacenamiento de documentos usado por la lógica de negocio.
 
-Implementaciones previstas (en ``integrations/``):
-- Workers: binding de Workers VPC hacia el servicio de documentos (``env.FILES_SERVICE``).
-- Uvicorn: cliente HTTP directo hacia ``FILES_SERVICE_URL``.
-Ambas envían ``Authorization: Bearer <FILES_SERVICE_TOKEN>``.
+Implementación prevista: cliente HTTP hacia ``FILES_SERVICE_URL`` (red interna de Docker)
+con ``Authorization: Bearer <FILES_SERVICE_TOKEN>``.
 """
 
 from __future__ import annotations

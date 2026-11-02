@@ -182,7 +182,7 @@ async def test_datos_persisten_entre_instancias_de_la_api(
     async with httpx.AsyncClient(transport=transport, base_url="http://a") as first:
         await first.post("/api/v1/clientes", json=PERSONA)
 
-    # Una instancia nueva (equivalente a reiniciar el proceso o un nuevo isolate de Workers).
+    # Una instancia nueva (equivalente a reiniciar el proceso de la API).
     transport = httpx.ASGITransport(app=create_app(settings_for(db_params)))
     async with httpx.AsyncClient(transport=transport, base_url="http://b") as second:
         response = await second.get("/api/v1/clientes")

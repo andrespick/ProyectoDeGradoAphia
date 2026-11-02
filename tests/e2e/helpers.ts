@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export const API = "http://127.0.0.1:8787";
+export const API = "http://127.0.0.1:8000";
 /** Contraseña de los usuarios de desarrollo (database/seeds/0003_usuarios_desarrollo.sql). */
 export const CLAVE_DEV = "Aphia.2026";
 

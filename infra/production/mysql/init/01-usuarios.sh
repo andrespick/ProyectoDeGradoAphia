@@ -4,7 +4,7 @@
 # cuando la contraseña de root ya está configurada y el servidor temporal escucha solo por
 # socket. Funciona tanto si el entrypoint lo carga con "source" como si lo ejecuta.
 #
-#   aphia_app       → usado por la API vía Hyperdrive: solo DML, exige TLS.
+#   aphia_app       → usado por la API (Uvicorn): solo DML, exige TLS.
 #   aphia_migrator  → usado por el servicio "migrator": DDL sobre la base de APHIA, exige TLS.
 #
 # Si este script falla, el volumen queda inicializado SIN estos usuarios y el entrypoint no

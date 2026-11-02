@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# API de APHIA con Uvicorn (producción en el VPS). Workers sigue usando pywrangler.
+# API de APHIA con Uvicorn (producción en el VPS, detrás de Caddy).
 
 FROM ghcr.io/astral-sh/uv:0.13.6 AS uv
 
@@ -11,7 +11,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-# Sin el grupo dev (pywrangler, pytest); con el grupo server (uvicorn).
+# Solo las dependencias de ejecución (sin el grupo dev: pytest, ruff, httpx).
 RUN uv sync --frozen --no-dev --no-install-project
 
 FROM python:3.13-slim AS runtime

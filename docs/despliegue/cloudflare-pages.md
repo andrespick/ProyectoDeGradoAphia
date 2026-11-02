@@ -27,14 +27,11 @@ Settings → Builds & deployments y Variables and Secrets:
 Sin la variable, el build falla con «Defina VITE_API_BASE_URL». Tras agregarla hay que
 relanzar el despliegue (Deployments → Retry deployment) o hacer un push.
 
-Alternativa no usada: subir el build desde GitHub Actions con `wrangler pages deploy`
-(Direct Upload). Un proyecto conectado a Git no admite ese modo, y viceversa.
-
 ## Después del primer despliegue
 
 1. Copie la URL de Pages (y el dominio propio, p. ej. `https://app.aphia.com.co`) en
    `CORS_ORIGINS` de `infra/production/.env.production` en el VPS (varios orígenes separados
-   por coma). Con la API en Workers, el valor va en `apps/api/wrangler.jsonc`.
+   por coma).
 2. Aplique el cambio: `docker compose --env-file .env.production up -d api`.
 3. Abra la URL: debe aparecer la pantalla de inicio de sesión y, en la barra lateral, «En línea».
 

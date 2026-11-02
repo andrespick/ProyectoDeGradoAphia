@@ -1,11 +1,7 @@
 """Conexiones MySQL con aiomysql.
 
-Cada operación abre y cierra su conexión de forma explícita:
-
-- En Cloudflare Workers los sockets no pueden reutilizarse entre solicitudes y
-  Hyperdrive ya mantiene el pool de conexiones hacia MySQL.
-- En Uvicorn el volumen de APHIA es bajo; si crece, aquí se puede añadir un pool
-  sin cambiar los repositorios.
+Cada operación abre y cierra su conexión de forma explícita: el volumen de APHIA es
+bajo; si crece, aquí se puede añadir un pool sin cambiar los repositorios.
 
 Las consultas siempre usan parámetros (``%s``); nunca se interpolan valores en el SQL.
 """

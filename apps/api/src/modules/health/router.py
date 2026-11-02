@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from core.errors import ServiceUnavailableError
-from core.runtime import get_settings, runtime_name
+from core.runtime import get_settings
 from db.connection import Database
 from db.dependencies import get_database
 
@@ -27,7 +27,6 @@ class HealthResponse(BaseModel):
     service: str
     version: str
     environment: str
-    runtime: Literal["workers", "asgi"]
 
 
 class ReadyResponse(BaseModel):
@@ -42,7 +41,6 @@ async def health(request: Request) -> HealthResponse:
         service="aphia-api",
         version=API_VERSION,
         environment=get_settings(request).app_env,
-        runtime=runtime_name(request.scope),
     )
 
 

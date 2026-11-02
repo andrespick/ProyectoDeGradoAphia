@@ -4,8 +4,10 @@ import { iniciarSesion } from "./helpers";
 
 const unique = `${Date.now()}`;
 
+// Días de Colombia, como la API (core/fechas.py): en UTC la prueba fallaba de 19:00 a 24:00.
 function fecha(diasDesdeHoy: number): string {
-  const d = new Date();
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
+  const d = new Date(`${hoy}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + diasDesdeHoy);
   return d.toISOString().slice(0, 10);
 }

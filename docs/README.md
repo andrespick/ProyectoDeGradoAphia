@@ -7,8 +7,8 @@
 | [manual de usuario](manual-usuario.md) | Guía por módulo para el personal de APHIA (misma información que `/ayuda`) |
 | [instalación y mantenimiento](despliegue/instalacion-y-mantenimiento.md) | Guía para quien opera el sistema: instalación, primer administrador, tareas recurrentes y logs |
 | [diseño](diseno/README.md) | Identidad visual: tokens, cascarón, componentes e inventario de pantallas |
-| [arquitectura](arquitectura/README.md) | Componentes, comunicación, tecnologías, entornos, portabilidad y compatibilidad con Workers |
+| [arquitectura](arquitectura/README.md) | Componentes, comunicación, tecnologías y entornos |
 | [desarrollo](desarrollo/README.md) | Crear módulos, convenciones, migraciones, Docker |
 | [pruebas](pruebas/README.md) | Estrategia, comandos y cobertura actual |
 | [seguridad](seguridad/README.md) | Controles implementados, pendientes y manejo de secretos |
-| [despliegue](despliegue/README.md) | VPS, MySQL, documentos, Pages, Workers, Hyperdrive, túnel, CI/CD y restauración |
+| [despliegue](despliegue/README.md) | VPS (API, MySQL, documentos, Caddy), Pages, CI/CD y restauración |

@@ -8,7 +8,7 @@ export default defineConfig(({ command, mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), "VITE_"), ...process.env };
   if (command === "build" && mode === "production" && !env.VITE_API_BASE_URL) {
     throw new Error(
-      "Defina VITE_API_BASE_URL (URL pública de la API, p. ej. https://aphia-api.<cuenta>.workers.dev) " +
+      "Defina VITE_API_BASE_URL (URL pública de la API, p. ej. https://api.aphia.com.co) " +
         "para construir la web de producción. Ver docs/despliegue/cloudflare-pages.md.",
     );
   }

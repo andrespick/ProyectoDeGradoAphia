@@ -9,8 +9,7 @@ Se ejecuta en cada push a `main` y en cada pull request. No usa secretos.
 | `web` | `pnpm install --frozen-lockfile`, TypeScript, Vitest, build |
 | `api` | `uv sync --frozen`, Ruff (lint y formato), Pytest unitarias, Pytest integración con servicio `mysql:8.4` |
 | `files` | Ruff, Pytest, `docker build` del servicio de documentos y de la API |
-| `worker` | `pywrangler deploy --dry-run` para local, staging y producción |
-| `e2e` | MySQL de servicio, migraciones, Playwright con la API en Python Workers local |
+| `e2e` | MySQL de servicio, migraciones, Playwright con la API en Uvicorn (como en producción) |
 
 Las credenciales de MySQL de CI son efímeras y solo existen en el contenedor del job.
 

@@ -1,4 +1,4 @@
-"""Hash de contraseñas con PBKDF2-HMAC-SHA256 (biblioteca estándar; funciona en Pyodide).
+"""Hash de contraseñas con PBKDF2-HMAC-SHA256 (``hashlib`` de la biblioteca estándar).
 
 Formato almacenado en ``user_account.hashed_password``::
 
@@ -15,12 +15,7 @@ import hashlib
 import hmac
 import secrets
 
-try:
-    from hashlib import pbkdf2_hmac as _pbkdf2_hmac
-except ImportError:  # Pyodide (Cloudflare Workers) no incluye pbkdf2_hmac: ver _pbkdf2_sha256
-    _pbkdf2_hmac = None
-
-# Medido en Workers local (ver docs/seguridad/README.md). Subirlo encarece cada inicio de sesión.
+# Subirlo encarece cada inicio de sesión (CPU del VPS); los hashes guardados conservan el suyo.
 PBKDF2_ITERATIONS = 100_000
 _PREFIX = "pbkdf2_sha256"
 _SALT_BYTES = 16
@@ -28,7 +23,7 @@ _DKLEN = 32
 
 # Hash de una clave aleatoria desechada: se verifica contra él cuando el usuario no existe o
 # está inactivo, para que el tiempo de respuesta no revele si la cuenta existe.
-# Es un literal para no gastar CPU al importar el módulo en el arranque del Worker.
+# Es un literal para no gastar CPU al importar el módulo.
 DUMMY_HASH = (
     "pbkdf2_sha256$100000$rcIDyz5yDdTwHGWIMcjzmw==$Um92ltLM5xpxrMkyJW3XNay7dGQ8Ox941itlT2JTnqs="
 )
@@ -69,34 +64,4 @@ def verify_password(clave: str, almacenado: str) -> bool:
 
 
 def _derive(clave: str, salt: bytes, iterations: int) -> bytes:
-    password = clave.encode("utf-8")
-    if _pbkdf2_hmac is not None:
-        return _pbkdf2_hmac("sha256", password, salt, iterations, _DKLEN)
-    return _pbkdf2_sha256(password, salt, iterations)
-
-
-def _pbkdf2_sha256(password: bytes, salt: bytes, iterations: int) -> bytes:
-    """PBKDF2-HMAC-SHA256 (RFC 8018) para un bloque de 32 bytes, sin ``pbkdf2_hmac``.
-
-    HMAC con estados interno/externo precalculados y copiados en cada iteración: es la forma
-    más rápida posible en Python puro (la que usaba CPython antes de delegar en OpenSSL).
-    """
-    if len(password) > 64:
-        password = hashlib.sha256(password).digest()
-    password = password.ljust(64, b"\x00")
-    inner = hashlib.sha256(bytes(byte ^ 0x36 for byte in password))
-    outer = hashlib.sha256(bytes(byte ^ 0x5C for byte in password))
-
-    def prf(message: bytes) -> bytes:
-        i = inner.copy()
-        i.update(message)
-        o = outer.copy()
-        o.update(i.digest())
-        return o.digest()
-
-    block = prf(salt + b"\x00\x00\x00\x01")
-    result = int.from_bytes(block, "big")
-    for _ in range(iterations - 1):
-        block = prf(block)
-        result ^= int.from_bytes(block, "big")
-    return result.to_bytes(_DKLEN, "big")
+    return hashlib.pbkdf2_hmac("sha256", clave.encode("utf-8"), salt, iterations, _DKLEN)

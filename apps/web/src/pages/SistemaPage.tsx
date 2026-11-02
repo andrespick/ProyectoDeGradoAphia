@@ -9,7 +9,6 @@ import { errorMessage } from "../services/apiClient";
 import type { EstadoSistema, Respaldo } from "../types/administracion";
 import { formatearBytes, formatearFechaHora } from "../utils/formato";
 
-const RUNTIME = { workers: "Cloudflare Workers", asgi: "ASGI (Uvicorn)" } as const;
 
 export function SistemaPage() {
   const [estado, setEstado] = useState<EstadoSistema | null>(null);
@@ -94,7 +93,7 @@ export function SistemaPage() {
           <KpiCard
             etiqueta="API"
             valor={`v${estado.api.version}`}
-            detalle={`${RUNTIME[estado.api.runtime]} · ${estado.api.entorno}`}
+            detalle={`Entorno ${estado.api.entorno}`}
             icono={<Server size={20} />}
             tono="ok"
           />

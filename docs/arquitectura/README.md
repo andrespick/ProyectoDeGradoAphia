@@ -3,70 +3,63 @@
 Modelo de datos (32 tablas en 3FN, relaciones y decisiones pendientes):
 [modelo-de-datos.md](modelo-de-datos.md).
 
-## Despliegue vigente (VPS)
+## Despliegue
 
-La API se ejecuta con Uvicorn en Docker dentro del VPS, junto a MySQL y al servicio de
-documentos, en la red interna `backend`; Caddy (en el host) publica la API por HTTPS y el
-frontend sigue en Cloudflare Pages. La API conecta a MySQL con TLS (`DB_SSL_MODE=required`)
-y lee los secretos desde archivos (`*_FILE`). El diagrama siguiente describe la ruta
-alternativa en Cloudflare Workers, que el código sigue soportando.
-
-## Diagrama de componentes (ruta Workers)
+El frontend (React + Vite) se publica en **Cloudflare Pages**. Todo el lado servidor corre en
+un **VPS Linux** con Docker Compose: la API (FastAPI con Uvicorn), MySQL 8.4 y el servicio de
+documentos comparten la red interna `backend`, sin puertos públicos. La API solo escucha en
+`127.0.0.1:8000` y **Caddy** (instalado en el host) la publica por HTTPS en
+`api.aphia.com.co`, con certificado de Let's Encrypt, límite de tamaño de cuerpo y límite de
+peticiones por IP. La API conecta a MySQL con TLS (`DB_SSL_MODE=required`) y lee los secretos
+desde archivos (`*_FILE`, Docker secrets).
 
 ```mermaid
 flowchart LR
     U[Usuario interno<br/>navegador] -->|HTTPS| P[Cloudflare Pages<br/>React + Vite]
-    U -->|HTTPS + CORS| W[Cloudflare Python Worker<br/>FastAPI · Pyodide]
-    W -->|binding HYPERDRIVE<br/>aiomysql| H[Hyperdrive<br/>pool de conexiones]
-    W -.->|binding FILES_SERVICE<br/>Workers VPC · beta| V[Workers VPC]
-    H -->|TCP + TLS| V
-    V ==>|Cloudflare Tunnel<br/>conexión saliente| C
+    U -->|HTTPS + CORS| C
 
     subgraph VPS["VPS Linux (Docker Compose)"]
-        C[cloudflared] --> M[(MySQL 8.4)]
-        C --> F[Servicio de documentos<br/>FastAPI]
+        C[Caddy<br/>TLS · límites] -->|127.0.0.1:8000| A[API<br/>FastAPI · Uvicorn]
+        A -->|aiomysql + TLS<br/>red backend| M[(MySQL 8.4)]
+        A -.->|HTTP + token<br/>red backend| F[Servicio de documentos<br/>FastAPI]
         F --> D[(Volumen<br/>files-data)]
         M --> MD[(Volumen<br/>mysql-data)]
     end
 
-    B[backup.sh<br/>cron] -.->|cifrado age| X[(Almacenamiento<br/>externo · rclone)]
+    B[backup.sh<br/>systemd] -.->|cifrado age| X[(Almacenamiento<br/>externo · rclone)]
     M -.-> B
     D -.-> B
 ```
 
-La línea punteada entre el Worker y el servicio de documentos indica una integración
+La línea punteada entre la API y el servicio de documentos indica una integración
 **preparada pero no implementada** en esta fase (ver «Documentos»).
 
 ## Comunicación entre servicios
 
 | Origen → destino | Protocolo | Autenticación | Estado |
 | --- | --- | --- | --- |
-| Navegador → Pages | HTTPS | — | Configurado (`_redirects`, `_headers`) |
-| Navegador → API | HTTPS, JSON, CORS con orígenes explícitos | Token de sesión `Authorization: Bearer` (HMAC, 8 h por defecto, revocable) tras login con contraseña | Funcional |
-| API → MySQL (Workers) | aiomysql → binding Hyperdrive → Workers VPC → túnel | Usuario `aphia_app` (solo DML), TLS | Local verificado; producción preparada |
-| API → MySQL (Uvicorn) | aiomysql directo | Igual | Verificado localmente |
-| API → documentos | HTTP vía binding Workers VPC (`env.FILES_SERVICE`) | `Authorization: Bearer <token de servicio>` | Preparado; adaptador pendiente |
-| Respaldos → externo | rclone | Clave pública `age` | Preparado; no ejecutado |
+| Navegador → Pages | HTTPS | — | En producción (`_redirects`, `_headers`) |
+| Navegador → API | HTTPS (Caddy), JSON, CORS con orígenes explícitos | Token de sesión `Authorization: Bearer` (HMAC, 8 h por defecto, revocable) tras login con contraseña | En producción |
+| API → MySQL | aiomysql por la red interna `backend` | Usuario `aphia_app` (solo DML), TLS | En producción |
+| API → documentos | HTTP por la red interna `backend` (`FILES_SERVICE_URL`) | `Authorization: Bearer <token de servicio>` | Preparado; adaptador pendiente |
+| Respaldos → externo | rclone | Clave pública `age` | En producción (semanal) |
 
 ## Estructura de la API
 
 ```text
-src/main.py            create_app(): FastAPI ASGI puro (Uvicorn y Workers)
-src/entry.py           Default = asgi.entrypoint(app)  ← único import de `workers`
+src/main.py            create_app(): aplicación FastAPI (Uvicorn: main:app)
 src/core/              config, errores, logging JSON, middleware (request id, cabeceras, CORS)
 src/db/                DatabaseConfig, Database (conexión por operación), dependencia FastAPI
-src/integrations/      cloudflare.py: lee env y binding Hyperdrive desde scope["env"]
 src/modules/<dominio>  router → service → repository (+ schemas Pydantic)
 ```
 
 Flujo de una solicitud:
 
-1. `RequestContextMiddleware` resuelve la configuración: en Workers desde `scope["env"]`
-   (variables de `wrangler.jsonc` y secretos); en Uvicorn desde variables de entorno.
+1. `RequestContextMiddleware` deja en la solicitud la configuración leída de las variables de
+   entorno y los Docker secrets (`core/runtime.py`, una sola lectura por proceso).
 2. `SettingsCORSMiddleware` aplica CORS con los orígenes de ese entorno.
 3. El router valida con Pydantic, verifica roles y llama al servicio.
-4. El repositorio obtiene `Database` de `get_database`: en Workers usa los parámetros del
-   binding Hyperdrive; en Uvicorn, `DB_*`.
+4. El repositorio obtiene `Database` de `get_database`, con los parámetros `DB_*`.
 
 ## Flujo de autenticación
 
@@ -91,86 +84,34 @@ Flujo de una solicitud:
 
 | Decisión | Motivo |
 | --- | --- |
-| Cloudflare Pages + Workers | Costo prácticamente nulo con poco tráfico, HTTPS y CDN incluidos, sin servidores web que mantener. |
-| Python Workers + FastAPI | FastAPI tiene soporte oficial en Python Workers; validación con Pydantic; ASGI permite el plan B con Uvicorn. |
-| aiomysql | Controlador MySQL recomendado por la documentación de Hyperdrive para Python; puro Python (compatible con Pyodide). |
-| Sin ORM | SQLAlchemy asíncrono no funciona en Python Workers (requiere greenlet). SQL parametrizado explícito es suficiente para el volumen de APHIA. |
-| Hyperdrive | Mantiene el pool de conexiones a MySQL cerca del Worker; el Worker abre una conexión por solicitud sin penalizar a MySQL. |
-| MySQL 8.4 LTS en VPS | Requisito del proyecto; soporte extendido; el VPS también aloja documentos. |
+| Cloudflare Pages (frontend) | Costo prácticamente nulo, HTTPS y CDN incluidos, build automático en cada push a `main`. |
+| API en VPS con Uvicorn (Docker) | Control de CPU y memoria: el login deriva contraseñas con PBKDF2, que superaba el límite de CPU de Cloudflare Workers (alternativa evaluada y descartada). Un único servidor aloja API, MySQL y documentos. |
+| Caddy en el host | HTTPS automático (Let's Encrypt), proxy inverso y límites de cuerpo y de peticiones por IP sin configuración compleja. |
+| FastAPI | Validación con Pydantic, tipado y documentación OpenAPI local. |
+| aiomysql | Controlador MySQL asíncrono, compatible con el bucle de eventos de FastAPI. |
+| Sin ORM | SQL parametrizado explícito es suficiente para el volumen de APHIA y deja ver cada consulta. |
+| MySQL 8.4 LTS en VPS | Requisito del proyecto; soporte extendido. |
 | Documentos en disco (no en MySQL) | Respaldos y base de datos livianos; el servicio controla acceso, tipo y tamaño. |
-| Cloudflare Tunnel + Workers VPC | MySQL y documentos sin puertos abiertos a Internet: el túnel es una conexión saliente desde el VPS. |
+| Red interna de Docker | MySQL y documentos sin puertos publicados: solo la API los alcanza. |
 | pnpm + uv | Instalación rápida y reproducible con lockfiles para JS y Python. |
 | Scripts Node en lugar de Makefile | Funcionan igual en Windows 11 y Linux. |
 
-## Separación entre entornos
-
-| Aspecto | development (local) | test (CI/integración) | staging | production |
-| --- | --- | --- | --- | --- |
-| API | `pywrangler dev` o Uvicorn | ASGI en pytest / Worker local en E2E | Worker `aphia-api-staging` | Worker `aphia-api` |
-| MySQL | Docker `127.0.0.1:3307`, base `aphia` | Contenedor aparte `:3308`, base `aphia_test`, en memoria | Base y Hyperdrive propios (por definir) | VPS, Hyperdrive de producción |
-| Conexión a MySQL | Hyperdrive local (`localConnectionString` por variable) — sin pool ni caché | Directa | Hyperdrive + Workers VPC | Hyperdrive + Workers VPC |
-| Autenticación | Login real (`AUTH_MODE=database`, usuarios de `pnpm db:seed`) | Ficticia en unitarias; real en E2E | Login real (`AUTH_SECRET` por `wrangler secret`) | Igual |
-| CORS | `localhost:5173` | `localhost:5173` | URL de Pages de staging | URL de Pages de producción |
-| Secretos | `.env` generado | Valores efímeros de CI | `wrangler secret`, GitHub Environment | Igual, con aprobación obligatoria |
-| HSTS / docs OpenAPI | Sin HSTS / `/api/docs` visible | Igual | HSTS / docs ocultas | HSTS / docs ocultas |
-
-El nombre del Worker local es `aphia-api-local` y su id de Hyperdrive es un marcador: un
-`deploy` sin `--env` falla en lugar de publicar la configuración de desarrollo.
-
-## Estrategia de portabilidad
-
-- `main.py` es una aplicación ASGI estándar; `entry.py` (3 líneas) es lo único específico de
-  Workers. Verificado: la misma app responde con `runtime: "workers"` y `runtime: "asgi"`.
-- La configuración entra por una función `get(nombre)`: `os.environ` o el `env` de Workers.
-- `integrations/cloudflare.py` aísla bindings; los módulos de negocio no lo importan.
-- La lógica de negocio depende de protocolos (`ClientesRepositoryPort`, `DocumentStorage`),
-  no de Cloudflare.
-- Migrar fuera de Cloudflare: ejecutar `uvicorn main:app --app-dir src` detrás de un proxy TLS en
-  el VPS (o en otro servidor), definir `DB_*` y servir `apps/web/dist` como sitio estático.
-
-## Compatibilidad con Cloudflare Python Workers (validación realizada)
-
-Documentación consultada el 2026-10-27 (Python Workers, FastAPI, Hyperdrive + Python,
-desarrollo local, conexión privada, Workers VPC). Resultados **verificados en este equipo**:
-
-| Verificación | Resultado |
-| --- | --- |
-| FastAPI con `asgi.entrypoint(app)` en `pywrangler dev` (pywrangler 1.17.9, wrangler 4.153, workerd 1.20261023.1) | ✅ |
-| aiomysql dentro de Pyodide conectando por el binding Hyperdrive local a MySQL 8.4 en Docker | ✅ lectura, escritura, restricción única (409) |
-| Pydantic v2 (validación, errores 422) dentro del Worker | ✅ |
-| Middleware ASGI propio, CORS y cabeceras de seguridad dentro del Worker | ✅ |
-| `pywrangler deploy --dry-run` (local, staging, production) | ✅ 9,8 MB sin comprimir / 2,45 MB gzip |
-| Binding `vpc_services` reconocido por wrangler | ✅ (solo validación de configuración) |
-
-Versiones de Python: con `compatibility_date = 2026-10-27`, pywrangler resolvió el paquete
-del Worker para **Python ≥ 3.14.2** (Pyodide), según `apps/api/pylock.toml`. El desarrollo
-local, las pruebas y Uvicorn usan **Python 3.13**. Las versiones de las dependencias son las
-mismas en ambos lockfiles (FastAPI 0.162.0, Pydantic 2.14.1, aiomysql 0.3.2) y el código
-se verificó en los dos runtimes. Al cambiar `compatibility_date`, revise `pylock.toml`.
-
 | Lockfile | Qué fija |
 | --- | --- |
-| `pnpm-lock.yaml` | Dependencias JS (incluye wrangler y workerd) |
-| `apps/api/uv.lock` | Dependencias Python de desarrollo, pruebas y Uvicorn |
-| `apps/api/pylock.toml` | Paquetes empaquetados en el Worker (lo regenera `pywrangler sync`) |
+| `pnpm-lock.yaml` | Dependencias JS (frontend, Playwright, scripts) |
+| `apps/api/uv.lock` | Dependencias Python de la API (ejecución, desarrollo y pruebas) |
 | `apps/files/uv.lock` | Servicio de documentos |
 
-Limitaciones y diferencias conocidas:
+## Separación entre entornos
 
-- **Desarrollo local sin pool:** con la cadena local, Hyperdrive conecta directo a MySQL sin
-  pool ni caché (documentado por Cloudflare). En producción sí hay pool.
-- **Arranque en frío local:** la primera solicitud a `pywrangler dev` tarda ~9 s (carga de
-  Pyodide). En producción Cloudflare usa *snapshots* de memoria; no se midió.
-- **Sockets:** no pueden crearse en el ámbito global del módulo; por eso la conexión es por operación.
-- **Tamaño del Worker:** 2,45 MB comprimido. Verifique el límite vigente de su plan en
-  la documentación de límites de Workers antes de agregar dependencias pesadas.
-- **Workers VPC está en beta.** La documentación muestra su uso desde JavaScript; el uso del
-  binding `FILES_SERVICE` desde Python **no está confirmado** por la documentación. Si no
-  funciona, la alternativa sin cambiar la lógica es un adaptador HTTP hacia un hostname
-  publicado por el túnel y protegido con Cloudflare Access (token de servicio) además del
-  token propio del servicio de documentos.
-- **TLS Hyperdrive → MySQL:** Hyperdrive exige TLS. MySQL usa un certificado autofirmado y
-  Workers VPC aún no permite subir una CA propia; ver `docs/despliegue/tunnel-y-acceso-privado.md`.
+| Aspecto | development (local) | test (CI/integración) | production |
+| --- | --- | --- | --- |
+| API | Uvicorn `127.0.0.1:8000` (`pnpm dev`) | ASGI en pytest; Uvicorn en E2E | Uvicorn en Docker en el VPS, detrás de Caddy |
+| MySQL | Docker `127.0.0.1:3307`, base `aphia` | Contenedor aparte `:3308`, base `aphia_test`, en memoria | Contenedor en la red interna `backend`, con TLS |
+| Autenticación | Login real (`AUTH_MODE=database`, usuarios de `pnpm db:seed`) | Ficticia en unitarias; real en E2E | Login real |
+| CORS | `localhost:5173` | `localhost:5173` | `https://app.aphia.com.co` |
+| Secretos | `.env` generado | Valores efímeros de CI | Docker secrets en `infra/production/secrets/`, GitHub Environment para el despliegue |
+| HSTS / docs OpenAPI | Sin HSTS / `/api/docs` visible | Igual | HSTS / docs ocultas |
 
 ## Documentos
 

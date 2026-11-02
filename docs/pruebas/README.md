@@ -18,8 +18,8 @@ datos en memoria), aplica las migraciones automáticamente, ejecuta las pruebas 
 
 `pnpm test:e2e` levanta la infraestructura local, migra, carga los seeds (usuarios de desarrollo)
 y Playwright inicia (o reutiliza) el
-frontend y la API en **Python Workers local**, de modo que la prueba recorre el mismo runtime
-que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
+frontend y la API con **Uvicorn**, el mismo servidor que producción: navegador → Vite → API
+(`127.0.0.1:8000`) → MySQL.
 
 ## Cobertura actual (resultados de la última ejecución local, 2026-10-28)
 
@@ -37,7 +37,7 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Catálogos para formularios | `test_catalogos.py` (contenido y 401), `test_catalogos_mysql.py` (códigos de `0008` sobre MySQL) | ✅ |
 | Roles y configuración de autenticación | `test_auth.py`: roles `admin_sistemas`/`administrativo`/`asesor`, 403 por rol insuficiente, `AUTH_MODE=database` exige `AUTH_SECRET` de 32 caracteres | ✅ |
 | Componentes compartidos de la web | `Field.test.tsx`, `Pagination.test.tsx`, `usePagedList.test.tsx` (filtros y paginación en la URL) | ✅ |
-| Inicio de sesión y bloqueo (RF-17, RF-18) | `test_passwords.py` (formato, verificación, implementación pura = `hashlib`), `test_tokens.py` (firma, expiración, manipulación), `test_auth.py` (login, `/me`, 3 intentos → 423, bloqueo vencido, inactivo, logs sin credenciales), `test_auth_mysql.py` (bloqueo persistido y desbloqueo por el admin), `LoginPage.test.tsx`, `AuthProvider.test.tsx`, `apiClient.test.ts` (Bearer, 401), E2E `auth.spec.ts` | ✅ |
+| Inicio de sesión y bloqueo (RF-17, RF-18) | `test_passwords.py` (formato, verificación, hash ficticio), `test_tokens.py` (firma, expiración, manipulación), `test_auth.py` (login, `/me`, 3 intentos → 423, bloqueo vencido, inactivo, logs sin credenciales), `test_auth_mysql.py` (bloqueo persistido y desbloqueo por el admin), `LoginPage.test.tsx`, `AuthProvider.test.tsx`, `apiClient.test.ts` (Bearer, 401), E2E `auth.spec.ts` | ✅ |
 | Usuarios y roles (RF-16, RNF-03) | `test_usuarios.py` (CRUD, validaciones, último administrador, cuenta propia, desbloqueo, 403 por rol), `test_usuarios_mysql.py` (persona + documento + cuenta + rol; reutilización de persona; 409 de identificación), `UsuariosPage.test.tsx`, `UsuarioForm.test.tsx`, `MainLayout.test.tsx`, E2E `usuarios.spec.ts` | ✅ |
 | Tablero e indicadores | `test_resumen.py`, `HomePage.test.tsx` | ✅ |
 | Inmuebles (RF-07…RF-09) | `test_inmuebles.py` (crear con propietarios y servicios, moneda solo con canon, 422 parametrizados, propietario inexistente 404, filtros, actualizar reemplaza listas, eliminar con contratos 409, asesor 403), `test_inmuebles_mysql.py` (ciudad única por nombre exacto, canon→COP, papel OWNER automático visible en `/propietarios`, bloqueo por contrato, filtros sin mayúsculas ni acentos), `InmuebleForm.test.tsx` (normalización del canon, propietario obligatorio, servicios, error de API), `InmueblesPage.test.tsx` (filtros de URL, 409 al eliminar, asesor, edición en panel), E2E `inmuebles.spec.ts` y `propietarios.spec.ts` (propietario con inmuebles no se elimina; el inscrito desde el inmueble aparece en Propietarios) | ✅ |
@@ -49,20 +49,16 @@ que producción: navegador → Vite → Worker → Hyperdrive local → MySQL.
 | Código de soporte en errores | `errorMessage()` añade el `request_id` (`apiClient.test.ts`) | ✅ |
 | Administración del sistema (RF-19…RF-24, fase 6) | `test_sesiones.py` (sesión revocada por versión o desactivación, clave temporal solo permite cambiarla, token nuevo al cambiarla, política de intentos/minutos/horas, `/auth/politica`, login auditado sin el usuario tecleado), `test_administracion.py` (clave temporal, cerrar sesiones, cuenta propia 409, política de largo, configuración y límites, empresa por rol, auditoría y fallo tolerado, estado con y sin MySQL, respaldo atrasado y solicitud única, catálogos), `test_papelera.py` (instantánea y restauración de persona, inmueble y contrato; 409 si no es posible), `test_administracion_mysql.py` (colación y valores de 0012–0018, sesiones y auditoría reales, clave temporal → cambio, papelera en la misma transacción, catálogos y empresa con FK, respaldo `SOLICITADO`, política aplicada al bloqueo), `Administracion.test.tsx`, E2E `administracion.spec.ts` | ✅ |
 
-Totales: 76 (web) + 238 (API) + 31 (documentos) unitarias; 56 (API ↔ MySQL) + 5 (documentos)
+Totales: 77 (web) + 241 (API) + 31 (documentos) unitarias; 61 (API ↔ MySQL) + 5 (documentos)
 de integración; 26 E2E en Chromium + 2 `@smoke` en Firefox y 2 en WebKit (inicio de sesión real
-contra el Worker local). Última ejecución E2E completa (2026-10-29): 29 de 30 sobre el Worker
-local; la restante falla de forma intermitente porque el runtime local de Workers destruye
-solicitudes concurrentes (riesgo 15 del plan de implementación). Con la API en Uvicorn la suite
-de Chromium pasó 25 de 26 en 3 ejecuciones, con 0 respuestas 500 (la única falla es la prueba
-que espera la etiqueta «Cloudflare Workers»).
+contra la API con Uvicorn). Última ejecución E2E completa (2026-11-01): 30 de 30, sin respuestas
+500, en 1 minuto. Las fechas de `contratos.spec.ts` se calculan en el día de Colombia, como la API.
 
 ## CI
 
 `.github/workflows/ci.yml` ejecuta lint, tipos, unitarias, integración con un servicio MySQL
-8.4, construcción del frontend y de la imagen de documentos, *dry-run* del Worker y E2E.
-La CI está escrita pero **todavía no se ha ejecutado en GitHub**: verifique la primera
-ejecución tras el primer push.
+8.4, construcción del frontend y de las imágenes de la API y de documentos, y E2E.
+Corre en cada push y pull request; el workflow *Deploy* la reutiliza antes de desplegar.
 
 ## Buenas prácticas
 

@@ -46,7 +46,6 @@ Reglas:
   trate `rowcount == 0` como código inválido, en vez de fijarlos con `Literal`.
 - Use `Annotated[..., Depends(...)]` y `Query(ge=..., le=...)` para paginación acotada.
 - Escrituras dentro de `async with db.transaction() as conn`.
-- No importe `integrations.cloudflare` ni `workers` desde el módulo.
 
 ## 3. Pruebas del backend
 

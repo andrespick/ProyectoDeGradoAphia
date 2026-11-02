@@ -10,13 +10,13 @@ test.describe("Clientes", () => {
     await iniciarSesion(page, "administrativo");
   });
 
-  test("la pantalla inicial muestra el estado del sistema y el runtime real", async ({ page }) => {
+  test("la pantalla inicial muestra el estado del sistema y el entorno real", async ({ page }) => {
     await page.goto("/");
 
     const sidebar = page.getByRole("complementary", { name: "Barra lateral" });
     await expect(sidebar.getByText("APHIA")).toBeVisible({ timeout: 30_000 });
     await expect(sidebar.getByText("En línea")).toBeVisible({ timeout: 30_000 });
-    await expect(sidebar.getByText("Cloudflare Workers · development")).toBeVisible();
+    await expect(sidebar.getByText("v0.1.0 · development")).toBeVisible();
     await expect(page.getByRole("region", { name: "Indicadores" })).toBeVisible();
   });
 

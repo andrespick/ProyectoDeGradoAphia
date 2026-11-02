@@ -36,7 +36,6 @@ export const HEALTH_OK = {
   service: "aphia-api",
   version: "0.1.0",
   environment: "test",
-  runtime: "asgi",
 };
 
 export const READY_OK = { status: "ready", checks: { database: "ok" } };
@@ -77,7 +76,7 @@ export const EMPRESA = {
 };
 
 export const ESTADO_SISTEMA = {
-  api: { version: "0.1.0", entorno: "test", runtime: "asgi" },
+  api: { version: "0.1.0", entorno: "test" },
   base_de_datos: { disponible: true, latencia_ms: 1.5, version: "8.4.0", tamano_bytes: 2_097_152 },
   migraciones: { aplicadas: 18, ultima: "0018", aplicada_en: "2026-10-28T12:00:00Z" },
   registros: { personas: 6, inmuebles: 3, contratos: 2, usuarios: 3, eventos_auditoria: 10, en_papelera: 1 },

@@ -1,4 +1,4 @@
-"""Middleware ASGI puros (sin BaseHTTPMiddleware) compatibles con Workers y Uvicorn."""
+"""Middleware ASGI puros (sin BaseHTTPMiddleware)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from core.logging import get_logger, log_event
 
 logger = get_logger("http")
 
-SettingsProvider = Callable[[Scope], Settings]
+SettingsProvider = Callable[[], Settings]
 
 SECURITY_HEADERS = {
     "x-content-type-options": "nosniff",
@@ -71,7 +71,7 @@ class RequestContextMiddleware:
             await send(message)
 
         try:
-            settings = self.settings_provider(scope)
+            settings = self.settings_provider()
         except ConfigurationError as exc:
             log_event(
                 logger, logging.ERROR, "configuration_error", detail=str(exc), request_id=request_id
@@ -122,9 +122,9 @@ class RequestContextMiddleware:
 class SettingsCORSMiddleware:
     """CORS con orígenes explícitos tomados de la configuración del entorno.
 
-    En Workers la configuración solo está disponible dentro de la solicitud, por eso el
-    ``CORSMiddleware`` de Starlette se crea de forma diferida y se reutiliza por cada
-    lista de orígenes.
+    La configuración llega con la solicitud (``RequestContextMiddleware``), así que el
+    ``CORSMiddleware`` de Starlette se crea al primer uso y se reutiliza por cada lista
+    de orígenes.
     """
 
     def __init__(self, app: ASGIApp) -> None:

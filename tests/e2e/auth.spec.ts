@@ -85,8 +85,6 @@ test.describe("Acceso", () => {
 
   test("el asesor entra, no ve Usuarios y la API le niega el módulo", async ({ page }) => {
     const token = await iniciarSesion(page, "asesor");
-    // Antes de abrir la página: el Worker local de Pyodide a veces deja colgada una petición
-    // que llega mientras el navegador cancela las suyas al navegar.
     const respuesta = await page.request.get(`${API}/api/v1/usuarios`, { headers: auth(token) });
     expect(respuesta.status()).toBe(403);
     await page.goto("/");

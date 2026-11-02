@@ -15,7 +15,7 @@ ROOT_LOGGER = "aphia"
 
 
 class _StdoutHandler(logging.Handler):
-    """Escribe en el ``sys.stdout`` vigente (Workers reenvía stdout a sus logs)."""
+    """Escribe en el ``sys.stdout`` vigente (Docker recoge stdout como log del contenedor)."""
 
     def emit(self, record: logging.LogRecord) -> None:
         try:

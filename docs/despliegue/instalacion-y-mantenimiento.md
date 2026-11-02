@@ -10,10 +10,10 @@ Requisitos: Node.js 22.12+, pnpm 12, uv, Docker Desktop (o Docker Engine) y Git.
 ```bash
 git clone <repositorio> aphia && cd aphia
 pnpm install                 # dependencias Node y Python (uv sync en apps/api y apps/files)
-pnpm env:init                # crea .env y apps/api/.dev.vars con un AUTH_SECRET aleatorio
+pnpm env:init                # crea .env con secretos locales (incluido AUTH_SECRET)
 pnpm infra:up                # MySQL 8.4 y servicio de documentos en Docker (solo 127.0.0.1)
 pnpm db:migrate && pnpm db:seed   # modelo 3FN + catálogos + datos ficticios de desarrollo
-pnpm dev                     # API en Python Workers local (8787) y web (5173)
+pnpm dev                     # API con Uvicorn (8000) y web (5173)
 ```
 
 Usuarios de desarrollo (seed `0003`, contraseña `Aphia.2026`): `admin`, `administrativo`,
@@ -24,13 +24,12 @@ Verificación: `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:integratio
 
 ## 2. Despliegue en producción
 
-Siga el [orden recomendado](README.md): VPS → MySQL → documentos → túnel y Workers VPC →
-Hyperdrive → Workers (API) → Pages (web) → GitHub Actions → respaldos. Secretos:
+Siga el [orden recomendado](README.md): VPS (API, MySQL, documentos y Caddy) → Pages (web) →
+GitHub Actions → respaldos. Secretos:
 
 | Secreto | Dónde | Cómo |
 | --- | --- | --- |
-| `AUTH_SECRET` (≥ 32 caracteres) | Worker | `uv run pywrangler secret put AUTH_SECRET --env production` |
-| Contraseñas de MySQL, token del servicio de documentos y clave de firma de sesiones (`auth_secret`) | VPS | `infra/production/secrets/` (no versionado) |
+| Contraseñas de MySQL, token del servicio de documentos y clave de firma de sesiones (`auth_secret`, ≥ 32 caracteres) | VPS | `infra/production/secrets/` (no versionado), generados con `generate-secrets.sh` |
 | Clave privada `age` de respaldos | Fuera del VPS | Gestor de contraseñas |
 
 La API no arranca en modo `database` sin `AUTH_SECRET`; el mensaje de configuración lo indica.
@@ -64,12 +63,12 @@ Inicie sesión y cambie la contraseña desde Usuarios. Los demás usuarios se cr
 | Revisión del estado del sistema | Semanal | Pantalla Sistema: base en línea, último respaldo de menos de 26 h, migraciones al día |
 | Vaciado de la papelera | Según la política de datos de la empresa | Pantalla Papelera → «Eliminar» en lo que ya no se necesite (contiene datos personales) |
 | Prueba de restauración | Trimestral | `restore.sh` en una réplica local; verificar `/api/ready` y un contrato |
-| Rotación de `AUTH_SECRET` | Anual o ante sospecha de fuga | `pywrangler secret put AUTH_SECRET`; cierra todas las sesiones (los usuarios vuelven a iniciar sesión) |
+| Rotación de `AUTH_SECRET` | Anual o ante sospecha de fuga | Nuevo valor en `infra/production/secrets/auth_secret` y `docker compose --env-file .env.production up -d api`; cierra todas las sesiones (los usuarios vuelven a iniciar sesión) |
 | Desbloqueo manual de una cuenta | A demanda | Pantalla Usuarios → «Desbloquear», o por SQL: `UPDATE user_account SET failed_login_attempts = 0, locked_until = NULL WHERE user_name = '…'` |
 | Contraseña olvidada | A demanda | Pantalla Usuarios → «Clave»: genera una clave temporal que se entrega por un canal seguro; la persona debe cambiarla al entrar |
 | Equipo perdido o sospecha de acceso indebido | A demanda | Pantalla Usuarios → «Sesiones» cierra todas las sesiones de esa cuenta; revise la Auditoría |
-| Migraciones | En cada versión | Respaldo verificado → `pnpm db:migrate -- --confirm-backup` contra producción (nunca al iniciar el Worker) |
-| Actualización de dependencias | Mensual | `pnpm update --interactive`, `uv lock --upgrade` en `apps/api` y `apps/files`; correr las pruebas; verificar compatibilidad con Pyodide antes de subir una dependencia Python |
+| Migraciones | En cada versión | Respaldo verificado → servicio `migrator` con `--confirm-backup` ([mysql.md](mysql.md)); nunca al iniciar la API |
+| Actualización de dependencias | Mensual | `pnpm update --interactive`, `uv lock --upgrade` en `apps/api` y `apps/files`; correr las pruebas |
 | Revisión de logs | Semanal | Ver abajo |
 
 ## 5. Qué vigilar en los logs
@@ -84,7 +83,7 @@ Los logs de la API son JSON (una línea por evento) sin datos personales ni cuer
 | `clave_restablecida` | El administrador generó una clave temporal | Confirmar que fue solicitado por la persona |
 | `login_failed` con `motivo: cuenta_no_disponible` | Usuario inexistente o inactivo | Muchos seguidos = enumeración de usuarios; revisar origen |
 | `unhandled_exception` | Error no controlado (respuesta 500) | Buscar el `request_id` que el usuario cita como «código de soporte» |
-| `db_connect_failed` / `/api/ready` 503 | MySQL o Hyperdrive inaccesibles | Revisar túnel, contenedor MySQL y Hyperdrive |
+| `db_connect_failed` / `/api/ready` 503 | MySQL inaccesible | Revisar el contenedor MySQL (`docker compose ps`, logs) y sus secretos |
 | `duration_ms` alto de forma sostenida | Consultas lentas | Revisar índices y volumen; RNF: < 3 s |
 
 ## 6. Restauración y recuperación
@@ -95,7 +94,4 @@ mantenga el destino externo configurado.
 
 ## 7. Límites conocidos
 
-- Plan gratuito de Workers: el inicio de sesión (PBKDF2, ~260 ms de CPU) supera el límite de
-  10 ms; use el plan de pago o sirva la API con Uvicorn en el VPS.
-- Los cambios de rol o la desactivación aplican en el siguiente inicio de sesión o a las 8 h.
 - No hay recuperación de contraseña por correo: la asigna el Administrador de Sistemas.

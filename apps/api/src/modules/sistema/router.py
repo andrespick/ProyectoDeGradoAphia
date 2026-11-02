@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 
-from core.runtime import get_settings, runtime_name
+from core.runtime import get_settings
 from db.connection import Database
 from db.dependencies import get_database
 from modules.auth.dependencies import Auditar, require_roles
@@ -38,11 +38,7 @@ Service = Annotated[SistemaService, Depends(get_sistema_service)]
 
 @router.get("/estado", response_model=EstadoSistema)
 async def estado(request: Request, service: Service) -> EstadoSistema:
-    api = EstadoApi(
-        version=API_VERSION,
-        entorno=get_settings(request).app_env,
-        runtime=runtime_name(request.scope),
-    )
+    api = EstadoApi(version=API_VERSION, entorno=get_settings(request).app_env)
     return await service.estado(api)
 
 

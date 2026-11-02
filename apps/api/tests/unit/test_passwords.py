@@ -47,19 +47,3 @@ def test_dummy_hash_tiene_formato_valido() -> None:
     partes = DUMMY_HASH.split("$")
     assert partes[0] == "pbkdf2_sha256" and partes[1] == "100000" and len(partes) == 4
     assert not verify_password("", DUMMY_HASH)
-
-
-def test_implementacion_pura_coincide_con_hashlib() -> None:
-    import hashlib
-
-    from modules.auth.passwords import _pbkdf2_sha256
-
-    for clave, sal, iteraciones in [
-        (b"Clave.Segura1", b"0123456789abcdef", 1),
-        (b"Clave.Segura1", b"0123456789abcdef", 1_000),
-        ("ñandú-ñ".encode(), b"\x00" * 16, 257),
-        (b"x" * 100, b"sal larga" * 3, 50),  # clave mayor que el bloque HMAC (64 bytes)
-    ]:
-        assert _pbkdf2_sha256(clave, sal, iteraciones) == hashlib.pbkdf2_hmac(
-            "sha256", clave, sal, iteraciones, 32
-        )

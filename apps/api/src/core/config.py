@@ -1,8 +1,7 @@
 """Configuración de la API.
 
-La configuración se construye a partir de una función ``get(nombre)`` para que la
-misma lógica sirva con ``os.environ`` (Uvicorn) y con el objeto ``env`` de
-Cloudflare Workers, donde las variables solo existen dentro de cada solicitud.
+Se construye a partir de una función ``get(nombre)``: en ejecución lee las variables del
+proceso y los Docker secrets (``read_environ``); las pruebas pasan un diccionario.
 """
 
 from __future__ import annotations

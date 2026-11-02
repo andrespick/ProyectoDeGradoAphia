@@ -27,7 +27,6 @@ export interface HealthResponse {
   service: string;
   version: string;
   environment: string;
-  runtime: "workers" | "asgi";
 }
 
 export interface ReadyResponse {

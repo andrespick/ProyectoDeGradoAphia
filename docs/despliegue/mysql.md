@@ -8,7 +8,7 @@ Servicio `mysql` de `infra/production/compose.yaml`, imagen `mysql:8.4`, configu
 | Usuario | Permisos | Uso |
 | --- | --- | --- |
 | `root` | Todos | Administración y respaldos, solo desde el contenedor |
-| `aphia_app` | `SELECT, INSERT, UPDATE, DELETE` sobre `aphia.*`, `REQUIRE SSL` | API vía Hyperdrive |
+| `aphia_app` | `SELECT, INSERT, UPDATE, DELETE` sobre `aphia.*`, `REQUIRE SSL` | API |
 | `aphia_migrator` | DDL + DML sobre `aphia.*`, `REQUIRE SSL` | Servicio `migrator` |
 
 Verificado en una réplica local: sin TLS se rechaza la conexión; con TLS se negocia TLSv1.3;
@@ -41,7 +41,7 @@ Detalle de reglas: [docs/desarrollo/migraciones.md](../desarrollo/migraciones.md
 ## Bases por entorno
 
 Use instancias o bases distintas para staging y producción (por ejemplo `aphia_staging` en el
-mismo VPS con su propio usuario y configuración de Hyperdrive, o un segundo VPS). Nunca
+mismo VPS con su propio usuario, o un segundo VPS). Nunca
 apunte staging a la base de producción.
 
 ## Consola de administración

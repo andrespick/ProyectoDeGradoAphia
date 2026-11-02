@@ -51,7 +51,6 @@ const NAV: readonly NavItem[] = [
   { to: "/ayuda", label: "Ayuda", icon: CircleHelp, roles: TODOS },
 ];
 
-const RUNTIME_LABELS = { workers: "Cloudflare Workers", asgi: "ASGI (Uvicorn)" } as const;
 const STATUS_LABEL = {
   verificando: "Verificando…",
   conectada: "En línea",
@@ -181,7 +180,7 @@ function SystemStatus({ compact = false }: { compact?: boolean }) {
         {badge}
       </div>
       <span className="muted">
-        {api.health ? `${RUNTIME_LABELS[api.health.runtime]} · ${api.health.environment}` : "—"}
+        {api.health ? `v${api.health.version} · ${api.health.environment}` : "—"}
       </span>
     </div>
   );

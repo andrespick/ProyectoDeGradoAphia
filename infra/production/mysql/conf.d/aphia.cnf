@@ -9,7 +9,7 @@ skip-name-resolve = ON
 # Seguridad
 require_secure_transport = ON
 local_infile = OFF
-# Hyperdrive y los clientes usan TLS; MySQL genera certificados propios al inicializar.
+# La API y el migrador usan TLS; MySQL genera certificados propios al inicializar.
 tls_version = TLSv1.2,TLSv1.3
 
 # Memoria

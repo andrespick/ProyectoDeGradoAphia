@@ -71,7 +71,7 @@ chmod 644 mysql/conf.d/aphia.cnf   # MySQL ignora archivos de configuración con
 docker compose --env-file .env.production up -d --build
 docker compose --env-file .env.production ps        # api, mysql y files "healthy"
 docker compose --env-file .env.production logs mysql | grep 01-usuarios
-curl -s http://127.0.0.1:8000/api/health            # {"status":"ok",...,"runtime":"asgi"}
+curl -s http://127.0.0.1:8000/api/health            # {"status":"ok",...,"environment":"production"}
 ```
 
 Luego aplique las [migraciones](mysql.md); hasta entonces `/api/ready` responde 503.
@@ -153,8 +153,7 @@ docker compose --env-file .env.production up -d --build api files
 ```
 
 MySQL no se reconstruye en cada despliegue. Actualice `MYSQL_VERSION` de forma deliberada,
-con respaldo previo. El túnel de Cloudflare (`--profile tunnel`) solo se necesita si la API se
-despliega en Workers ([tunnel-y-acceso-privado.md](tunnel-y-acceso-privado.md)).
+con respaldo previo.
 
 ## Recursos estimados
 
@@ -163,4 +162,3 @@ despliega en Workers ([tunnel-y-acceso-privado.md](tunnel-y-acceso-privado.md)).
 | MySQL (buffer pool 512 MB) | 1200 MB (`MYSQL_MEMORY_LIMIT`) |
 | API (Uvicorn) | 384 MB |
 | Documentos | 256 MB |
-| cloudflared (opcional) | 128 MB |
