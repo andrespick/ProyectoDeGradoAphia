@@ -91,6 +91,18 @@ async def test_una_persona_existente_reutiliza_su_fila(
     )
 
 
+async def test_otra_cuenta_con_la_misma_identificacion_responde_409(
+    client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
+) -> None:
+    await client.post(RUTA, json=NUEVO)
+
+    response = await client.post(RUTA, json={**NUEVO, "usuario": "otra", "rol": "admin_sistemas"})
+
+    assert response.status_code == 409
+    assert response.json()["error"]["codigo"] == "identificacion_duplicada"
+    assert _count(db_conn, "SELECT COUNT(*) FROM user_account") == 1
+
+
 async def test_actualizar_cambia_rol_identificacion_y_estado(
     client: httpx.AsyncClient, db_conn: pymysql.connections.Connection
 ) -> None:

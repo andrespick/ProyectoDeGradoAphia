@@ -160,7 +160,7 @@ export function AyudaPage() {
 
       <Seccion id="usuarios" titulo="Usuarios">
         <ul>
-          <li>Solo el Administrador de Sistemas gestiona usuarios: nombre de usuario (minúsculas, único), nombre, identificación, correo, contraseña (con letra y dígito y el largo mínimo de la política; 8 por defecto) y rol.</li>
+          <li>Solo el Administrador de Sistemas gestiona usuarios: nombre de usuario (minúsculas, único), nombre, identificación, correo, contraseña (con letra y dígito y el largo mínimo de la política; 8 por defecto) y rol. Cada persona tiene una sola cuenta: una identificación que ya usa otro usuario se rechaza.</li>
           <li>Cada cuenta bloqueada aparece con una alerta y el botón «Desbloquear». El conmutador Activo/Inactivo impide iniciar sesión sin borrar la cuenta.</li>
           <li>Cambiar el rol o la contraseña, o desactivar la cuenta, cierra de inmediato las sesiones abiertas de esa persona. La contraseña propia se cambia con «Cambiar contraseña» (icono de llave), no aquí.</li>
           <li><strong>Clave</strong> genera una clave temporal que aparece una sola vez: entréguela por un canal seguro. La persona deberá cambiarla al entrar; mientras tanto la tabla muestra «Clave temporal».</li>

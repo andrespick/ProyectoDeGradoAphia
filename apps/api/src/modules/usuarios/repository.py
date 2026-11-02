@@ -96,6 +96,17 @@ class UsuariosRepository:
                 )
                 if person_id is None:
                     person_id = await _crear_persona(cursor, datos)
+                else:
+                    # Una cuenta por persona: el nombre vive en `person` y se compartiría al editar.
+                    # shortcut: sin índice único, dos altas simultáneas podrían pasar; añadir
+                    # UNIQUE(person_id) en una migración cuando no queden cuentas compartidas.
+                    await cursor.execute(
+                        "SELECT 1 FROM user_account WHERE person_id = %s", (person_id,)
+                    )
+                    if await cursor.fetchone() is not None:
+                        raise IdentificacionDuplicadaError(
+                            "Ya existe un usuario con ese tipo y número de identificación."
+                        )
                 await cursor.execute(
                     "INSERT INTO user_account (person_id, user_name, login_email, hashed_password, "
                     "is_active) VALUES (%s, %s, %s, %s, %s)",

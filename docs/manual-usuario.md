@@ -162,7 +162,8 @@ tiene. Los contratos, inmuebles y personas eliminados van a la papelera (ver «P
 
 - «Registrar usuario»: nombre de usuario (minúsculas, único), nombre, identificación, correo,
   contraseña (con letra y dígito y el largo mínimo de la política; 8 por defecto) y rol. Si la
-  identificación ya pertenece a un cliente, la cuenta se vincula a esa persona.
+  identificación ya pertenece a un cliente, la cuenta se vincula a esa persona. Cada persona
+  tiene una sola cuenta: una identificación que ya usa otro usuario se rechaza.
 - Cada cuenta bloqueada aparece con una alerta y el botón «Desbloquear». El conmutador
   Activo/Inactivo impide iniciar sesión sin borrar la cuenta.
 - «Editar» cambia nombre, identificación, correo, rol, estado y, si se indica, la contraseña.
