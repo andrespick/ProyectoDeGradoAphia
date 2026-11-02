@@ -56,4 +56,23 @@ test.describe("Diseño adaptable (375 px)", () => {
     await expect(dialog.getByLabel(/Dirección completa/)).toHaveValue("Calle móvil 1");
     await sinDesplazamientoHorizontal(page);
   });
+
+  test("la marca del cajón, los iconos de las alertas y los campos de filtro no se aplastan", async ({ page }) => {
+    await iniciarSesion(page, "admin");
+    await page.goto("/usuarios");
+    const alerta = page.locator(".alert-info");
+    await expect(alerta).toContainText("Protocolo activo");
+    expect(await alerta.locator("svg").evaluate((s) => s.getBoundingClientRect().width)).toBeGreaterThanOrEqual(16);
+
+    await page.getByRole("button", { name: "Abrir menú" }).click();
+    const marca = page.getByRole("complementary", { name: "Menú de navegación" }).locator(".brand-text");
+    const [nombre, lema] = await marca.evaluate((m) => [...m.children].map((c) => c.getBoundingClientRect().top));
+    expect(lema, "el lema va debajo del nombre, no en la misma línea").toBeGreaterThan(nombre);
+
+    await page.goto("/catalogos");
+    const nombreCatalogo = page.getByLabel(/Nombre/);
+    await expect(nombreCatalogo).toBeVisible();
+    expect(await nombreCatalogo.evaluate((i) => i.getBoundingClientRect().width)).toBeGreaterThanOrEqual(200);
+    await sinDesplazamientoHorizontal(page);
+  });
 });

@@ -582,9 +582,9 @@ a {
   font-size: 0.78rem;
 }
 
-.filters-search {
-  flex: 1;
-  min-width: 220px;
+/* Dos clases: `.field { min-width: 0 }` se declara después y anulaba el mínimo (campo aplastado). */
+.filters .filters-search {
+  flex: 1 1 220px;
 }
 
 .segmented {
@@ -1018,6 +1018,10 @@ button.link {
   margin: 0;
 }
 
+.alert > svg {
+  flex-shrink: 0; /* en fila, un texto largo encogía el icono hasta un punto */
+}
+
 .alert-error {
   background: var(--color-primary-light);
   color: var(--color-primary-dark);
@@ -1370,11 +1374,14 @@ th.num {
     display: none;
   }
 
-  .drawer .brand-text,
   .drawer .nav-label,
   .drawer .system-status,
   .drawer .sidebar-footer .label {
     display: initial;
+  }
+
+  .drawer .brand-text {
+    display: flex; /* `initial` lo volvía en línea y juntaba «APHIA» con el lema */
   }
 
   .drawer .brand {
