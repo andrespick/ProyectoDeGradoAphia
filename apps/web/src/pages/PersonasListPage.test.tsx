@@ -124,7 +124,7 @@ describe("PersonasListPage", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "Mario Dueño" })).toBeInTheDocument();
-    expect(screen.getByText("Bancolombia · AHORROS •••• 6789")).toBeInTheDocument();
+    expect(screen.getByText("Bancolombia · AHORROS 0123456789")).toBeInTheDocument();
     expect(screen.getByText("@mdueno")).toBeInTheDocument();
     const inmuebles = screen.getByRole("region", { name: "Inmuebles de los que es propietario" });
     expect(within(inmuebles).getByText("Calle 5 # 6-7")).toBeInTheDocument();

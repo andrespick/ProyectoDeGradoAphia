@@ -65,7 +65,8 @@ editarlo o, automáticamente, al asociarlo a un inmueble o a un contrato.
 ## Propietarios
 
 - Registrar un propietario exige dirección, teléfono, correo y cuenta bancaria (banco con
-  sugerencias, tipo y número). En las listas el número se muestra enmascarado (•••• 4902).
+  sugerencias, tipo y número). En las listas el número se muestra enmascarado (•••• 4902); el
+  detalle de la persona lo muestra completo para poder hacer los pagos.
 - La lista muestra solo personas con papel propietario, con la cuenta bancaria y el chip
   «N inmuebles» / «Sin inmuebles»; se filtra por nombre, identificación o correo.
 - Un propietario con inmuebles **no se puede eliminar**: primero reasigne o elimine sus

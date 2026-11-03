@@ -121,7 +121,7 @@ export function AyudaPage() {
 
       <Seccion id="propietarios" titulo="Propietarios">
         <ul>
-          <li>Registrar un propietario exige dirección, teléfono, correo y cuenta bancaria (banco con sugerencias, tipo y número). El número se muestra enmascarado (•••• 4902).</li>
+          <li>Registrar un propietario exige dirección, teléfono, correo y cuenta bancaria (banco con sugerencias, tipo y número). En la lista el número se muestra enmascarado (•••• 4902); el detalle de la persona lo muestra completo para poder hacer pagos.</li>
           <li>La lista muestra solo personas con papel propietario, con la cuenta bancaria y el chip «N inmuebles» / «Sin inmuebles»; se filtra por nombre, identificación o correo.</li>
           <li>Un propietario con inmuebles no se puede eliminar: primero reasigne o elimine sus inmuebles.</li>
           <li>Quien se asocia como propietario desde un inmueble aparece aquí automáticamente.</li>

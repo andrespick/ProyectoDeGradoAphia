@@ -5,7 +5,6 @@ import { Link, useNavigate, useParams } from "react-router";
 import { useAuth } from "../features/auth/AuthProvider";
 import { ELIMINACION, ESCRITURA } from "../features/auth/roles";
 import { type Modulo, MODULOS } from "../features/personas/modulos";
-import { enmascarar } from "../features/personas/PersonasTable";
 import { errorMessage } from "../services/apiClient";
 import { deletePersona, getPersona } from "../services/personasService";
 import {
@@ -123,7 +122,7 @@ export function PersonaDetallePage({ modulo }: { modulo: Modulo }) {
                   <dt>Cuenta bancaria</dt>
                   <dd>
                     {persona.cuenta_bancaria
-                      ? `${persona.cuenta_bancaria.banco} · ${persona.cuenta_bancaria.tipo} ${enmascarar(persona.cuenta_bancaria.numero)}`
+                      ? `${persona.cuenta_bancaria.banco} · ${persona.cuenta_bancaria.tipo} ${persona.cuenta_bancaria.numero}`
                       : "—"}
                   </dd>
                 </div>
