@@ -1553,19 +1553,16 @@ th.num {
 
 .login-intro h1 {
   font-size: 2rem;
-  margin: 1rem 0 0.75rem;
+  margin: 0 0 0.75rem;
 }
 
-.login-note {
+/* Estado del servidor en la barra pública: texto discreto con un punto de color. */
+.status-compact {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--slate-700);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.6rem 0.9rem;
-  font-size: 0.9rem;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .login-card {

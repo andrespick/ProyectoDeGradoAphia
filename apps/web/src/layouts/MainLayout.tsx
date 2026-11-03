@@ -172,7 +172,14 @@ function SystemStatus({ compact = false }: { compact?: boolean }) {
   const badge = (
     <span className={`badge ${STATUS_BADGE[api.status]}`}>{STATUS_LABEL[api.status]}</span>
   );
-  if (compact) return badge;
+  if (compact) {
+    return (
+      <span className="status-compact" role="status">
+        <span className={STATUS_BADGE[api.status].replace("badge-", "status-dot-")} aria-hidden="true" />
+        {STATUS_LABEL[api.status]}
+      </span>
+    );
+  }
   return (
     <div className="system-status">
       <div className="system-status-row">

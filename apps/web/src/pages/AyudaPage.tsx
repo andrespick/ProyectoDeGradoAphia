@@ -68,8 +68,8 @@ export function AyudaPage() {
         </p>
         <ul>
           <li>
-            Tras <strong>3 intentos fallidos</strong> la cuenta se bloquea <strong>15 minutos</strong> (valores por defecto; la
-            pantalla de inicio de sesión muestra los vigentes). Espere ese tiempo o pida al Administrador de Sistemas que la
+            Tras <strong>3 intentos fallidos</strong> la cuenta se bloquea <strong>15 minutos</strong> (valores por defecto; los
+            vigentes se ven en Configuración). Espere ese tiempo o pida al Administrador de Sistemas que la
             desbloquee desde Usuarios.
           </li>
           <li>

@@ -20,7 +20,7 @@ página de ayuda.
    equipos compartidos. La sesión dura 8 horas (valor por defecto; lo fija la política de
    seguridad).
 2. Tras **3 intentos fallidos** la cuenta queda bloqueada **15 minutos** (valores por defecto;
-   la pantalla de inicio de sesión muestra los vigentes). Espere o pida al Administrador de
+   los vigentes se ven en Configuración). Espere o pida al Administrador de
    Sistemas que la desbloquee desde Usuarios. El mensaje indica los minutos que faltan.
 3. No hay recuperación de contraseña por correo: el enlace «¿Olvidó su contraseña?» explica que
    el Administrador de Sistemas le genera una **clave temporal** desde Usuarios. Al entrar con

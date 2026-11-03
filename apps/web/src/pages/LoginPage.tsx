@@ -1,12 +1,10 @@
-import { Eye, EyeOff, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
+import { type FormEvent, useState } from "react";
 import { Link, Navigate } from "react-router";
 
 import { Field } from "../components/Field";
 import { useAuth } from "../features/auth/AuthProvider";
-import { getPoliticaPublica } from "../services/administracionService";
 import { ApiError } from "../services/apiClient";
-import type { PoliticaPublica } from "../types/administracion";
 
 export function LoginPage() {
   const auth = useAuth();
@@ -16,15 +14,6 @@ export function LoginPage() {
   const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [politica, setPolitica] = useState<PoliticaPublica | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    getPoliticaPublica(controller.signal)
-      .then(setPolitica)
-      .catch(() => undefined); // sin la API el aviso usa un texto general
-    return () => controller.abort();
-  }, []);
 
   // Siempre al inicio («/» lleva a cada rol a su pantalla): la ruta anterior pudo ser de otro usuario.
   if (auth.status === "autenticado") return <Navigate to="/" replace />;
@@ -51,19 +40,9 @@ export function LoginPage() {
   return (
     <div className="login-layout">
       <section className="login-intro" aria-labelledby="login-intro-titulo">
-        <span className="badge badge-primary">
-          <ShieldCheck size={14} aria-hidden="true" /> Portal administrativo
-        </span>
         <h1 id="login-intro-titulo">Gestión integral de propiedad horizontal e inmobiliaria.</h1>
         <p className="muted">
           Control unificado de clientes, propietarios, inmuebles y contratos de APHIA S.A.S.
-        </p>
-        <p className="login-note">
-          <LockKeyhole size={16} aria-hidden="true" /> Acceso corporativo protegido: la cuenta se
-          bloquea{" "}
-          {politica
-            ? `${politica.minutos_bloqueo} minutos tras ${politica.max_intentos} intentos fallidos.`
-            : "temporalmente tras varios intentos fallidos."}
         </p>
       </section>
 
